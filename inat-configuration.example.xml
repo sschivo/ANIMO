@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<Inat>
+	<!-- Configuration for the UPPAAL invoker. It needs two paths -->
+	<UppaalInvoker>
+		<!-- the path to the tracer executable. -->
+		<tracer>z:\path\to\tracer.exe</tracer>
+		<!-- the path to the verifyta executable. -->
+		<verifyta>relative/path/verifyta</verifyta>
+		<!-- the path to the temporary directory. 
+		  if omitted the default system path will be used
+		-->
+		<!-- <temporary></temporary> -->
+		<!-- should files be left in the directory? -->
+		<!-- <leaveFiles/> -->
+	</UppaalInvoker>
+</Inat>

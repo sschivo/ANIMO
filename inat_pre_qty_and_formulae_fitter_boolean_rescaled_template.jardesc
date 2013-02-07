@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="WINDOWS-1252" standalone="no"?>
+<jardesc>
+    <jar path="C:/Users/stefano/.cytoscape/2.8/plugins/ANIMO-1.31/ANIMO.jar"/>
+    <options buildIfNeeded="true" compress="true" descriptionLocation="/inat_pre_qty_and_formulae_fitter_boolean_rescaled_template/inat_pre_qty_and_formulae_fitter_boolean_rescaled_template.jardesc" exportErrors="true" exportWarnings="true" includeDirectoryEntries="false" overwrite="true" saveDescription="true" storeRefactorings="false" useSourceFolders="false"/>
+    <storedRefactorings deprecationInfo="true" structuralOnly="false"/>
+    <selectedProjects/>
+    <manifest generateManifest="false" manifestLocation="/inat_pre_qty_and_formulae_fitter_boolean_rescaled_template/manifest.mf" manifestVersion="1.0" reuseManifest="true" saveManifest="true" usesManifest="true">
+        <sealing sealJar="false">
+            <packagesToSeal/>
+            <packagesToUnSeal/>
+        </sealing>
+    </manifest>
+    <selectedElements exportClassFiles="true" exportJavaFiles="false" exportOutputFolder="false">
+        <javaElement handleIdentifier="=inat_pre_qty_and_formulae_fitter_boolean_rescaled_template/src"/>
+    </selectedElements>
+</jardesc>
