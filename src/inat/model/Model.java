@@ -735,9 +735,9 @@ public class Model implements Serializable {
 				nodeAttributes.setAttribute(node.getIdentifier(), INITIAL_LEVEL, 0);
 			}
 			
-			if (!nodeAttributes.hasAttribute(node.getIdentifier(), LEVELS_SCALE_FACTOR)) {
-				nodeAttributes.setAttribute(node.getIdentifier(), LEVELS_SCALE_FACTOR, nodeAttributes.getDoubleAttribute(node.getIdentifier(), NUMBER_OF_LEVELS) / 15.0);
-			}
+//			if (!nodeAttributes.hasAttribute(node.getIdentifier(), LEVELS_SCALE_FACTOR)) {
+//				nodeAttributes.setAttribute(node.getIdentifier(), LEVELS_SCALE_FACTOR, nodeAttributes.getDoubleAttribute(node.getIdentifier(), NUMBER_OF_LEVELS) / 15.0);
+//			}
 		}
 		
 		/*if (noReactantsPlotted && !smcUppaal.isSelected()) {

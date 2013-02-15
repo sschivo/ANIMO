@@ -209,10 +209,10 @@ public class Scenario {
 
 	/**
 	 * Generate the times table based on the scenario formula and parameters.
-	 * @param nLevelsReactant1 The total number of levels of reactant1 (the enzyme or catalyst)
+	 * @param nLevelsReactant1 The total number of levels of reactant1 (the enzyme or catalyst) + 1 (!! Note the +1! Basically, this is the number of columns of the time table, so when using it as the number of activity levels of the enzyme we must subtract 1)
 	 * @param activeR1 true if the R1 input to the formula is the concentration of active reactant 1
 	 * @param reactant1IsDownstream true when the reactant 1 is a downstream reactant (the reaction time depends on its activity, but we treat limit cases as their nearest neighbours to ensure that boolean networks behave correctly) 
-	 * @param nLevelsReactant2 The total number of levels of reactant2 (the substrate)
+	 * @param nLevelsReactant2 The total number of levels of reactant2 (the substrate) + 1 (!! Note the +1)
 	 * @param activeR2 true if the R2 input to the formula is the concentration of active reactant 2
 	 * @param reactant2IsDownstream see reactant1IsDownstream
 	 * @return Output is a list for no particular reason anymore. It used to be
@@ -230,7 +230,7 @@ public class Scenario {
 		} else {
 			if (reactant2IsDownstream) {
 				for (int k=0;k<nLevelsReactant1;k++) {
-					times.add(computeFormula(k, nLevelsReactant1, activeR1, 1, nLevelsReactant2, activeR2));
+					times.add(computeFormula(k, nLevelsReactant1 - 1, activeR1, 1, nLevelsReactant2 - 1, activeR2));
 				}
 			} else {
 				for (int k=0;k<nLevelsReactant1;k++) {
@@ -247,7 +247,7 @@ public class Scenario {
 				limitJ = nLevelsReactant1 - 1; //the last coluimn will be all infinite
 			} else {
 				if (reactant1IsDownstream) {
-					times.add(computeFormula(1, nLevelsReactant1, activeR1, i, nLevelsReactant2, activeR2));
+					times.add(computeFormula(1, nLevelsReactant1 - 1, activeR1, i, nLevelsReactant2 - 1, activeR2));
 				} else {
 					times.add(Double.POSITIVE_INFINITY); //no reactant1 = no reaction
 				}
@@ -255,11 +255,11 @@ public class Scenario {
 				limitJ = nLevelsReactant1; //the last column will have the smallest values
 			}
 			for (;j<limitJ;j++) {
-				times.add(computeFormula(j, nLevelsReactant1, activeR1, i, nLevelsReactant2, activeR2));
+				times.add(computeFormula(j, nLevelsReactant1 - 1, activeR1, i, nLevelsReactant2 - 1, activeR2));
 			}
 			if (!activeR1) { //We depend on the inactivity of R1, which in the last column is completely active. So the last column has all infinite
 				if (reactant1IsDownstream) {
-					times.add(computeFormula(nLevelsReactant1 - 1, nLevelsReactant1, activeR1, i, nLevelsReactant2, activeR2));
+					times.add(computeFormula(nLevelsReactant1 - 1, nLevelsReactant1 - 1, activeR1, i, nLevelsReactant2 - 1, activeR2));
 				} else {
 					times.add(Double.POSITIVE_INFINITY);
 				}
@@ -267,11 +267,11 @@ public class Scenario {
 		}
 		if (!activeR2) { //We depend on the inactivity of R2, which in the last row is completely active. So the last row has all infinite
 			for (int j=0;j<nLevelsReactant1;j++) {
-				if (reactant2IsDownstream) {
-					times.add(computeFormula(j, nLevelsReactant1, activeR1, nLevelsReactant2 - 1, nLevelsReactant2, activeR2));
-				} else {
+				/*if (reactant2IsDownstream) { //Having this made no sense: the second reactant will always have a 0 inactivity level, so we would anyway get rate = 0 --> time = inf
+					times.add(computeFormula(j, nLevelsReactant1 - 1, activeR1, nLevelsReactant2 - 1, nLevelsReactant2 - 1, activeR2));
+				} else {*/
 					times.add(Double.POSITIVE_INFINITY); //all reactant2 already reacted (active) = no reaction
-				}
+				/*}*/
 			}
 		}
 		return times;

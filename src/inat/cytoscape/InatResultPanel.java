@@ -441,6 +441,7 @@ public class InatResultPanel extends JPanel implements ChangeListener, GraphScal
 		Map<String, String> seriesNameMapping = new HashMap<String, String>();
 		Vector<String> filteredSeriesNames = new Vector<String>(); //profit from the cycle for the series mapping to create a filter for the series to be actually plotted
 		for (String r : result.getReactantIds()) {
+			if (r.charAt(0) == 'E') continue; //If the identifier corresponds to an edge (e.g. "Enode123 (DefaultEdge) node456") we don't consider it, as we are looking only at series to be plotted in the graph, and those data instead are used for the slider (edge highlighting corresponding to reaction "strength")
 			String name = null;
 			String stdDevReactantName = null;
 			if (model.getReactant(r) != null) { //we can also refer to a name not present in the reactant collection
@@ -457,6 +458,10 @@ public class InatResultPanel extends JPanel implements ChangeListener, GraphScal
 				}
 			} else if (r.toLowerCase().contains(ResultAverager.OVERLAY_NAME.toLowerCase())) {
 				stdDevReactantName = r.substring(0, r.lastIndexOf(ResultAverager.OVERLAY_NAME));
+				//System.err.println("Overlay series: \"" + r + "\" --> \"" + stdDevReactantName + "\"");
+				/*if (model.getReactant(stdDevReactantName) == null) {
+					System.err.println("Reactant \"" + stdDevReactantName + "\" unknown to the model!");
+				}*/
 				if (model.getReactant(stdDevReactantName).get(Model.Properties.ALIAS).as(String.class) != null) {
 					name = model.getReactant(stdDevReactantName).get(Model.Properties.ALIAS).as(String.class); // + r.substring(r.lastIndexOf(ResultAverager.OVERLAY_NAME));
 					seriesNameMapping.put(stdDevReactantName, name);
@@ -467,7 +472,7 @@ public class InatResultPanel extends JPanel implements ChangeListener, GraphScal
 			if ((!r.toLowerCase().contains(ResultAverager.STD_DEV.toLowerCase()) && !r.toLowerCase().contains(ResultAverager.OVERLAY_NAME.toLowerCase()) 
 						&& model.getReactant(r) != null && model.getReactant(r).get(Model.Properties.PLOTTED).as(Boolean.class))
 				|| ((r.toLowerCase().contains(ResultAverager.STD_DEV.toLowerCase()) || r.toLowerCase().contains(ResultAverager.OVERLAY_NAME.toLowerCase())) 
-						&& model.getReactant(r) != null && model.getReactant(stdDevReactantName).get(Model.Properties.PLOTTED).as(Boolean.class))) {
+						&& model.getReactant(stdDevReactantName) != null && model.getReactant(stdDevReactantName).get(Model.Properties.PLOTTED).as(Boolean.class))) {
 				
 				filteredSeriesNames.add(r);
 			}

@@ -663,6 +663,20 @@ public class INATPropertyChangeListener implements PropertyChangeListener {
 				EdgeView ev = (EdgeView)(i.next());
 				ev.setLineType(EdgeView.CURVED_LINES);
 			}
+
+			VisualMappingManager vizMap = Cytoscape.getVisualMappingManager();
+			vizMap.setVisualStyle("default");
+			@SuppressWarnings("rawtypes")
+			Iterator it = Cytoscape.getCurrentNetwork().nodesList().iterator();
+			CyAttributes nodeAttr = Cytoscape.getNodeAttributes();
+			while (it.hasNext()) {
+				Node n = (Node)it.next();
+				if (nodeAttr.hasAttribute(n.getIdentifier(), Model.Properties.INITIAL_LEVEL) && nodeAttr.hasAttribute(n.getIdentifier(), Model.Properties.NUMBER_OF_LEVELS)) {
+					double val = 1.0 * nodeAttr.getIntegerAttribute(n.getIdentifier(), Model.Properties.INITIAL_LEVEL) / nodeAttr.getIntegerAttribute(n.getIdentifier(), Model.Properties.NUMBER_OF_LEVELS);
+					nodeAttr.setAttribute(n.getIdentifier(), Model.Properties.SHOWN_LEVEL, val); //Set the initial values for the activity ratio of the nodes, to color them correctly
+				}
+			}
+			Cytoscape.getCurrentNetworkView().applyVizmapper(vizMap.getVisualStyle());
 		}
 		if (evt.getPropertyName().equalsIgnoreCase(Cytoscape.NETWORK_CREATED)) {
 			//addVisualMappings();

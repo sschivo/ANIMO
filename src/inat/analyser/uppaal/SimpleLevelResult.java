@@ -149,7 +149,12 @@ private int numberOfLevels;
 	public LevelResult filter(Vector<String> acceptedNames) {
 		Map<String, SortedMap<Double, Double>> lev = new HashMap<String, SortedMap<Double, Double>>();
 		for (String s : levels.keySet()) {
-			if (!acceptedNames.contains(s)) continue;
+			//System.err.print(s);
+			if (!acceptedNames.contains(s)) {
+				//System.err.println(" NON lo aggiungo");
+				continue;
+			}
+			//System.err.println(" lo aggiungo");
 			SortedMap<Double, Double> m = levels.get(s);
 			lev.put(s, m);
 		}
