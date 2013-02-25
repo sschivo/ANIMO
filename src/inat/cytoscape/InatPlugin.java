@@ -86,6 +86,7 @@ public class InatPlugin extends CytoscapePlugin {
 	private ShapesLegend legendShapes;
 	private ColorsLegend legendColors;
 	public static final String TAB_NAME = "ANIMO";
+	public static int TAB_INDEX = 0;
 	private ColorsListener colorsListener = null;
 	private ShapesListener shapesListener = null;
 
@@ -101,6 +102,7 @@ public class InatPlugin extends CytoscapePlugin {
 
 			CytoPanel p = Cytoscape.getDesktop().getCytoPanel(SwingConstants.WEST);
 			p.add(TAB_NAME, this.setupPanel(this));
+			TAB_INDEX = p.getCytoPanelComponentCount() - 1; //We assume that the component was added at the end
 			
 			INATPropertyChangeListener pcl = new INATPropertyChangeListener(legendColors, legendShapes);
 			final PropertyChangeSupport pcs = Cytoscape.getPropertyChangeSupport();
@@ -498,6 +500,8 @@ public class InatPlugin extends CytoscapePlugin {
 				});
 				verifytaPanel.add(changeLocation, BorderLayout.EAST);
 				content.add(new LabelledField("UPPAAL verifyta location", verifytaPanel), new GridBagConstraints(0, 0, 1, 1, 1.0, 0.5, GridBagConstraints.CENTER, GridBagConstraints.BOTH, new Insets(0, 0, 0, 0), 0, 0));
+				
+				
 				final String useUncertaintyTitle = "Use uncertainty value (in %): ",
 							 noUncertaintyTitle = "Uncertainty is 0";
 				final JCheckBox useUncertainty = new JCheckBox(useUncertaintyTitle);
@@ -532,6 +536,31 @@ public class InatPlugin extends CytoscapePlugin {
 				uncertaintyPanel.add(useUncertainty);
 				uncertaintyPanel.add(uncertainty);
 				content.add(new LabelledField("Reaction parameters uncertainty", uncertaintyPanel), new GridBagConstraints(0, 1, 1, 1, 1.0, 0.5, GridBagConstraints.CENTER, GridBagConstraints.BOTH, new Insets(0, 0, 0, 0), 0, 0));
+				
+				
+				final String reactionCenteredTitle = "Reaction-centered model",
+							 reactantCenteredTitle = "Reactant-centered model";
+				final JRadioButton useReactionCentered = new JRadioButton(reactionCenteredTitle),
+								   useReactantCentered = new JRadioButton(reactantCenteredTitle);
+				useReactionCentered.setToolTipText("Advised when the network is not reaction-heavy");
+				useReactantCentered.setToolTipText("Advised when the network is reaction-heavy (experimental, uses more memory)");
+				final ButtonGroup reactionCenteredGroup = new ButtonGroup();
+				reactionCenteredGroup.add(useReactionCentered);
+				reactionCenteredGroup.add(useReactantCentered);
+				Boolean reactionCent = true;
+				try {
+					reactionCent = new Boolean(configuration.get(XmlConfiguration.REACTION_CENTERED_KEY));
+				} catch (Exception ex) {
+					reactionCent = true;
+				}
+				useReactionCentered.setSelected(reactionCent);
+				useReactantCentered.setSelected(!reactionCent);
+				JPanel reactionCenteredPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+				reactionCenteredPanel.add(useReactionCentered);
+				reactionCenteredPanel.add(useReactantCentered);
+				content.add(new LabelledField("Model type", reactionCenteredPanel), new GridBagConstraints(0, 2, 1, 1, 1.0, 0.5, GridBagConstraints.CENTER, GridBagConstraints.BOTH, new Insets(0, 0, 0, 0), 0, 0));
+				
+				
 				JPanel buttonsPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
 				JButton okButton = new JButton("OK"),
 						cancelButton = new JButton("Cancel");
@@ -548,6 +577,11 @@ public class InatPlugin extends CytoscapePlugin {
 							uncertaintyValue = "0";
 						}
 						configuration.set(XmlConfiguration.UNCERTAINTY_KEY, uncertaintyValue);
+						String useReactionCenteredValue = Boolean.TRUE.toString();
+						if (useReactantCentered.isSelected()) {
+							useReactionCenteredValue = Boolean.FALSE.toString();
+						}
+						configuration.set(XmlConfiguration.REACTION_CENTERED_KEY, useReactionCenteredValue);
 						try {
 							configuration.writeConfigFile();
 						} catch (Exception ex) {

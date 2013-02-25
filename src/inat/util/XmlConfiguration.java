@@ -64,6 +64,10 @@ public class XmlConfiguration {
 	public static final String UNCERTAINTY_KEY = "/ANIMO/Uncertainty";
 	private static final String DEFAULT_UNCERTAINTY = "5";
 	
+	//Whether we use a reaction-centered model (default). The alternative is reactant-centered.
+	public static final String REACTION_CENTERED_KEY = "/ANIMO/ReactionCenteredModel";
+	private static final String DEFAULT_REACTION_CENTERED = Boolean.TRUE.toString();
+	
 	/**
 	 * The document that backs this configuration.
 	 */
@@ -105,6 +109,12 @@ public class XmlConfiguration {
 			sourceConfig.put(UNCERTAINTY_KEY, v);
 		} else {
 			sourceConfig.put(UNCERTAINTY_KEY, DEFAULT_UNCERTAINTY);
+		}
+		v = this.get(REACTION_CENTERED_KEY, null);
+		if (v != null) {
+			sourceConfig.put(REACTION_CENTERED_KEY, v);
+		} else {
+			sourceConfig.put(REACTION_CENTERED_KEY, DEFAULT_REACTION_CENTERED);
 		}
 		try {
 			writeConfigFile();
@@ -148,6 +158,8 @@ public class XmlConfiguration {
 		
 		sourceConfig.put(UNCERTAINTY_KEY, DEFAULT_UNCERTAINTY);
 		
+		sourceConfig.put(REACTION_CENTERED_KEY, DEFAULT_REACTION_CENTERED);
+		
 		writeConfigFile(configuration);
 	}
 	
@@ -187,6 +199,10 @@ public class XmlConfiguration {
 		Element uncertaintyNode = document.createElement("Uncertainty");
 		uncertaintyNode.appendChild(document.createTextNode(sourceConfig.get(UNCERTAINTY_KEY)));
 		rootElement.appendChild(uncertaintyNode);
+		
+		Element reactionCenteredNode = document.createElement("ReactionCenteredModel");
+		reactionCenteredNode.appendChild(document.createTextNode(sourceConfig.get(REACTION_CENTERED_KEY)));
+		rootElement.appendChild(reactionCenteredNode);
 		
 		TransformerFactory transformerFactory = TransformerFactory.newInstance();
 		Transformer transformer = transformerFactory.newTransformer();

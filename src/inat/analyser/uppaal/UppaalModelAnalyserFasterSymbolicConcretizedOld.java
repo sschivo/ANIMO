@@ -77,7 +77,15 @@ public class UppaalModelAnalyserFasterSymbolicConcretizedOld implements ModelAna
 	public SMCResult analyzeSMC(Model m, String probabilisticQuery) throws AnalysisException {
 		SMCResult result = null;
 		try {
-			final String uppaalModel = new VariablesModelSMC().transform(m);
+			final VariablesModel variablesModel;
+			XmlConfiguration configuration = InatBackend.get().configuration();
+			String reactionCentered = configuration.get(XmlConfiguration.REACTION_CENTERED_KEY, null);
+			if (reactionCentered == null || new Boolean(reactionCentered)) {
+				variablesModel = new VariablesModelSMC(); //Reaction-centered model
+			} else {
+				variablesModel = new VariablesModelReactantCentered(); //Reactant-centered model
+			}
+			final String uppaalModel = variablesModel.transform(m);
 			
 			File modelFile = File.createTempFile("ANIMO", ".xml");
 			final String prefix = modelFile.getAbsolutePath().replace(".xml", "");
@@ -223,7 +231,15 @@ public class UppaalModelAnalyserFasterSymbolicConcretizedOld implements ModelAna
 	public LevelResult analyze(final Model m, final int timeTo) throws AnalysisException {
 		LevelResult result = null;
 		try {
-			final String uppaalModel = new VariablesModelSMC().transform(m);
+			final VariablesModel variablesModel;
+			XmlConfiguration configuration = InatBackend.get().configuration();
+			String reactionCentered = configuration.get(XmlConfiguration.REACTION_CENTERED_KEY, null);
+			if (reactionCentered == null || new Boolean(reactionCentered)) {
+				variablesModel = new VariablesModelSMC(); //Reaction-centered model
+			} else {
+				variablesModel = new VariablesModelReactantCentered(); //Reactant-centered model
+			}
+			final String uppaalModel = variablesModel.transform(m);
 			final String uppaalQuery = "E<> (globalTime > " + timeTo + ")";
 			
 			File modelFile = File.createTempFile("ANIMO", ".xml");

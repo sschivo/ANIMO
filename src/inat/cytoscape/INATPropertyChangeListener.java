@@ -603,6 +603,9 @@ public class INATPropertyChangeListener implements PropertyChangeListener {
 						return;
 					}
 				} else if (e.getClickCount() == 1) {
+					if (Cytoscape.getDesktop().getCytoPanel(SwingConstants.WEST).getSelectedIndex() != InatPlugin.TAB_INDEX) {
+						return;
+					}
 					if (drawingEdge) { //Ctrl is not important, we just make sure that there was only one click
 						DGraphView view = (DGraphView)Cytoscape.getCurrentNetworkView();
 						NodeView nv = view.getPickedNodeView(e.getPoint());
@@ -719,6 +722,7 @@ public class INATPropertyChangeListener implements PropertyChangeListener {
 					edgesArray = newEdges.toArray();
 				} else if (newEdgeNumber < currentEdgeNumber) {
 					//JOptionPane.showMessageDialog(null, "Arco rimosso");
+					edgesArray = network.edgesList().toArray();
 				}
 				if (newNodeNumber > currentNodeNumber) {
 					network.getSelectedNodes();
