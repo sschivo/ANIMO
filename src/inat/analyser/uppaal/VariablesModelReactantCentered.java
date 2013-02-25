@@ -78,7 +78,8 @@ public class VariablesModelReactantCentered extends VariablesModel {
 		out.append(newLine);
 		out.append("const double zero = {0, 0};");
 		out.append(newLine);
-		out.append("const double INFINITE_TIME_DOUBLE = {-100, -2}; //INFINITE_TIME translated into double");
+		/*out.append("const double INFINITE_TIME_DOUBLE = {-100, -2}; //INFINITE_TIME translated into double");*/
+		out.append("const double INFINITE_TIME_DOUBLE = {-1000, -3}; //INFINITE_TIME translated into double");
 		out.append(newLine);
 		out.append(newLine);
 		out.append("typedef int[-1, 1073741822] time_t;"); //The type for time values
@@ -99,7 +100,7 @@ public class VariablesModelReactantCentered extends VariablesModel {
 		}
 		out.append(newLine);
 		out.append(newLine);
-		out.append("double subtract(double a, double b) { // a - b"); // Subtraction
+/*		out.append("double subtract(double a, double b) { // a - b"); // Subtraction
 		out.append(newLine);
 		out.append("\tdouble r = {-100, -100};");
 		out.append(newLine);
@@ -387,6 +388,375 @@ public class VariablesModelReactantCentered extends VariablesModel {
 		out.append("\t\t}");
 		out.append(newLine);
 		out.append("\t}");
+		out.append(newLine);
+		out.append("\treturn a.b * pow(10, a.e);");
+		out.append(newLine);
+		out.append("}");
+		out.append(newLine);*/
+		
+		out.append("double subtract(double a, double b) { // a - b"); // Subtraction
+		out.append(newLine);
+		out.append("\tdouble r = {-1000, -1000};");
+		out.append(newLine);
+		out.append("\tif (a.b == 0) {");
+		out.append(newLine);
+		out.append("\t\tr.b = -b.b;");
+		out.append(newLine);
+		out.append("\t\tr.e = b.e;");
+		out.append(newLine);
+		out.append("\t\treturn r;");
+		out.append(newLine);
+		out.append("\t}");
+		out.append(newLine);
+		out.append("\tif (b.b == 0) {");
+		out.append(newLine);
+		out.append("\t\treturn a;");
+		out.append(newLine);
+		out.append("\t}");
+		out.append(newLine);
+		out.append("\tif ((a.e - b.e) &gt;= 4) return a;");
+		out.append(newLine);
+		out.append("\tif ((b.e - a.e) &gt;= 4) {");
+		out.append(newLine);
+		out.append("\t\tr.b = -b.b;");
+		out.append(newLine);
+		out.append("\t\tr.e = b.e;");
+		out.append(newLine);
+		out.append("\t\treturn r;");
+		out.append(newLine);
+		out.append("\t}");
+		out.append(newLine);
+		out.append("\tif (a.e == b.e) {");
+		out.append(newLine);
+		out.append("\t\tr.b = a.b - b.b;");
+		out.append(newLine);
+		out.append("\t\tr.e = a.e;");
+		out.append(newLine);
+		out.append("\t}");
+		out.append(newLine);
+		out.append("\tif (a.e - b.e == 1) {");
+		out.append(newLine);
+		out.append("\t\tr.b = a.b - b.b/10;");
+		out.append(newLine);
+		out.append("\t\tr.e = a.e;");
+		out.append(newLine);
+		out.append("\t}");
+		out.append(newLine);
+		out.append("\tif (a.e - b.e == 2) {");
+		out.append(newLine);
+		out.append("\t\tr.b = a.b - b.b/100;");
+		out.append(newLine);
+		out.append("\t\tr.e = a.e;");
+		out.append(newLine);
+		out.append("\t}");
+		out.append(newLine);
+		out.append("    if (a.e - b.e == 3) {");
+		out.append(newLine);
+		out.append("        r.b = a.b - b.b/1000;");
+		out.append(newLine);
+		out.append("        r.e = a.e;");
+		out.append(newLine);
+		out.append("    }");
+		out.append(newLine);
+		out.append("\tif (b.e - a.e == 1) {");
+		out.append(newLine);
+		out.append("\t\tr.b = a.b/10 - b.b;");
+		out.append(newLine);
+		out.append("\t\tr.e = b.e;");
+		out.append(newLine);
+		out.append("\t}");
+		out.append(newLine);
+		out.append("\tif (b.e - a.e == 2) {");
+		out.append(newLine);
+		out.append("\t\tr.b = a.b/100 - b.b;");
+		out.append(newLine);
+		out.append("\t\tr.e = b.e;");
+		out.append(newLine);
+		out.append("\t}");
+		out.append(newLine);
+		out.append("    if (b.e - a.e == 3) {");
+		out.append(newLine);
+		out.append("        r.b = a.b/1000 - b.b;");
+		out.append(newLine);
+		out.append("        r.e = b.e;");
+		out.append(newLine);
+		out.append("    }");
+		out.append(newLine);
+		out.append("\tif ((r.b &gt; 0 &amp;&amp; r.b &lt; 10) || (r.b &lt; 0 &amp;&amp; r.b &gt; -10)) {");
+		out.append(newLine);
+		out.append("\t\tr.b = r.b * 1000;");
+		out.append(newLine);
+		out.append("\t\tr.e = r.e - 3;");
+		out.append(newLine);
+		out.append("\t} else if ((r.b &gt; 0 &amp;&amp; r.b &lt; 100) || (r.b &lt; 0 &amp;&amp; r.b &gt; -100)) {");
+		out.append(newLine);
+		out.append("\t\tr.b = r.b * 100;");
+		out.append(newLine);
+		out.append("\t\tr.e = r.e - 2;");
+		out.append(newLine);
+		out.append("\t} else if ((r.b &gt; 0 &amp;&amp; r.b &lt; 1000) || (r.b &lt; 0 &amp;&amp; r.b &gt; -1000)) {");
+		out.append(newLine);
+		out.append("        r.b = r.b * 10;");
+		out.append(newLine);
+		out.append("        r.e = r.e - 1;");
+		out.append(newLine);
+		out.append("    }");
+		out.append(newLine);
+		out.append("\treturn r;");
+		out.append(newLine);
+		out.append("}");
+		out.append(newLine);
+		out.append("");
+		out.append(newLine);
+		out.append("double add(double a, double b) { // a + b"); // Addition
+		out.append(newLine);
+		out.append("\tdouble r = {-1000,-1000};");
+		out.append(newLine);
+		out.append("\tif (a.b == 0) {");
+		out.append(newLine);
+		out.append("\t\treturn b;");
+		out.append(newLine);
+		out.append("\t}");
+		out.append(newLine);
+		out.append("\tif (b.b == 0) {");
+		out.append(newLine);
+		out.append("\t\treturn a;");
+		out.append(newLine);
+		out.append("\t}");
+		out.append(newLine);
+		out.append("\tif ((a.e - b.e) &gt;= 4) return a;");
+		out.append(newLine);
+		out.append("\tif ((b.e - a.e) &gt;= 4) return b;");
+		out.append(newLine);
+		out.append("\tif (a.e == b.e) {");
+		out.append(newLine);
+		out.append("\t\tr.b = a.b + b.b;");
+		out.append(newLine);
+		out.append("\t\tr.e = a.e;");
+		out.append(newLine);
+		out.append("\t}");
+		out.append(newLine);
+		out.append("\tif (a.e - b.e == 1) {");
+		out.append(newLine);
+		out.append("\t\tr.b = a.b + b.b/10;");
+		out.append(newLine);
+		out.append("\t\tr.e = a.e;");
+		out.append(newLine);
+		out.append("\t}");
+		out.append(newLine);
+		out.append("\tif (a.e - b.e == 2) {");
+		out.append(newLine);
+		out.append("\t\tr.b = a.b + b.b/100;");
+		out.append(newLine);
+		out.append("\t\tr.e = a.e;");
+		out.append(newLine);
+		out.append("\t}");
+		out.append(newLine);
+		out.append("    if (a.e - b.e == 3) {");
+		out.append(newLine);
+		out.append("        r.b = a.b + b.b/1000;");
+		out.append(newLine);
+		out.append("        r.e = a.e;");
+		out.append(newLine);
+		out.append("    }");
+		out.append(newLine);
+		out.append("\tif (b.e - a.e == 1) {");
+		out.append(newLine);
+		out.append("\t\tr.b = a.b/10 + b.b;");
+		out.append(newLine);
+		out.append("\t\tr.e = b.e;");
+		out.append(newLine);
+		out.append("\t}");
+		out.append(newLine);
+		out.append("\tif (b.e - a.e == 2) {");
+		out.append(newLine);
+		out.append("\t\tr.b = a.b/100 + b.b;");
+		out.append(newLine);
+		out.append("\t\tr.e = b.e;");
+		out.append(newLine);
+		out.append("\t}");
+		out.append(newLine);
+		out.append("    if (b.e - a.e == 3) {");
+		out.append(newLine);
+		out.append("        r.b = a.b/1000 + b.b;");
+		out.append(newLine);
+		out.append("        r.e = b.e;");
+		out.append(newLine);
+		out.append("    }");
+		out.append(newLine);
+		out.append("\tif ((r.b &gt; 0 &amp;&amp; r.b &lt; 10) || (r.b &lt; 0 &amp;&amp; r.b &gt; -10)) {");
+		out.append(newLine);
+		out.append("\t\tr.b = r.b * 1000;");
+		out.append(newLine);
+		out.append("\t\tr.e = r.e - 3;");
+		out.append(newLine);
+		out.append("\t} else if ((r.b &gt; 0 &amp;&amp; r.b &lt; 100) || (r.b &lt; 0 &amp;&amp; r.b &gt; -100)) {");
+		out.append(newLine);
+		out.append("\t\tr.b = r.b * 100;");
+		out.append(newLine);
+		out.append("\t\tr.e = r.e - 2;");
+		out.append(newLine);
+		out.append("\t} else if ((r.b &gt; 0 &amp;&amp; r.b &lt; 1000) || (r.b &lt; 0 &amp;&amp; r.b &gt; -1000)) {");
+		out.append(newLine);
+		out.append("        r.b = r.b * 10;");
+		out.append(newLine);
+		out.append("        r.e = r.e - 1;");
+		out.append(newLine);
+		out.append("    }");
+		out.append(newLine);
+		out.append("\treturn r;");
+		out.append(newLine);
+		out.append("}");
+		out.append(newLine);
+		out.append("");
+		out.append(newLine);
+		out.append("double multiply(double a, double b) { // a * b"); // Multiplication
+		out.append(newLine);
+		out.append("\tdouble r;");
+		out.append(newLine);
+		out.append("\tr.b = a.b * b.b;");
+		out.append(newLine);
+		out.append("\tif (r.b % 1000 &lt; 500) {");
+		out.append(newLine);
+		out.append("\t\tr.b = r.b / 1000;");
+		out.append(newLine);
+		out.append("\t} else {");
+		out.append(newLine);
+		out.append("\t\tr.b = 1 + r.b / 1000;");
+		out.append(newLine);
+		out.append("\t}");
+		out.append(newLine);
+		out.append("\tr.e = a.e + b.e + 3;");
+		out.append(newLine);
+		out.append("\tif ((r.b &gt; 0 &amp;&amp; r.b &lt; 10) || (r.b &lt; 0 &amp;&amp; r.b &gt; -10)) {");
+		out.append(newLine);
+		out.append("\t\tr.b = r.b * 1000;");
+		out.append(newLine);
+		out.append("\t\tr.e = r.e - 3;");
+		out.append(newLine);
+		out.append("\t} else if ((r.b &gt; 0 &amp;&amp; r.b &lt; 100) || (r.b &lt; 0 &amp;&amp; r.b &gt; -100)) {");
+		out.append(newLine);
+		out.append("\t\tr.b = r.b * 100;");
+		out.append(newLine);
+		out.append("\t\tr.e = r.e - 2;");
+		out.append(newLine);
+		out.append("\t} else if ((r.b &gt; 0 &amp;&amp; r.b &lt; 1000) || (r.b &lt; 0 &amp;&amp; r.b &gt; -1000)) {");
+		out.append(newLine);
+		out.append("        r.b = r.b * 10;");
+		out.append(newLine);
+		out.append("        r.e = r.e - 1;");
+		out.append(newLine);
+		out.append("    }");
+		out.append(newLine);
+		out.append("\treturn r;");
+		out.append(newLine);
+		out.append("}");
+		out.append(newLine);
+		out.append("");
+		out.append(newLine);
+		out.append("double inverse(double a) { // 1 / a"); // Inverse
+		out.append(newLine);
+		out.append("\tdouble r;");
+		out.append(newLine);
+		out.append("\tif (a.b == 0) {");
+		out.append(newLine);
+		out.append("\t\treturn INFINITE_TIME_DOUBLE;");
+		out.append(newLine);
+		out.append("\t}");
+		out.append(newLine);
+		out.append("\tr.b = 1000000 / a.b;");
+		out.append(newLine);
+		out.append("\tr.e = -6 - a.e;");
+		out.append(newLine);
+		out.append("\tif ((r.b &gt; 0 &amp;&amp; r.b &lt; 10) || (r.b &lt; 0 &amp;&amp; r.b &gt; -10)) {");
+		out.append(newLine);
+		out.append("\t\tr.b = r.b * 1000;");
+		out.append(newLine);
+		out.append("\t\tr.e = r.e - 3;");
+		out.append(newLine);
+		out.append("\t} else if ((r.b &gt; 0 &amp;&amp; r.b &lt; 100) || (r.b &lt; 0 &amp;&amp; r.b &gt; -100)) {");
+		out.append(newLine);
+		out.append("\t\tr.b = r.b * 100;");
+		out.append(newLine);
+		out.append("\t\tr.e = r.e - 2;");
+		out.append(newLine);
+		out.append("\t} else if ((r.b &gt; 0 &amp;&amp; r.b &lt; 1000) || (r.b &lt; 0 &amp;&amp; r.b &gt; -1000)) {");
+		out.append(newLine);
+		out.append("        r.b = r.b * 10;");
+		out.append(newLine);
+		out.append("        r.e = r.e - 1;");
+		out.append(newLine);
+		out.append("    }");
+		out.append(newLine);
+		out.append("\treturn r;");
+		out.append(newLine);
+		out.append("}");
+		out.append(newLine);
+		out.append("");
+		out.append(newLine);
+		out.append("time_t pow(int a, int b) { // a ^ b (b &gt;= 0)"); // Integer power
+		out.append(newLine);
+		out.append("\ttime_t r = 1;");
+		out.append(newLine);
+		out.append("\twhile (b &gt; 0) {");
+		out.append(newLine);
+		out.append("\t\tr = r * a;");
+		out.append(newLine);
+		out.append("\t\tb = b - 1;");
+		out.append(newLine);
+		out.append("\t}");
+		out.append(newLine);
+		out.append("\treturn r;");
+		out.append(newLine);
+		out.append("}");
+		out.append(newLine);
+		out.append("");
+		out.append(newLine);
+		out.append("time_t round(double a) { // double --&gt; integer"); // Round
+		out.append(newLine);
+		out.append("\tif (a.e &lt; -3) return 0;");
+		out.append(newLine);
+		out.append("\tif (a.e == -1) {");
+		out.append(newLine);
+		out.append("\t\tif (a.b % 10 &lt; 5) {");
+		out.append(newLine);
+		out.append("\t\t	return a.b / 10;");
+		out.append(newLine);
+		out.append("\t\t} else {");
+		out.append(newLine);
+		out.append("\t\t	return 1 + a.b / 10;");
+		out.append(newLine);
+		out.append("\t\t}");
+		out.append(newLine);
+		out.append("\t}");
+		out.append(newLine);
+		out.append("\tif (a.e == -2) {");
+		out.append(newLine);
+		out.append("\t\tif (a.b % 100 &lt; 50) {");
+		out.append(newLine);
+		out.append("\t\t	return a.b / 100;");
+		out.append(newLine);
+		out.append("\t\t} else {");
+		out.append(newLine);
+		out.append("\t\t	return 1 + a.b / 100;");
+		out.append(newLine);
+		out.append("\t\t}");
+		out.append(newLine);
+		out.append("\t}");
+		out.append(newLine);
+		out.append("    if (a.e == -3) {");
+		out.append(newLine);
+		out.append("        if (a.b % 1000 &lt; 500) {");
+		out.append(newLine);
+		out.append("            return a.b / 1000;");
+		out.append(newLine);
+		out.append("        } else {");
+		out.append(newLine);
+		out.append("            return 1 + a.b / 1000;");
+		out.append(newLine);
+		out.append("        }");
+		out.append(newLine);
+		out.append("    }");
 		out.append(newLine);
 		out.append("\treturn a.b * pow(10, a.e);");
 		out.append(newLine);
@@ -833,7 +1203,7 @@ public class VariablesModelReactantCentered extends VariablesModel {
 					}
 				}
 				template.append("\tif (rateUpper.b &lt; 0) { //Plese note: the smaller rate is the \"upper\" one, which corresponds to the largest value for time\n\t\tdelta = -1;\n\t\trateLower.b = -rateLower.b;\n\t\trateUpper.b = -rateUpper.b;\n\t} else {\n\t\tdelta = 1;\n\t}\n\tif (rateLower.b != 0) {\n\t\ttL = round(inverse(rateLower));\n\t} else {\n\t\ttL = INFINITE_TIME;\n\t}\n\tif (rateUpper.b != 0) {\n\t\ttU = round(inverse(rateUpper));\n\t} else {\n\t\ttU = INFINITE_TIME;\n\t}\n\tif (tL != INFINITE_TIME &amp;&amp; tU != INFINITE_TIME &amp;&amp; tL &gt; tU) { //We use rounded things: maybe the difference between tL and tU was not so great, and with some rounding problems we could have this case\n\t\ttL = tU;\n\t}\n}\n\nvoid react() {\n\tif (0 &lt;= R + delta &amp;&amp; R + delta &lt;= MAX) {\n\t\tR = R + delta;\n\t}\n\tupdate();\n}\n\nbool can_react() {\n\treturn tL != INFINITE_TIME &amp;&amp; tL != 0 &amp;&amp; tU != 0 &amp;&amp; ((delta &gt; 0 &amp;&amp; R &lt; MAX) || (delta &lt; 0 &amp;&amp; R &gt; 0));\n}\n\nbool cant_react() {\n\treturn tL == INFINITE_TIME || tL == 0 || tU == 0 || (delta &gt; 0 &amp;&amp; R == MAX) || (delta &lt; 0 &amp;&amp; R == 0);\n}</declaration>");
-				template.append("<location id=\"id6\" x=\"-1256\" y=\"-728\"><name x=\"-1248\" y=\"-752\">start</name><committed/></location><location id=\"id7\" x=\"-1552\" y=\"-856\"><name x=\"-1656\" y=\"-872\">not_reacting</name></location><location id=\"id8\" x=\"-1416\" y=\"-728\"><name x=\"-1400\" y=\"-752\">updating</name><committed/></location><location id=\"id9\" x=\"-1664\" y=\"-728\"><name x=\"-1728\" y=\"-744\">waiting</name><label kind=\"invariant\" x=\"-1728\" y=\"-720\">c &lt;= tU\n|| tU ==\nINFINITE_TIME</label></location><init ref=\"id6\"/><transition><source ref=\"id6\"/><target ref=\"id8\"/><label kind=\"assignment\" x=\"-1344\" y=\"-728\">update()</label></transition>");
+				template.append("<location id=\"id0\" x=\"-1896\" y=\"-728\"><name x=\"-1960\" y=\"-752\">stubborn</name><committed/></location><location id=\"id6\" x=\"-1256\" y=\"-728\"><name x=\"-1248\" y=\"-752\">start</name><committed/></location><location id=\"id7\" x=\"-1552\" y=\"-856\"><name x=\"-1656\" y=\"-872\">not_reacting</name></location><location id=\"id8\" x=\"-1416\" y=\"-728\"><name x=\"-1400\" y=\"-752\">updating</name><committed/></location><location id=\"id9\" x=\"-1664\" y=\"-728\"><name x=\"-1728\" y=\"-744\">waiting</name><label kind=\"invariant\" x=\"-1728\" y=\"-720\">c &lt;= tU\n|| tU ==\nINFINITE_TIME</label></location><init ref=\"id6\"/><transition><source ref=\"id0\"/><target ref=\"id8\"/><label kind=\"guard\" x=\"-1816\" y=\"-632\">c &lt; tL</label><label kind=\"assignment\" x=\"-1816\" y=\"-616\">update()</label><nail x=\"-1848\" y=\"-616\"/><nail x=\"-1464\" y=\"-616\"/></transition><transition><source ref=\"id0\"/><target ref=\"id9\"/><label kind=\"guard\" x=\"-1816\" y=\"-680\">c &gt;= tL</label><nail x=\"-1840\" y=\"-664\"/><nail x=\"-1744\" y=\"-664\"/></transition><transition><source ref=\"id6\"/><target ref=\"id8\"/><label kind=\"assignment\" x=\"-1344\" y=\"-728\">update()</label></transition>");
 				int y1 = -904,
 					y2 = -888,
 					y3 = -848,
@@ -872,11 +1242,11 @@ public class VariablesModelReactantCentered extends VariablesModel {
 					}
 				}
 				template.append("<transition><source ref=\"id8\"/><target ref=\"id7\"/><label kind=\"guard\" x=\"-1512\" y=\"-840\">cant_react()</label><nail x=\"-1416\" y=\"-824\"/><nail x=\"-1552\" y=\"-824\"/></transition><transition><source ref=\"id8\"/><target ref=\"id9\"/><label kind=\"guard\" x=\"-1584\" y=\"-744\">can_react()</label><label kind=\"assignment\" x=\"-1568\" y=\"-728\">c := 0</label></transition><transition><source ref=\"id9\"/><target ref=\"id8\"/><label kind=\"guard\" x=\"-1576\" y=\"-808\">c &gt;= tL</label><label kind=\"synchronisation\" x=\"-1584\" y=\"-792\">reacting[" + r.get(REACTANT_INDEX).as(Integer.class) + "]!</label><label kind=\"assignment\" x=\"-1568\" y=\"-776\">react()</label><nail x=\"-1632\" y=\"-776\"/><nail x=\"-1464\" y=\"-776\"/></transition>");
-				y1 = -696;
-				y2 = -680;
-				incrY = 48;
+				y1 = -744;
+				y2 = -728;
+				incrY = -48;
 				alreadyOutputReactants = new Vector<Reactant>(); //Keep trace of which reactants already have a transition for them, because otherwise we get input nondeterminism
-				for (Reaction re : influencingReactions) { //Transitions from waiting to updating
+				for (Reaction re : influencingReactions) { //Transitions from waiting to stubborn
 					int scenario = re.get(SCENARIO).as(Integer.class);
 					Reactant catalyst = m.getReactant(re.get(CATALYST).as(String.class)),
 							 reactant = m.getReactant(re.get(REACTANT).as(String.class)); //This is not null only when scenario != 0
@@ -884,7 +1254,7 @@ public class VariablesModelReactantCentered extends VariablesModel {
 						case 0:
 							if (catalyst.get(REACTANT_INDEX).as(Integer.class) != r.get(REACTANT_INDEX).as(Integer.class) && !alreadyOutputReactants.contains(catalyst)) {
 								alreadyOutputReactants.add(catalyst);
-								template.append("<transition><source ref=\"id9\"/><target ref=\"id8\"/><label kind=\"synchronisation\" x=\"-1584\" y=\"" + y1 + "\">reacting[" + m.getReactant(re.get(CATALYST).as(String.class)).get(REACTANT_INDEX).as(Integer.class) + "]?</label><label kind=\"assignment\" x=\"-1576\" y=\"" + y2 + "\">update()</label><nail x=\"-1592\" y=\"" + y2 + "\"/><nail x=\"-1496\" y=\"" + y2 + "\"/></transition>");
+								template.append("<transition><source ref=\"id9\"/><target ref=\"id0\"/><label kind=\"synchronisation\" x=\"-1832\" y=\"" + y1 + "\">reacting[" + m.getReactant(re.get(CATALYST).as(String.class)).get(REACTANT_INDEX).as(Integer.class) + "]?</label><nail x=\"-1752\" y=\"" + y2 + "\"/><nail x=\"-1840\" y=\"" + y2 + "\"/></transition>");
 								y1 += incrY;
 								y2 += incrY;
 							}
@@ -893,13 +1263,13 @@ public class VariablesModelReactantCentered extends VariablesModel {
 						case 2: //In this case, CATALYST = E1, REACTANT = E2 (the two upstream reactants)
 							if (catalyst.get(REACTANT_INDEX).as(Integer.class) != r.get(REACTANT_INDEX).as(Integer.class) && !alreadyOutputReactants.contains(catalyst)) {
 								alreadyOutputReactants.add(catalyst);
-								template.append("<transition><source ref=\"id9\"/><target ref=\"id8\"/><label kind=\"synchronisation\" x=\"-1584\" y=\"" + y1 + "\">reacting[" + m.getReactant(re.get(CATALYST).as(String.class)).get(REACTANT_INDEX).as(Integer.class) + "]?</label><label kind=\"assignment\" x=\"-1576\" y=\"" + y2 + "\">update()</label><nail x=\"-1592\" y=\"" + y2 + "\"/><nail x=\"-1496\" y=\"" + y2 + "\"/></transition>");
+								template.append("<transition><source ref=\"id9\"/><target ref=\"id0\"/><label kind=\"synchronisation\" x=\"-1832\" y=\"" + y1 + "\">reacting[" + m.getReactant(re.get(CATALYST).as(String.class)).get(REACTANT_INDEX).as(Integer.class) + "]?</label><nail x=\"-1752\" y=\"" + y2 + "\"/><nail x=\"-1840\" y=\"" + y2 + "\"/></transition>");
 								y1 += incrY;
 								y2 += incrY;
 							}
 							if (reactant.get(REACTANT_INDEX).as(Integer.class) != r.get(REACTANT_INDEX).as(Integer.class) && !alreadyOutputReactants.contains(reactant)) {
 								alreadyOutputReactants.add(reactant);
-								template.append("<transition><source ref=\"id9\"/><target ref=\"id8\"/><label kind=\"synchronisation\" x=\"-1584\" y=\"" + y1 + "\">reacting[" + m.getReactant(re.get(REACTANT).as(String.class)).get(REACTANT_INDEX).as(Integer.class) + "]?</label><label kind=\"assignment\" x=\"-1576\" y=\"" + y2 + "\">update()</label><nail x=\"-1592\" y=\"" + y2 + "\"/><nail x=\"-1496\" y=\"" + y2 + "\"/></transition>");
+								template.append("<transition><source ref=\"id9\"/><target ref=\"id0\"/><label kind=\"synchronisation\" x=\"-1832\" y=\"" + y1 + "\">reacting[" + m.getReactant(re.get(REACTANT).as(String.class)).get(REACTANT_INDEX).as(Integer.class) + "]?</label><nail x=\"-1752\" y=\"" + y2 + "\"/><nail x=\"-1840\" y=\"" + y2 + "\"/></transition>");
 								y1 += incrY;
 								y2 += incrY;
 							}
@@ -946,17 +1316,38 @@ public class VariablesModelReactantCentered extends VariablesModel {
 		} else {
 			int b, e;
 			double d = 1.0 / time; //time is guaranteed not to be 0, because we use 0 as a signal that rounding is not good enough, and increase time scale
-			e = (int)Math.round(Math.log10(d)) - 2;
+			e = (int)Math.round(Math.log10(d)) - 3;
 			b = (int)Math.round(d * Math.pow(10, -e));
-			if (b < 100) { //We always want 3 figures
-				b = b * 10;
-				e = e - 1;
-			} else if (b < 10) {
+			if (b < 10) { //We always want 4 figures
+				b = b * 1000;
+				e = e - 3;
+			} else if (b < 100) {
 				b = b * 100;
 				e = e - 2;
+			} else if (b < 1000) {
+				b = b * 10;
+				e = e - 1;
 			}
 			return "{" + b + ", " + e + "}";
 		}
 	}
+	/*protected String formatTime(int time) {
+		if (time == INFINITE_TIME) {
+			return "{0, 0}";
+		} else {
+			int b, e;
+			double d = 1.0 / time; //time is guaranteed not to be 0, because we use 0 as a signal that rounding is not good enough, and increase time scale
+			e = (int)Math.round(Math.log10(d)) - 2;
+			b = (int)Math.round(d * Math.pow(10, -e));
+			if (b < 10) { //We always want 3 figures
+				b = b * 100;
+				e = e - 2;
+			} else if (b < 100) {
+				b = b * 10;
+				e = e - 1;
+			}
+			return "{" + b + ", " + e + "}";
+		}
+	}*/
 
 }
