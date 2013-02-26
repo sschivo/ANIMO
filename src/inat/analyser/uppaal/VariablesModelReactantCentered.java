@@ -71,7 +71,9 @@ public class VariablesModelReactantCentered extends VariablesModel {
 		out.append(newLine);
 		out.append("typedef struct {");
 		out.append(newLine);
-		out.append("\tint b, e;");
+		out.append("\tint[-99980001, 99980001] b;"); //99980001 = 9999 * 9999, i.e. the maximum result of a multiplication between two .b of double numbers
+		out.append(newLine);
+		out.append("\tint e;");
 		out.append(newLine);
 		out.append("} double;");
 		out.append(newLine);
@@ -450,13 +452,13 @@ public class VariablesModelReactantCentered extends VariablesModel {
 		out.append(newLine);
 		out.append("\t}");
 		out.append(newLine);
-		out.append("    if (a.e - b.e == 3) {");
+		out.append("\tif (a.e - b.e == 3) {");
 		out.append(newLine);
-		out.append("        r.b = a.b - b.b/1000;");
+		out.append("\t\tr.b = a.b - b.b/1000;");
 		out.append(newLine);
-		out.append("        r.e = a.e;");
+		out.append("\t\tr.e = a.e;");
 		out.append(newLine);
-		out.append("    }");
+		out.append("\t}");
 		out.append(newLine);
 		out.append("\tif (b.e - a.e == 1) {");
 		out.append(newLine);
@@ -474,13 +476,13 @@ public class VariablesModelReactantCentered extends VariablesModel {
 		out.append(newLine);
 		out.append("\t}");
 		out.append(newLine);
-		out.append("    if (b.e - a.e == 3) {");
+		out.append("\tif (b.e - a.e == 3) {");
 		out.append(newLine);
-		out.append("        r.b = a.b/1000 - b.b;");
+		out.append("\t\tr.b = a.b/1000 - b.b;");
 		out.append(newLine);
-		out.append("        r.e = b.e;");
+		out.append("\t\tr.e = b.e;");
 		out.append(newLine);
-		out.append("    }");
+		out.append("\t}");
 		out.append(newLine);
 		out.append("\tif ((r.b &gt; 0 &amp;&amp; r.b &lt; 10) || (r.b &lt; 0 &amp;&amp; r.b &gt; -10)) {");
 		out.append(newLine);
@@ -496,11 +498,11 @@ public class VariablesModelReactantCentered extends VariablesModel {
 		out.append(newLine);
 		out.append("\t} else if ((r.b &gt; 0 &amp;&amp; r.b &lt; 1000) || (r.b &lt; 0 &amp;&amp; r.b &gt; -1000)) {");
 		out.append(newLine);
-		out.append("        r.b = r.b * 10;");
+		out.append("\t\tr.b = r.b * 10;");
 		out.append(newLine);
-		out.append("        r.e = r.e - 1;");
+		out.append("\t\tr.e = r.e - 1;");
 		out.append(newLine);
-		out.append("    }");
+		out.append("\t}");
 		out.append(newLine);
 		out.append("\treturn r;");
 		out.append(newLine);
@@ -552,13 +554,13 @@ public class VariablesModelReactantCentered extends VariablesModel {
 		out.append(newLine);
 		out.append("\t}");
 		out.append(newLine);
-		out.append("    if (a.e - b.e == 3) {");
+		out.append("\tif (a.e - b.e == 3) {");
 		out.append(newLine);
-		out.append("        r.b = a.b + b.b/1000;");
+		out.append("\t\tr.b = a.b + b.b/1000;");
 		out.append(newLine);
-		out.append("        r.e = a.e;");
+		out.append("\t\tr.e = a.e;");
 		out.append(newLine);
-		out.append("    }");
+		out.append("\t}");
 		out.append(newLine);
 		out.append("\tif (b.e - a.e == 1) {");
 		out.append(newLine);
@@ -576,13 +578,13 @@ public class VariablesModelReactantCentered extends VariablesModel {
 		out.append(newLine);
 		out.append("\t}");
 		out.append(newLine);
-		out.append("    if (b.e - a.e == 3) {");
+		out.append("\tif (b.e - a.e == 3) {");
 		out.append(newLine);
-		out.append("        r.b = a.b/1000 + b.b;");
+		out.append("\t\tr.b = a.b/1000 + b.b;");
 		out.append(newLine);
-		out.append("        r.e = b.e;");
+		out.append("\t\tr.e = b.e;");
 		out.append(newLine);
-		out.append("    }");
+		out.append("\t}");
 		out.append(newLine);
 		out.append("\tif ((r.b &gt; 0 &amp;&amp; r.b &lt; 10) || (r.b &lt; 0 &amp;&amp; r.b &gt; -10)) {");
 		out.append(newLine);
@@ -598,11 +600,11 @@ public class VariablesModelReactantCentered extends VariablesModel {
 		out.append(newLine);
 		out.append("\t} else if ((r.b &gt; 0 &amp;&amp; r.b &lt; 1000) || (r.b &lt; 0 &amp;&amp; r.b &gt; -1000)) {");
 		out.append(newLine);
-		out.append("        r.b = r.b * 10;");
+		out.append("\tr.b = r.b * 10;");
 		out.append(newLine);
-		out.append("        r.e = r.e - 1;");
+		out.append("\t\tr.e = r.e - 1;");
 		out.append(newLine);
-		out.append("    }");
+		out.append("\t}");
 		out.append(newLine);
 		out.append("\treturn r;");
 		out.append(newLine);
@@ -642,11 +644,17 @@ public class VariablesModelReactantCentered extends VariablesModel {
 		out.append(newLine);
 		out.append("\t} else if ((r.b &gt; 0 &amp;&amp; r.b &lt; 1000) || (r.b &lt; 0 &amp;&amp; r.b &gt; -1000)) {");
 		out.append(newLine);
-		out.append("        r.b = r.b * 10;");
+		out.append("\t\tr.b = r.b * 10;");
 		out.append(newLine);
-		out.append("        r.e = r.e - 1;");
+		out.append("\t\tr.e = r.e - 1;");
 		out.append(newLine);
-		out.append("    }");
+		out.append("\t} else if (r.b &gt; 9999 || r.b &lt; -9999) {");
+		out.append(newLine);
+        out.append("\t\tr.b = r.b / 10;");
+		out.append(newLine);
+        out.append("\t\tr.e = r.e + 1;");
+		out.append(newLine);
+    	out.append("\t}");
 		out.append(newLine);
 		out.append("\treturn r;");
 		out.append(newLine);
@@ -682,11 +690,11 @@ public class VariablesModelReactantCentered extends VariablesModel {
 		out.append(newLine);
 		out.append("\t} else if ((r.b &gt; 0 &amp;&amp; r.b &lt; 1000) || (r.b &lt; 0 &amp;&amp; r.b &gt; -1000)) {");
 		out.append(newLine);
-		out.append("        r.b = r.b * 10;");
+		out.append("\t\tr.b = r.b * 10;");
 		out.append(newLine);
-		out.append("        r.e = r.e - 1;");
+		out.append("\t\tr.e = r.e - 1;");
 		out.append(newLine);
-		out.append("    }");
+		out.append("\t}");
 		out.append(newLine);
 		out.append("\treturn r;");
 		out.append(newLine);
@@ -714,17 +722,23 @@ public class VariablesModelReactantCentered extends VariablesModel {
 		out.append(newLine);
 		out.append("time_t round(double a) { // double --&gt; integer"); // Round
 		out.append(newLine);
-		out.append("\tif (a.e &lt; -3) return 0;");
+		out.append("\tif (a.e &lt; -3) {");
+		out.append(newLine);
+		out.append("\t\tif (a.b &lt; 5000) return 0;");
+		out.append(newLine);
+		out.append("\t\telse return 1;");
+		out.append(newLine);
+		out.append("\t}");
 		out.append(newLine);
 		out.append("\tif (a.e == -1) {");
 		out.append(newLine);
 		out.append("\t\tif (a.b % 10 &lt; 5) {");
 		out.append(newLine);
-		out.append("\t\t	return a.b / 10;");
+		out.append("\t\t\treturn a.b / 10;");
 		out.append(newLine);
 		out.append("\t\t} else {");
 		out.append(newLine);
-		out.append("\t\t	return 1 + a.b / 10;");
+		out.append("\t\t\treturn 1 + a.b / 10;");
 		out.append(newLine);
 		out.append("\t\t}");
 		out.append(newLine);
@@ -734,29 +748,29 @@ public class VariablesModelReactantCentered extends VariablesModel {
 		out.append(newLine);
 		out.append("\t\tif (a.b % 100 &lt; 50) {");
 		out.append(newLine);
-		out.append("\t\t	return a.b / 100;");
+		out.append("\t\t\treturn a.b / 100;");
 		out.append(newLine);
 		out.append("\t\t} else {");
 		out.append(newLine);
-		out.append("\t\t	return 1 + a.b / 100;");
+		out.append("\t\t\treturn 1 + a.b / 100;");
 		out.append(newLine);
 		out.append("\t\t}");
 		out.append(newLine);
 		out.append("\t}");
 		out.append(newLine);
-		out.append("    if (a.e == -3) {");
+		out.append("\tif (a.e == -3) {");
 		out.append(newLine);
-		out.append("        if (a.b % 1000 &lt; 500) {");
+		out.append("\t\tif (a.b % 1000 &lt; 500) {");
 		out.append(newLine);
-		out.append("            return a.b / 1000;");
+		out.append("\t\t\treturn a.b / 1000;");
 		out.append(newLine);
-		out.append("        } else {");
+		out.append("\t\t} else {");
 		out.append(newLine);
-		out.append("            return 1 + a.b / 1000;");
+		out.append("\t\t\treturn 1 + a.b / 1000;");
 		out.append(newLine);
-		out.append("        }");
+		out.append("\t\t}");
 		out.append(newLine);
-		out.append("    }");
+		out.append("\t}");
 		out.append(newLine);
 		out.append("\treturn a.b * pow(10, a.e);");
 		out.append(newLine);
@@ -1202,8 +1216,8 @@ public class VariablesModelReactantCentered extends VariablesModel {
 						}
 					}
 				}
-				template.append("\tif (rateUpper.b &lt; 0) { //Plese note: the smaller rate is the \"upper\" one, which corresponds to the largest value for time\n\t\tdelta = -1;\n\t\trateLower.b = -rateLower.b;\n\t\trateUpper.b = -rateUpper.b;\n\t} else {\n\t\tdelta = 1;\n\t}\n\tif (rateLower.b != 0) {\n\t\ttL = round(inverse(rateLower));\n\t} else {\n\t\ttL = INFINITE_TIME;\n\t}\n\tif (rateUpper.b != 0) {\n\t\ttU = round(inverse(rateUpper));\n\t} else {\n\t\ttU = INFINITE_TIME;\n\t}\n\tif (tL != INFINITE_TIME &amp;&amp; tU != INFINITE_TIME &amp;&amp; tL &gt; tU) { //We use rounded things: maybe the difference between tL and tU was not so great, and with some rounding problems we could have this case\n\t\ttL = tU;\n\t}\n}\n\nvoid react() {\n\tif (0 &lt;= R + delta &amp;&amp; R + delta &lt;= MAX) {\n\t\tR = R + delta;\n\t}\n\tupdate();\n}\n\nbool can_react() {\n\treturn tL != INFINITE_TIME &amp;&amp; tL != 0 &amp;&amp; tU != 0 &amp;&amp; ((delta &gt; 0 &amp;&amp; R &lt; MAX) || (delta &lt; 0 &amp;&amp; R &gt; 0));\n}\n\nbool cant_react() {\n\treturn tL == INFINITE_TIME || tL == 0 || tU == 0 || (delta &gt; 0 &amp;&amp; R == MAX) || (delta &lt; 0 &amp;&amp; R == 0);\n}</declaration>");
-				template.append("<location id=\"id0\" x=\"-1896\" y=\"-728\"><name x=\"-1960\" y=\"-752\">stubborn</name><committed/></location><location id=\"id6\" x=\"-1256\" y=\"-728\"><name x=\"-1248\" y=\"-752\">start</name><committed/></location><location id=\"id7\" x=\"-1552\" y=\"-856\"><name x=\"-1656\" y=\"-872\">not_reacting</name></location><location id=\"id8\" x=\"-1416\" y=\"-728\"><name x=\"-1400\" y=\"-752\">updating</name><committed/></location><location id=\"id9\" x=\"-1664\" y=\"-728\"><name x=\"-1728\" y=\"-744\">waiting</name><label kind=\"invariant\" x=\"-1728\" y=\"-720\">c &lt;= tU\n|| tU ==\nINFINITE_TIME</label></location><init ref=\"id6\"/><transition><source ref=\"id0\"/><target ref=\"id8\"/><label kind=\"guard\" x=\"-1816\" y=\"-632\">c &lt; tL</label><label kind=\"assignment\" x=\"-1816\" y=\"-616\">update()</label><nail x=\"-1848\" y=\"-616\"/><nail x=\"-1464\" y=\"-616\"/></transition><transition><source ref=\"id0\"/><target ref=\"id9\"/><label kind=\"guard\" x=\"-1816\" y=\"-680\">c &gt;= tL</label><nail x=\"-1840\" y=\"-664\"/><nail x=\"-1744\" y=\"-664\"/></transition><transition><source ref=\"id6\"/><target ref=\"id8\"/><label kind=\"assignment\" x=\"-1344\" y=\"-728\">update()</label></transition>");
+				template.append("\tif (rateUpper.b &lt; 0) { //Plese note: the smaller rate is the \"upper\" one, which corresponds to the largest value for time\n\t\tdelta = -1;\n\t\trateLower.b = -rateLower.b;\n\t\trateUpper.b = -rateUpper.b;\n\t} else {\n\t\tdelta = 1;\n\t}\n\tif (rateLower.b != 0) {\n\t\ttL = round(inverse(rateLower));\n\t} else {\n\t\ttL = INFINITE_TIME;\n\t}\n\tif (rateUpper.b != 0) {\n\t\ttU = round(inverse(rateUpper));\n\t} else {\n\t\ttU = INFINITE_TIME;\n\t}\n\tif (tL != INFINITE_TIME &amp;&amp; tU != INFINITE_TIME &amp;&amp; tL &gt; tU) { //We use rounded things: maybe the difference between tL and tU was not so great, and with some rounding problems we could have this case\n\t\ttL = tU;\n\t}\n}\n\nvoid react() {\n\tif (0 &lt;= R + delta &amp;&amp; R + delta &lt;= MAX) {\n\t\tR = R + delta;\n\t}\n\tupdate();\n\tc = 0;\n}\n\nbool can_react() {\n\treturn tL != INFINITE_TIME &amp;&amp; tL != 0 &amp;&amp; tU != 0 &amp;&amp; ((delta &gt; 0 &amp;&amp; R &lt; MAX) || (delta &lt; 0 &amp;&amp; R &gt; 0));\n}\n\nbool cant_react() {\n\treturn tL == INFINITE_TIME || tL == 0 || tU == 0 || (delta &gt; 0 &amp;&amp; R == MAX) || (delta &lt; 0 &amp;&amp; R == 0);\n}</declaration>");
+				template.append("<location id=\"id0\" x=\"-1896\" y=\"-728\"><name x=\"-1960\" y=\"-752\">stubborn</name><committed/></location><location id=\"id1\" x=\"-1528\" y=\"-728\"><committed/></location><location id=\"id6\" x=\"-1256\" y=\"-728\"><name x=\"-1248\" y=\"-752\">start</name><committed/></location><location id=\"id7\" x=\"-1552\" y=\"-856\"><name x=\"-1656\" y=\"-872\">not_reacting</name></location><location id=\"id8\" x=\"-1416\" y=\"-728\"><name x=\"-1400\" y=\"-752\">updating</name><committed/></location><location id=\"id9\" x=\"-1664\" y=\"-728\"><name x=\"-1728\" y=\"-744\">waiting</name><label kind=\"invariant\" x=\"-1728\" y=\"-720\">c &lt;= tU\n|| tU ==\nINFINITE_TIME</label></location><init ref=\"id6\"/><transition><source ref=\"id1\"/><target ref=\"id9\"/><label kind=\"guard\" x=\"-1640\" y=\"-760\">tU == INFINITE_TIME\n|| c &lt;= tU</label></transition><transition><source ref=\"id1\"/><target ref=\"id9\"/><label kind=\"guard\" x=\"-1608\" y=\"-712\">tU != INFINITE_TIME\n&amp;&amp; c &gt; tU</label><label kind=\"assignment\" x=\"-1608\" y=\"-680\">c := tU</label><nail x=\"-1528\" y=\"-680\"/><nail x=\"-1608\" y=\"-680\"/></transition><transition><source ref=\"id0\"/><target ref=\"id8\"/><label kind=\"guard\" x=\"-1816\" y=\"-632\">c &lt; tL</label><label kind=\"assignment\" x=\"-1816\" y=\"-616\">update()</label><nail x=\"-1848\" y=\"-616\"/><nail x=\"-1464\" y=\"-616\"/></transition><transition><source ref=\"id0\"/><target ref=\"id9\"/><label kind=\"guard\" x=\"-1816\" y=\"-680\">c &gt;= tL</label><nail x=\"-1840\" y=\"-664\"/><nail x=\"-1744\" y=\"-664\"/></transition><transition><source ref=\"id6\"/><target ref=\"id8\"/><label kind=\"assignment\" x=\"-1344\" y=\"-728\">update()</label></transition>");
 				int y1 = -904,
 					y2 = -888,
 					y3 = -848,
@@ -1217,7 +1231,7 @@ public class VariablesModelReactantCentered extends VariablesModel {
 						case 0:
 							if (catalyst.get(REACTANT_INDEX).as(Integer.class) != r.get(REACTANT_INDEX).as(Integer.class) && !alreadyOutputReactants.contains(catalyst)) {
 								alreadyOutputReactants.add(catalyst);
-								template.append("<transition><source ref=\"id7\"/><target ref=\"id8\"/><label kind=\"synchronisation\" x=\"-1512\" y=\"" + y1 + "\">reacting[" + m.getReactant(re.get(CATALYST).as(String.class)).get(REACTANT_INDEX).as(Integer.class) + "]?</label><label kind=\"assignment\" x=\"-1504\" y=\"" + y2 + "\">update()</label><nail x=\"-1552\" y=\"" + y2 + "\"/><nail x=\"-1376\" y=\"" + y2 + "\"/><nail x=\"-1376\" y=\"" + y3 + "\"/></transition>");
+								template.append("<transition><source ref=\"id7\"/><target ref=\"id8\"/><label kind=\"synchronisation\" x=\"-1512\" y=\"" + y1 + "\">reacting[" + m.getReactant(re.get(CATALYST).as(String.class)).get(REACTANT_INDEX).as(Integer.class) + "]?</label><label kind=\"assignment\" x=\"-1528\" y=\"" + y2 + "\">update(), c:= 0</label><nail x=\"-1552\" y=\"" + y2 + "\"/><nail x=\"-1376\" y=\"" + y2 + "\"/><nail x=\"-1376\" y=\"" + y3 + "\"/></transition>");
 								y1 += incrY;
 								y2 += incrY;
 							}
@@ -1226,13 +1240,13 @@ public class VariablesModelReactantCentered extends VariablesModel {
 						case 2: //In this case, CATALYST = E1, REACTANT = E2 (the two upstream reactants)
 							if (catalyst.get(REACTANT_INDEX).as(Integer.class) != r.get(REACTANT_INDEX).as(Integer.class) && !alreadyOutputReactants.contains(catalyst)) {
 								alreadyOutputReactants.add(catalyst);
-								template.append("<transition><source ref=\"id7\"/><target ref=\"id8\"/><label kind=\"synchronisation\" x=\"-1512\" y=\"" + y1 + "\">reacting[" + m.getReactant(re.get(CATALYST).as(String.class)).get(REACTANT_INDEX).as(Integer.class) + "]?</label><label kind=\"assignment\" x=\"-1504\" y=\"" + y2 + "\">update()</label><nail x=\"-1552\" y=\"" + y2 + "\"/><nail x=\"-1376\" y=\"" + y2 + "\"/><nail x=\"-1376\" y=\"" + y3 + "\"/></transition>");
+								template.append("<transition><source ref=\"id7\"/><target ref=\"id8\"/><label kind=\"synchronisation\" x=\"-1512\" y=\"" + y1 + "\">reacting[" + m.getReactant(re.get(CATALYST).as(String.class)).get(REACTANT_INDEX).as(Integer.class) + "]?</label><label kind=\"assignment\" x=\"-1528\" y=\"" + y2 + "\">update(), c:= 0</label><nail x=\"-1552\" y=\"" + y2 + "\"/><nail x=\"-1376\" y=\"" + y2 + "\"/><nail x=\"-1376\" y=\"" + y3 + "\"/></transition>");
 								y1 += incrY;
 								y2 += incrY;
 							}
 							if (reactant.get(REACTANT_INDEX).as(Integer.class) != r.get(REACTANT_INDEX).as(Integer.class) && !alreadyOutputReactants.contains(reactant)) {
 								alreadyOutputReactants.add(reactant);
-								template.append("<transition><source ref=\"id7\"/><target ref=\"id8\"/><label kind=\"synchronisation\" x=\"-1512\" y=\"" + y1 + "\">reacting[" + m.getReactant(re.get(REACTANT).as(String.class)).get(REACTANT_INDEX).as(Integer.class) + "]?</label><label kind=\"assignment\" x=\"-1504\" y=\"" + y2 + "\">update()</label><nail x=\"-1552\" y=\"" + y2 + "\"/><nail x=\"-1376\" y=\"" + y2 + "\"/><nail x=\"-1376\" y=\"" + y3 + "\"/></transition>");
+								template.append("<transition><source ref=\"id7\"/><target ref=\"id8\"/><label kind=\"synchronisation\" x=\"-1512\" y=\"" + y1 + "\">reacting[" + m.getReactant(re.get(REACTANT).as(String.class)).get(REACTANT_INDEX).as(Integer.class) + "]?</label><label kind=\"assignment\" x=\"-1528\" y=\"" + y2 + "\">update(), c:= 0</label><nail x=\"-1552\" y=\"" + y2 + "\"/><nail x=\"-1376\" y=\"" + y2 + "\"/><nail x=\"-1376\" y=\"" + y3 + "\"/></transition>");
 								y1 += incrY;
 								y2 += incrY;
 							}
@@ -1241,7 +1255,7 @@ public class VariablesModelReactantCentered extends VariablesModel {
 							break;
 					}
 				}
-				template.append("<transition><source ref=\"id8\"/><target ref=\"id7\"/><label kind=\"guard\" x=\"-1512\" y=\"-840\">cant_react()</label><nail x=\"-1416\" y=\"-824\"/><nail x=\"-1552\" y=\"-824\"/></transition><transition><source ref=\"id8\"/><target ref=\"id9\"/><label kind=\"guard\" x=\"-1584\" y=\"-744\">can_react()</label><label kind=\"assignment\" x=\"-1568\" y=\"-728\">c := 0</label></transition><transition><source ref=\"id9\"/><target ref=\"id8\"/><label kind=\"guard\" x=\"-1576\" y=\"-808\">c &gt;= tL</label><label kind=\"synchronisation\" x=\"-1584\" y=\"-792\">reacting[" + r.get(REACTANT_INDEX).as(Integer.class) + "]!</label><label kind=\"assignment\" x=\"-1568\" y=\"-776\">react()</label><nail x=\"-1632\" y=\"-776\"/><nail x=\"-1464\" y=\"-776\"/></transition>");
+				template.append("<transition><source ref=\"id8\"/><target ref=\"id7\"/><label kind=\"guard\" x=\"-1512\" y=\"-840\">cant_react()</label><nail x=\"-1416\" y=\"-824\"/><nail x=\"-1552\" y=\"-824\"/></transition><transition><source ref=\"id8\"/><target ref=\"id1\"/><label kind=\"guard\" x=\"-1512\" y=\"-744\">can_react()</label></transition><transition><source ref=\"id9\"/><target ref=\"id8\"/><label kind=\"guard\" x=\"-1576\" y=\"-816\">c &gt;= tL</label><label kind=\"synchronisation\" x=\"-1584\" y=\"-800\">reacting[" + r.get(REACTANT_INDEX).as(Integer.class) + "]!</label><label kind=\"assignment\" x=\"-1568\" y=\"-784\">react()</label><nail x=\"-1632\" y=\"-784\"/><nail x=\"-1464\" y=\"-784\"/></transition>");
 				y1 = -744;
 				y2 = -728;
 				incrY = -48;
