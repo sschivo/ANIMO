@@ -14,6 +14,7 @@ import inat.graph.GraphScaleListener;
 import inat.graph.Scale;
 import inat.model.Model;
 import inat.util.Heptuple;
+import inat.util.Pair;
 
 import java.awt.BorderLayout;
 import java.awt.Component;
@@ -487,6 +488,7 @@ public class InatResultPanel extends JPanel implements ChangeListener, GraphScal
 			g.declareMaxYValue(nLevels);
 			double maxTime = scale * result.getTimeIndices().get(result.getTimeIndices().size()-1);
 			g.setDrawArea(0, (int)maxTime, 0, nLevels); //This is done because the graph automatically computes the area to be shown based on minimum and maximum values for X and Y, including StdDev. So, if the StdDev of a particular series (which represents an average) in a particular point is larger that the value of that series in that point, the minimum y value would be negative. As this is not very nice to see, I decided that we will recenter the graph to more strict bounds instead.
+														//Also, if the maximum value reached during the simulation is not the maximum activity level, the graph does not loook nice
 		}
 		this.add(g, BorderLayout.CENTER);
 		g.addGraphScaleListener(this);
@@ -539,6 +541,7 @@ public class InatResultPanel extends JPanel implements ChangeListener, GraphScal
 		return (1.0 * this.slider.getValue() / this.slider.getMaximum() * (this.maxValueOnGraph - this.minValueOnGraph) + this.minValueOnGraph) / this.scale; //1.0 * this.slider.getValue() / this.slider.getMaximum() * this.scaleForConcentration; //this.slider.getValue() / scale;
 	}
 	
+	private HashMap<Integer, Pair<Boolean, Vector<Integer>>> convergingEdges = null;
 	/**
 	 * When the user moves the time slider, we update the activity ratio (SHOWN_LEVEL) of
 	 * all nodes in the network window, so that, thanks to the continuous Visual Mapping
@@ -551,6 +554,36 @@ public class InatResultPanel extends JPanel implements ChangeListener, GraphScal
 		
 		double graphWidth = this.maxValueOnGraph - this.minValueOnGraph;
 		g.setRedLinePosition(1.0 * this.slider.getValue() / this.slider.getMaximum() * graphWidth);
+		
+		if (convergingEdges == null) {
+			convergingEdges = new HashMap<Integer, Pair<Boolean, Vector<Integer>>>();
+			HashMap<String, Integer> cytoscapeNodesByIdentifier = new HashMap<String, Integer>();
+			@SuppressWarnings("rawtypes")
+			List nodes = Cytoscape.getCurrentNetwork().nodesList();
+			for (Object o : nodes) {
+				Node n = (Node)o;
+				cytoscapeNodesByIdentifier.put(n.getIdentifier(), n.getRootGraphIndex());
+			}
+			RootGraph rootG = Cytoscape.getCurrentNetwork().getRootGraph();
+			for (String r : this.result.getReactantIds()) {
+				if (this.model.getReactant(r) == null) continue;
+				final String id = this.model.getReactant(r).get(Model.Properties.REACTANT_NAME).as(String.class);
+				int[] incomingEdges = rootG.getAdjacentEdgeIndicesArray(cytoscapeNodesByIdentifier.get(id), true, true, false);
+				if (incomingEdges.length > 1) {
+					Pair<Boolean, Vector<Integer>> edgesGroup = new Pair<Boolean, Vector<Integer>>(true, new Vector<Integer>());
+					for (int i=0;i<incomingEdges.length;i++) {
+						edgesGroup.second.add(incomingEdges[i]);
+					}
+					for (int i=0;i<incomingEdges.length;i++) {
+						convergingEdges.put(incomingEdges[i], edgesGroup);
+					}
+				}
+			}
+		} else {
+			for (Pair<Boolean, Vector<Integer>> group : convergingEdges.values()) {
+				group.first = true; //Each edge in each group is initially assumed to be a candidate for having 0 activityRatio
+			}
+		}
 		
 		CyAttributes nodeAttributes = Cytoscape.getNodeAttributes(),
 					 edgeAttributes = Cytoscape.getEdgeAttributes();
@@ -578,20 +611,24 @@ public class InatResultPanel extends JPanel implements ChangeListener, GraphScal
 				} else {
 					int scenario = edgeAttributes.getIntegerAttribute(edge.getIdentifier(), Model.Properties.SCENARIO);
 					double concentration = this.result.getConcentration(r, t);
+					boolean candidate = false;
 					switch (scenario) {
 						case 0:
 							if (nodeAttributes.getDoubleAttribute(edge.getSource().getIdentifier(), Model.Properties.SHOWN_LEVEL) == 0) {
 								concentration = 0;
+								candidate = true;
 							}
 							break;
 						case 1:
 							if (nodeAttributes.getDoubleAttribute(edge.getSource().getIdentifier(), Model.Properties.SHOWN_LEVEL) == 0) {
 								concentration = 0;
+								candidate = true;
 							} else if ((edgeAttributes.getIntegerAttribute(edge.getIdentifier(), Model.Properties.INCREMENT) >= 0
 										&& nodeAttributes.getDoubleAttribute(edge.getTarget().getIdentifier(), Model.Properties.SHOWN_LEVEL) == 1)
 									   || (edgeAttributes.getIntegerAttribute(edge.getIdentifier(), Model.Properties.INCREMENT) < 0
 										&& nodeAttributes.getDoubleAttribute(edge.getTarget().getIdentifier(), Model.Properties.SHOWN_LEVEL) == 0)) {
-								concentration = 0;
+								//concentration = 0;
+								candidate = true;
 							}
 							break;
 						case 2:
@@ -603,13 +640,31 @@ public class InatResultPanel extends JPanel implements ChangeListener, GraphScal
 								||
 								((edgeAttributes.getBooleanAttribute(edge.getIdentifier(), Model.Properties.REACTANT_IS_ACTIVE_INPUT + "E2") && nodeAttributes.getDoubleAttribute(e2, Model.Properties.SHOWN_LEVEL) == 0)
 								|| (!edgeAttributes.getBooleanAttribute(edge.getIdentifier(), Model.Properties.REACTANT_IS_ACTIVE_INPUT + "E2") && nodeAttributes.getDoubleAttribute(e2, Model.Properties.SHOWN_LEVEL) == 1))) {
-								concentration = 0;
+								//concentration = 0;
+								candidate = true;
 							}
 							break;
 						default:
+							candidate = false;
 							break;
 					}
+					if (!candidate && convergingEdges.get(edge.getRootGraphIndex()) != null) {
+						//If at least one edge is NOT a candidate for having 0 activityRatio, then all edges will have their activityRatio set as it comes from the result
+						convergingEdges.get(edge.getRootGraphIndex()).first = false;
+					}
+					
 					edgeAttributes.setAttribute(edge.getIdentifier(), Model.Properties.SHOWN_LEVEL, concentration);
+				}
+			}
+			if (t != 0) { //At the initial time we have already done what was needed, i.e. remove the attribute
+				CyNetwork network = Cytoscape.getCurrentNetwork();
+				for (Pair<Boolean, Vector<Integer>> edgeGroup : convergingEdges.values()) {
+					if (edgeGroup.first) { //All the edges of this group were still candidates at the end of the first cycle, so we will set all their activityRatios to 0
+						for (Integer i : edgeGroup.second) {
+							edgeAttributes.setAttribute(network.getEdge(i).getIdentifier(), Model.Properties.SHOWN_LEVEL, 0.0);
+						}
+						edgeGroup.first = false;
+					}
 				}
 			}
 		} catch (Exception ex) {

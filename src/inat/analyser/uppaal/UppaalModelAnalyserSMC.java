@@ -650,7 +650,7 @@ public class UppaalModelAnalyserSMC implements ModelAnalyser<LevelResult> {
 			SortedMap<Double, Double> rMap;
 			String reactantId, reactionId = "";
 			Reaction reaction = null;
-			int minTime = m.getProperties().get(Model.Properties.MINIMUM_DURATION).as(Integer.class), //Use the global minimum instead of the local minimum
+			int minTime = m.getProperties().get(Model.Properties.MINIMUM_DURATION).as(Integer.class), //Use the global minimum instead of the local minimum for time table values
 				maxTime = m.getProperties().get(Model.Properties.MAXIMUM_DURATION).as(Integer.class);
 			double activityIntervalWidth = Math.log10(1.0 * minTime / maxTime);
 			
@@ -692,6 +692,8 @@ public class UppaalModelAnalyserSMC implements ModelAnalyser<LevelResult> {
 							//int minTime = reaction.get(Model.Properties.MINIMUM_DURATION).as(Integer.class); //We use global instead of local minimum: see definition of minTime
 							if (level == 0 || level == VariablesModelSMC.INFINITE_TIME || minTime == VariablesModelSMC.INFINITE_TIME) { //I put also level == 0 because otherwise we go in the "else" and we divide by 0 =)
 								level = 0;
+							} else if (activityIntervalWidth > -2) { //If there are not orders of magnitude of difference between minimum and maximum, we can simply use a normal linear scale as we did before
+								level = 1.0 * minTime / level;
 							} else {
 								//level = 1.0 * minTime / level;
 								level = (activityIntervalWidth - Math.log10(1.0 * minTime / level)) / activityIntervalWidth;
@@ -699,7 +701,8 @@ public class UppaalModelAnalyserSMC implements ModelAnalyser<LevelResult> {
 						}
 					}
 					rMap = levels.get(chosenMap);
-					if (rMap.isEmpty() || rMap.get(rMap.lastKey()) != level) { //if we didn't register a variation, we don't plot a point
+					if (rMap.isEmpty() || (rMap.get(rMap.lastKey()) != level && time <= timeTo)) { //if we didn't register a variation, we don't plot a point
+																								   //Also, if the current time is already over the requested simulation time, we don't put it in the data (but still read the values, to clear the stream)
 						rMap.put(time, (double)level);
 					}
 				}
