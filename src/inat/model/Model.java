@@ -3,10 +3,12 @@ package inat.model;
 import fitting.ScenarioCfg;
 import giny.model.Edge;
 import giny.model.Node;
+import inat.InatBackend;
 import inat.analyser.uppaal.VariablesModel;
 import inat.analyser.uppaal.VariablesModelSMC;
 import inat.exceptions.InatException;
 import inat.util.Table;
+import inat.util.XmlConfiguration;
 
 import java.io.Serializable;
 import java.util.Collection;
@@ -49,6 +51,7 @@ public class Model implements Serializable {
 								   TIMES = "times", //Time bound (no upper nor lower: it is possible that it is never be used in practice)
 								   TIMES_LOWER = "timesL", //Lower time bound
 								   MINIMUM_DURATION = "minTime", //The minimum amount of time a reaction can take
+								   MAXIMUM_DURATION = "maxTime", //The maximum amount of time a reaction can take (not infinite)
 								   INCREMENT = "increment", //Increment in substrate as effect of the reaction (+1, -1, etc)
 								   BI_REACTION = "reaction2", //Reaction between two reactants (substrate/reactant and catalyst)
 								   MONO_REACTION = "reaction1", //Reaction with only one reactant
@@ -290,6 +293,7 @@ public class Model implements Serializable {
 		TIMES_U = Model.Properties.TIMES_UPPER,
 		TIMES_L = Model.Properties.TIMES_LOWER,
 		MINIMUM_DURATION = Model.Properties.MINIMUM_DURATION,
+		MAXIMUM_DURATION = Model.Properties.MAXIMUM_DURATION,
 		REACTION_TYPE = Model.Properties.REACTION_TYPE,
 		REACTANT_NAME = Model.Properties.REACTANT_NAME,
 		REACTANT_ALIAS = Model.Properties.ALIAS,
@@ -351,6 +355,15 @@ public class Model implements Serializable {
 		// do edges next
 		CyAttributes edgeAttributes = Cytoscape.getEdgeAttributes();
 		final Iterator<Edge> edges = (Iterator<Edge>) network.edgesIterator();
+		int minTimeModel = Integer.MAX_VALUE,
+			maxTimeModel = Integer.MIN_VALUE;
+		Integer unc = 5; //Uncertainty value is now ANIMO-wide (TODO: is that a bit excessive? One would expect the uncertainty to be connected to the model...)
+		XmlConfiguration configuration = InatBackend.get().configuration();
+		try {
+			unc = new Integer(configuration.get(XmlConfiguration.UNCERTAINTY_KEY));
+		} catch (NumberFormatException ex) {
+			unc = 0;
+		}
 		for (int i = 0; edges.hasNext(); i++) {
 			if (monitor != null) {
 				monitor.setPercentCompleted((100 * doneWork++) / totalWork);
@@ -476,7 +489,12 @@ public class Model implements Serializable {
 			}
 			r.let(Model.Properties.SCENARIO_CFG).be(new ScenarioCfg(scenarioIdx, scenarioParameterValues));
 			
-			double uncertainty = edgeAttributes.getIntegerAttribute(edge.getIdentifier(), UNCERTAINTY);
+			
+			double uncertainty = unc; //edgeAttributes.getIntegerAttribute(edge.getIdentifier(), UNCERTAINTY); //We want to use the uncertainty given under the options, not the uncertainty in the reaction.
+			//Also: while we are here, we delete the UNCERTAINTY attribute if we find it
+			if (edgeAttributes.hasAttribute(edge.getIdentifier(), UNCERTAINTY)) {
+				edgeAttributes.deleteAttribute(edge.getIdentifier(), UNCERTAINTY);
+			}
 			
 			if (scenarioIdx == 2) { //actually, they are both catalysts
 				String cata, reac;
@@ -555,7 +573,8 @@ public class Model implements Serializable {
 			Table timesLTable = new Table(nLevelsR2 + 1, nLevelsR1 + 1);
 			Table timesUTable = new Table(nLevelsR2 + 1, nLevelsR1 + 1);
 			
-			int minTime = Integer.MAX_VALUE;
+			int minTime = Integer.MAX_VALUE,
+				maxTime = Integer.MIN_VALUE;
 			for (int j = 0; j < nLevelsR2 + 1; j++) {
 				for (int k = 0; k < nLevelsR1 + 1; k++) {
 					Double t = times.get(j * (nLevelsR1 + 1) + k);
@@ -568,11 +587,17 @@ public class Model implements Serializable {
 						if (timesLTable.get(j, k) < minTime) {
 							minTime = timesLTable.get(j, k);
 						}
+						if (timesUTable.get(j, k) > maxTime) {
+							maxTime = timesUTable.get(j, k);
+						}
 					} else {
 						timesLTable.set(j, k, Math.max(0, (int)Math.round(secStepFactor * levelsScaleFactor * t * (1 - uncertainty / 100.0))));
 						timesUTable.set(j, k, Math.max(0, (int)Math.round(secStepFactor * levelsScaleFactor * t * (1 + uncertainty / 100.0))));
 						if (timesLTable.get(j, k) < minTime) {
 							minTime = timesLTable.get(j, k);
+						}
+						if (timesUTable.get(j, k) > maxTime) {
+							maxTime = timesUTable.get(j, k);
 						}
 					}
 				}
@@ -580,9 +605,19 @@ public class Model implements Serializable {
 			if (minTime == Integer.MAX_VALUE) {
 				minTime = VariablesModelSMC.INFINITE_TIME;
 			}
+			if (maxTime == Integer.MIN_VALUE) {
+				maxTime = VariablesModelSMC.INFINITE_TIME;
+			}
 			r.let(TIMES_L).be(timesLTable);
 			r.let(TIMES_U).be(timesUTable);
 			r.let(MINIMUM_DURATION).be(minTime);
+			r.let(MAXIMUM_DURATION).be(maxTime);
+			if (minTime != VariablesModelSMC.INFINITE_TIME && (minTimeModel == Integer.MAX_VALUE || minTime < minTimeModel)) {
+				minTimeModel = minTime;
+			}
+			if (maxTime != VariablesModelSMC.INFINITE_TIME && (maxTimeModel == Integer.MIN_VALUE || maxTime > maxTimeModel)) {
+				maxTimeModel = maxTime;
+			}
 			
 			String r1Id = r.get(CATALYST).as(String.class);
 			String r2Id = r.get(REACTANT).as(String.class);
@@ -591,6 +626,14 @@ public class Model implements Serializable {
 			
 			model.add(r);
 		}
+		if (minTimeModel == Integer.MAX_VALUE) {
+			minTimeModel = VariablesModelSMC.INFINITE_TIME;
+		}
+		model.getProperties().let(MINIMUM_DURATION).be(minTimeModel);
+		if (maxTimeModel == Integer.MIN_VALUE) {
+			maxTimeModel = VariablesModelSMC.INFINITE_TIME;
+		}
+		model.getProperties().let(MAXIMUM_DURATION).be(maxTimeModel);
 		
 		/*This should not be necessary any more, as we do that in checkParameters()
 		//check that the number of levels is present in each reactant

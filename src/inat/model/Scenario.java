@@ -227,7 +227,7 @@ public class Scenario {
 		if (!activeR2) { //We depend on the inactivity of R2, which is completely inactive (first row --> R2 = 0), so the first row will have the smallest values
 			i = 0;
 			limitI = nLevelsReactant2 - 1; //the last row will be all infinite
-		} else {
+		} else { //We depend on the activity of R2, which is completely inactive, so the first row should be all infinite
 			if (reactant2IsDownstream) {
 				for (int k=0;k<nLevelsReactant1;k++) {
 					times.add(computeFormula(k, nLevelsReactant1 - 1, activeR1, 1, nLevelsReactant2 - 1, activeR2));
@@ -238,13 +238,13 @@ public class Scenario {
 				}
 			}
 			i = 1; //the first row was already done here, with all infinites
-			limitI = nLevelsReactant2; //the last row will have the smallest valus
+			limitI = nLevelsReactant2; //the last row will have the smallest values
 		}
 		for (;i<limitI;i++) {
 			int j, limitJ;
 			if (!activeR1) { //We depend on the inactivity of R1, which when j = 0 is completely inactive (first column --> R1 = 0), so the first column will have the smallest values
 				j = 0;
-				limitJ = nLevelsReactant1 - 1; //the last coluimn will be all infinite
+				limitJ = nLevelsReactant1 - 1; //the last column will be all infinite
 			} else {
 				if (reactant1IsDownstream) {
 					times.add(computeFormula(1, nLevelsReactant1 - 1, activeR1, i, nLevelsReactant2 - 1, activeR2));
@@ -259,7 +259,7 @@ public class Scenario {
 			}
 			if (!activeR1) { //We depend on the inactivity of R1, which in the last column is completely active. So the last column has all infinite
 				if (reactant1IsDownstream) {
-					times.add(computeFormula(nLevelsReactant1 - 1, nLevelsReactant1 - 1, activeR1, i, nLevelsReactant2 - 1, activeR2));
+					times.add(computeFormula(nLevelsReactant1 - 2, nLevelsReactant1 - 1, activeR1, i, nLevelsReactant2 - 1, activeR2));
 				} else {
 					times.add(Double.POSITIVE_INFINITY);
 				}
@@ -267,11 +267,11 @@ public class Scenario {
 		}
 		if (!activeR2) { //We depend on the inactivity of R2, which in the last row is completely active. So the last row has all infinite
 			for (int j=0;j<nLevelsReactant1;j++) {
-				/*if (reactant2IsDownstream) { //Having this made no sense: the second reactant will always have a 0 inactivity level, so we would anyway get rate = 0 --> time = inf
-					times.add(computeFormula(j, nLevelsReactant1 - 1, activeR1, nLevelsReactant2 - 1, nLevelsReactant2 - 1, activeR2));
-				} else {*/
+				if (reactant2IsDownstream) {
+					times.add(computeFormula(j, nLevelsReactant1 - 1, activeR1, nLevelsReactant2 - 2, nLevelsReactant2 - 1, activeR2));
+				} else {
 					times.add(Double.POSITIVE_INFINITY); //all reactant2 already reacted (active) = no reaction
-				/*}*/
+				}
 			}
 		}
 		return times;

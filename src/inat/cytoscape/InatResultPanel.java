@@ -580,8 +580,17 @@ public class InatResultPanel extends JPanel implements ChangeListener, GraphScal
 					double concentration = this.result.getConcentration(r, t);
 					switch (scenario) {
 						case 0:
+							if (nodeAttributes.getDoubleAttribute(edge.getSource().getIdentifier(), Model.Properties.SHOWN_LEVEL) == 0) {
+								concentration = 0;
+							}
+							break;
 						case 1:
 							if (nodeAttributes.getDoubleAttribute(edge.getSource().getIdentifier(), Model.Properties.SHOWN_LEVEL) == 0) {
+								concentration = 0;
+							} else if ((edgeAttributes.getIntegerAttribute(edge.getIdentifier(), Model.Properties.INCREMENT) >= 0
+										&& nodeAttributes.getDoubleAttribute(edge.getTarget().getIdentifier(), Model.Properties.SHOWN_LEVEL) == 1)
+									   || (edgeAttributes.getIntegerAttribute(edge.getIdentifier(), Model.Properties.INCREMENT) < 0
+										&& nodeAttributes.getDoubleAttribute(edge.getTarget().getIdentifier(), Model.Properties.SHOWN_LEVEL) == 0)) {
 								concentration = 0;
 							}
 							break;

@@ -573,6 +573,12 @@ public class InatPlugin extends CytoscapePlugin {
 						String uncertaintyValue = "5";
 						if (useUncertainty.isSelected()) {
 							uncertaintyValue = uncertainty.getText();
+							try {
+								uncertaintyValue = "" + new Integer(uncertaintyValue);
+							} catch (NumberFormatException ex) {
+								JOptionPane.showMessageDialog(Cytoscape.getDesktop(), "\"" + uncertaintyValue + "\" is not a number.", "Error", JOptionPane.ERROR_MESSAGE);
+								return;
+							}
 						} else {
 							uncertaintyValue = "0";
 						}

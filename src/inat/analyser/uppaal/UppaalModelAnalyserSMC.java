@@ -650,6 +650,9 @@ public class UppaalModelAnalyserSMC implements ModelAnalyser<LevelResult> {
 			SortedMap<Double, Double> rMap;
 			String reactantId, reactionId = "";
 			Reaction reaction = null;
+			int minTime = m.getProperties().get(Model.Properties.MINIMUM_DURATION).as(Integer.class), //Use the global minimum instead of the local minimum
+				maxTime = m.getProperties().get(Model.Properties.MAXIMUM_DURATION).as(Integer.class);
+			double activityIntervalWidth = Math.log10(1.0 * minTime / maxTime);
 			
 			while ((line = br.readLine()) != null) {
 				reactantId = line.substring(0, line.indexOf(":"));
@@ -686,11 +689,12 @@ public class UppaalModelAnalyserSMC implements ModelAnalyser<LevelResult> {
 						reaction = m.getReaction(reactionId);
 						if (reaction != null) {
 							chosenMap = reaction.get(Model.Properties.CYTOSCAPE_ID).as(String.class);
-							int minTime = reaction.get(Model.Properties.MINIMUM_DURATION).as(Integer.class);
+							//int minTime = reaction.get(Model.Properties.MINIMUM_DURATION).as(Integer.class); //We use global instead of local minimum: see definition of minTime
 							if (level == 0 || level == VariablesModelSMC.INFINITE_TIME || minTime == VariablesModelSMC.INFINITE_TIME) { //I put also level == 0 because otherwise we go in the "else" and we divide by 0 =)
 								level = 0;
 							} else {
-								level = 1.0 * minTime / level;
+								//level = 1.0 * minTime / level;
+								level = (activityIntervalWidth - Math.log10(1.0 * minTime / level)) / activityIntervalWidth;
 							}
 						}
 					}
