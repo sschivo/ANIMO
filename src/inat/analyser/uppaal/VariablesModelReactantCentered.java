@@ -556,7 +556,7 @@ public class VariablesModelReactantCentered extends VariablesModel {
 		out.append(newLine);
 		out.append("\t\tr.e = -1;");
 		out.append(newLine);
-		out.append("\t} else if (a &lt; 10000) { //Our model supports up to 100 levels, so this should be the most we can check");
+		out.append("\t} else if (a &lt; 10000) { //Our model supports up to 100 levels, so this should be the most it makes sense to check");
 		out.append(newLine);
 		out.append("\t\tr.b = a;");
 		out.append(newLine);
