@@ -475,6 +475,7 @@ public class Model implements Serializable {
 			//System.err.println("Levels scale factor = " + levelsScaleFactor);
 			r.let(Model.Properties.SCENARIO).be(scenarioIdx);
 			r.let(LEVELS_SCALE_FACTOR + "_reaction").be(levelsScaleFactor);
+			r.let(Model.Properties.SCENARIO_PARAMETER_K).be(edgeAttributes.getDoubleAttribute(edge.getIdentifier(), Model.Properties.SCENARIO_PARAMETER_K));
 			
 			String[] parameters = scenario.listVariableParameters();
 			HashMap<String, Double> scenarioParameterValues = new HashMap<String, Double>();

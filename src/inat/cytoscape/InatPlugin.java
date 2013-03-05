@@ -13,6 +13,7 @@ import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Container;
+import java.awt.Dialog;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.GridBagConstraints;
@@ -474,7 +475,7 @@ public class InatPlugin extends CytoscapePlugin {
 		options.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				final JDialog optionsDialog = new JDialog(Cytoscape.getDesktop(), "ANIMO Options");
+				final JDialog optionsDialog = new JDialog(Cytoscape.getDesktop(), "ANIMO Options", Dialog.ModalityType.APPLICATION_MODAL);
 				optionsDialog.getContentPane().setLayout(new BorderLayout());
 				JPanel content = new JPanel(new GridBagLayout());
 				String location = configuration.get(XmlConfiguration.VERIFY_KEY);

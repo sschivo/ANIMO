@@ -1,10 +1,8 @@
 package inat.analyser.uppaal;
 
 import inat.model.Model;
-import inat.model.Property;
 import inat.model.Reactant;
 import inat.model.Reaction;
-import inat.util.Table;
 
 import java.io.ByteArrayInputStream;
 import java.io.StringWriter;
@@ -80,7 +78,6 @@ public class VariablesModelReactantCentered extends VariablesModel {
 		out.append(newLine);
 		out.append("const double zero = {0, 0};");
 		out.append(newLine);
-		/*out.append("const double INFINITE_TIME_DOUBLE = {-100, -2}; //INFINITE_TIME translated into double");*/
 		out.append("const double INFINITE_TIME_DOUBLE = {-1000, -3}; //INFINITE_TIME translated into double");
 		out.append(newLine);
 		out.append(newLine);
@@ -102,300 +99,6 @@ public class VariablesModelReactantCentered extends VariablesModel {
 		}
 		out.append(newLine);
 		out.append(newLine);
-/*		out.append("double subtract(double a, double b) { // a - b"); // Subtraction
-		out.append(newLine);
-		out.append("\tdouble r = {-100, -100};");
-		out.append(newLine);
-		out.append("\tif (a.b == 0) {");
-		out.append(newLine);
-		out.append("\t\tr.b = -b.b;");
-		out.append(newLine);
-		out.append("\t\tr.e = b.e;");
-		out.append(newLine);
-		out.append("\t\treturn r;");
-		out.append(newLine);
-		out.append("\t}");
-		out.append(newLine);
-		out.append("\tif (b.b == 0) {");
-		out.append(newLine);
-		out.append("\t\treturn a;");
-		out.append(newLine);
-		out.append("\t}");
-		out.append(newLine);
-		out.append("\tif ((a.e - b.e) &gt;= 3) return a;");
-		out.append(newLine);
-		out.append("\tif ((b.e - a.e) &gt;= 3) {");
-		out.append(newLine);
-		out.append("\t\tr.b = -b.b;");
-		out.append(newLine);
-		out.append("\t\tr.e = b.e;");
-		out.append(newLine);
-		out.append("\t\treturn r;");
-		out.append(newLine);
-		out.append("\t}");
-		out.append(newLine);
-		out.append("\tif (a.e == b.e) {");
-		out.append(newLine);
-		out.append("\t\tr.b = a.b - b.b;");
-		out.append(newLine);
-		out.append("\t\tr.e = a.e;");
-		out.append(newLine);
-		out.append("\t}");
-		out.append(newLine);
-		out.append("\tif (a.e - b.e == 1) {");
-		out.append(newLine);
-		out.append("\t\tr.b = a.b - b.b/10;");
-		out.append(newLine);
-		out.append("\t\tr.e = a.e;");
-		out.append(newLine);
-		out.append("\t}");
-		out.append(newLine);
-		out.append("\tif (a.e - b.e == 2) {");
-		out.append(newLine);
-		out.append("\t\tr.b = a.b - b.b/100;");
-		out.append(newLine);
-		out.append("\t\tr.e = a.e;");
-		out.append(newLine);
-		out.append("\t}");
-		out.append(newLine);
-		out.append("\tif (b.e - a.e == 1) {");
-		out.append(newLine);
-		out.append("\t\tr.b = a.b/10 - b.b;");
-		out.append(newLine);
-		out.append("\t\tr.e = b.e;");
-		out.append(newLine);
-		out.append("\t}");
-		out.append(newLine);
-		out.append("\tif (b.e - a.e == 2) {");
-		out.append(newLine);
-		out.append("\t\tr.b = a.b/100 - b.b;");
-		out.append(newLine);
-		out.append("\t\tr.e = b.e;");
-		out.append(newLine);
-		out.append("\t}");
-		out.append(newLine);
-		out.append("\tif ((r.b &gt; 0 &amp;&amp; r.b &lt; 10) &#124;&#124; (r.b &lt; 0 &amp;&amp; r.b &gt; -10)) {");
-		out.append(newLine);
-		out.append("\t\tr.b = r.b * 100;");
-		out.append(newLine);
-		out.append("\t\tr.e = r.e - 2;");
-		out.append(newLine);
-		out.append("\t} else if ((r.b &gt; 0 &amp;&amp; r.b &lt; 100) &#124;&#124; (r.b &lt; 0 &amp;&amp; r.b &gt; -100)) {");
-		out.append(newLine);
-		out.append("\t\tr.b = r.b * 10;");
-		out.append(newLine);
-		out.append("\t\tr.e = r.e - 1;");
-		out.append(newLine);
-		out.append("\t}");
-		out.append(newLine);
-		out.append("\treturn r;");
-		out.append(newLine);
-		out.append("}");
-		out.append(newLine);
-		out.append(newLine);
-		out.append("double add(double a, double b) { // a + b"); // Addition
-		out.append(newLine);
-		out.append("\tdouble r = {-100,-100};");
-		out.append(newLine);
-		out.append("\tif (a.b == 0) {");
-		out.append(newLine);
-		out.append("\t\treturn b;");
-		out.append(newLine);
-		out.append("\t}");
-		out.append(newLine);
-		out.append("\tif (b.b == 0) {");
-		out.append(newLine);
-		out.append("\t\treturn a;");
-		out.append(newLine);
-		out.append("\t}");
-		out.append(newLine);
-		out.append("\tif ((a.e - b.e) &gt;= 3) return a;");
-		out.append(newLine);
-		out.append("\tif ((b.e - a.e) &gt;= 3) return b;");
-		out.append(newLine);
-		out.append("\tif (a.e == b.e) {");
-		out.append(newLine);
-		out.append("\t\tr.b = a.b + b.b;");
-		out.append(newLine);
-		out.append("\t\tr.e = a.e;");
-		out.append(newLine);
-		out.append("\t}");
-		out.append(newLine);
-		out.append("\tif (a.e - b.e == 1) {");
-		out.append(newLine);
-		out.append("\t\tr.b = a.b + b.b/10;");
-		out.append(newLine);
-		out.append("\t\tr.e = a.e;");
-		out.append(newLine);
-		out.append("\t}");
-		out.append(newLine);
-		out.append("\tif (a.e - b.e == 2) {");
-		out.append(newLine);
-		out.append("\t\tr.b = a.b + b.b/100;");
-		out.append(newLine);
-		out.append("\t\tr.e = a.e;");
-		out.append(newLine);
-		out.append("\t}");
-		out.append(newLine);
-		out.append("\tif (b.e - a.e == 1) {");
-		out.append(newLine);
-		out.append("\t\tr.b = a.b/10 + b.b;");
-		out.append(newLine);
-		out.append("\t\tr.e = b.e;");
-		out.append(newLine);
-		out.append("\t}");
-		out.append(newLine);
-		out.append("\tif (b.e - a.e == 2) {");
-		out.append(newLine);
-		out.append("\t\tr.b = a.b/100 + b.b;");
-		out.append(newLine);
-		out.append("\t\tr.e = b.e;");
-		out.append(newLine);
-		out.append("\t}");
-		out.append(newLine);
-		out.append("\tif ((r.b &gt; 0 &amp;&amp; r.b &lt; 10) &#124;&#124; (r.b &lt; 0 &amp;&amp; r.b &gt; -10)) {");
-		out.append(newLine);
-		out.append("\t\tr.b = r.b * 100;");
-		out.append(newLine);
-		out.append("\t\tr.e = r.e - 2;");
-		out.append(newLine);
-		out.append("\t} else if ((r.b &gt; 0 &amp;&amp; r.b &lt; 100) &#124;&#124; (r.b &lt; 0 &amp;&amp; r.b &gt; -100)) {");
-		out.append(newLine);
-		out.append("\t\tr.b = r.b * 10;");
-		out.append(newLine);
-		out.append("\t\tr.e = r.e - 1;");
-		out.append(newLine);
-		out.append("\t}");
-		out.append(newLine);
-		out.append("\treturn r;");
-		out.append(newLine);
-		out.append("}");
-		out.append(newLine);
-		out.append(newLine);
-		out.append("double multiply(double a, double b) { // a * b"); // Multiplication
-		out.append(newLine);
-		out.append("\tdouble r;");
-		out.append(newLine);
-		out.append("\tr.b = a.b * b.b;");
-		out.append(newLine);
-		out.append("\tif (r.b % 100 &lt; 50) {");
-		out.append(newLine);
-		out.append("\t\tr.b = r.b / 100;");
-		out.append(newLine);
-		out.append("\t} else {");
-		out.append(newLine);
-		out.append("\t\tr.b = 1 + r.b / 100;");
-		out.append(newLine);
-		out.append("\t}");
-		out.append(newLine);
-		out.append("\tr.e = a.e + b.e + 2;");
-		out.append(newLine);
-		out.append("\tif ((r.b &gt; 0 &amp;&amp; r.b &lt; 10) &#124;&#124; (r.b &lt; 0 &amp;&amp; r.b &gt; -10)) {");
-		out.append(newLine);
-		out.append("\t\tr.b = r.b * 100;");
-		out.append(newLine);
-		out.append("\t\tr.e = r.e - 2;");
-		out.append(newLine);
-		out.append("\t} else if ((r.b &gt; 0 &amp;&amp; r.b &lt; 100) &#124;&#124; (r.b &lt; 0 &amp;&amp; r.b &gt; -100)) {");
-		out.append(newLine);
-		out.append("\t\tr.b = r.b * 10;");
-		out.append(newLine);
-		out.append("\t\tr.e = r.e - 1;");
-		out.append(newLine);
-		out.append("\t}");
-		out.append(newLine);
-		out.append("\treturn r;");
-		out.append(newLine);
-		out.append("}");
-		out.append(newLine);
-		out.append(newLine);
-		out.append("double inverse(double a) { // 1 / a"); // Inverse
-		out.append(newLine);
-		out.append("\tdouble r;");
-		out.append(newLine);
-	    out.append("\tif (a.b == 0) {");
-		out.append(newLine);
-	    out.append("\t\treturn INFINITE_TIME_DOUBLE;");
-		out.append(newLine);
-	    out.append("\t}");
-		out.append(newLine);
-		out.append("\tr.b = 100000 / a.b;");
-		out.append(newLine);
-		out.append("\tr.e = -5 - a.e;");
-		out.append(newLine);
-		out.append("\tif ((r.b &gt; 0 &amp;&amp; r.b &lt; 10) &#124;&#124; (r.b &lt; 0 &amp;&amp; r.b &gt; -10)) {");
-		out.append(newLine);
-		out.append("\t\tr.b = r.b * 100;");
-		out.append(newLine);
-		out.append("\t\tr.e = r.e - 2;");
-		out.append(newLine);
-		out.append("\t} else if ((r.b &gt; 0 &amp;&amp; r.b &lt; 100) &#124;&#124; (r.b &lt; 0 &amp;&amp; r.b &gt; -100)) {");
-		out.append(newLine);
-		out.append("\t\tr.b = r.b * 10;");
-		out.append(newLine);
-		out.append("\t\tr.e = r.e - 1;");
-		out.append(newLine);
-		out.append("\t}");
-		out.append(newLine);
-		out.append("\treturn r;");
-		out.append(newLine);
-		out.append("}");
-		out.append(newLine);
-		out.append(newLine);
-		out.append("time_t pow(int a, int b) { // a ^ b (b &gt;= 0)"); // Integer power
-		out.append(newLine);
-		out.append("\ttime_t r = 1;");
-		out.append(newLine);
-		out.append("\twhile (b &gt; 0) {");
-		out.append(newLine);
-		out.append("\t\tr = r * a;");
-		out.append(newLine);
-		out.append("\t\tb = b - 1;");
-		out.append(newLine);
-		out.append("\t}");
-		out.append(newLine);
-		out.append("\treturn r;");
-		out.append(newLine);
-		out.append("}");
-		out.append(newLine);
-		out.append(newLine);
-		out.append("time_t round(double a) { // double --&gt; integer"); // Round to integer
-		out.append(newLine);
-		out.append("\tif (a.e &lt; -2) return 0;");
-		out.append(newLine);
-		out.append("\tif (a.e == -1) {");
-		out.append(newLine);
-		out.append("\t\tif (a.b % 10 &lt; 5) {");
-		out.append(newLine);
-		out.append("\t\t\treturn a.b / 10;");
-		out.append(newLine);
-		out.append("\t\t} else {");
-		out.append(newLine);
-		out.append("\t\t\treturn 1 + a.b / 10;");
-		out.append(newLine);
-		out.append("\t\t}");
-		out.append(newLine);
-		out.append("\t}");
-		out.append(newLine);
-		out.append("\tif (a.e == -2) {");
-		out.append(newLine);
-		out.append("\t\tif (a.b % 100 &lt; 50) {");
-		out.append(newLine);
-		out.append("\t\t\treturn a.b / 100;");
-		out.append(newLine);
-		out.append("\t\t} else {");
-		out.append(newLine);
-		out.append("\t\t\treturn 1 + a.b / 100;");
-		out.append(newLine);
-		out.append("\t\t}");
-		out.append(newLine);
-		out.append("\t}");
-		out.append(newLine);
-		out.append("\treturn a.b * pow(10, a.e);");
-		out.append(newLine);
-		out.append("}");
-		out.append(newLine);*/
-		
 		out.append("double subtract(double a, double b) { // a - b"); // Subtraction
 		out.append(newLine);
 		out.append("\tdouble r = {-1000, -1000};");
@@ -776,6 +479,95 @@ public class VariablesModelReactantCentered extends VariablesModel {
 		out.append(newLine);
 		out.append("}");
 		out.append(newLine);
+		out.append(newLine);
+		out.append("double scenario1(double k, double r1, double r1Levels, bool r1Active) {"); // Scenario 1
+		out.append(newLine);
+		out.append("\tdouble E;");
+		out.append(newLine);
+		out.append("\tif (r1Active) { //If we depend on active R1, the level of activity is the value of E");
+		out.append(newLine);
+		out.append("\t\tE = r1;");
+		out.append(newLine);
+		out.append("\t} else { //otherwise we find the inactivity level via the total number of levels");
+		out.append(newLine);
+		out.append("\t\tE = subtract(r1Levels, r1);");
+		out.append(newLine);
+		out.append("\t}");
+		out.append(newLine);
+		out.append("\treturn multiply(k, E);");
+		out.append(newLine);
+		out.append("}");
+		out.append(newLine);
+		out.append("");
+		out.append(newLine);
+		out.append("");
+		out.append(newLine);
+		out.append("double scenario2_3(double k, double r2, double r2Levels, bool r2Active, double r1, double r1Levels, bool r1Active) {"); // Scenarios 2 and 3
+		out.append(newLine);
+		out.append("\tdouble E, S;");
+		out.append(newLine);
+		out.append("\tif (r1Active) { //If we depend on active R1, the level of activity is the value of E");
+		out.append(newLine);
+		out.append("\t\tE = r1;");
+		out.append(newLine);
+		out.append("\t} else { //otherwise we find the inactivity level via the total number of levels");
+		out.append(newLine);
+		out.append("\t\tE = subtract(r1Levels, r1);");
+		out.append(newLine);
+		out.append("\t}");
+		out.append(newLine);
+		out.append("\tif (r2Active) { //Same for R2");
+		out.append(newLine);
+		out.append("\t\tS = r2;");
+		out.append(newLine);
+		out.append("\t} else {");
+		out.append(newLine);
+		out.append("\t\tS = subtract(r2Levels, r2);");
+		out.append(newLine);
+		out.append("\t}");
+		out.append(newLine);
+		out.append("\treturn multiply(k, multiply(E, S));");
+		out.append(newLine);
+		out.append("}");
+		out.append(newLine);
+		out.append("");
+		out.append(newLine);
+		out.append("");
+		out.append(newLine);
+		out.append("double int_to_double(int a) { //Used to translate an activity level into double."); // Translate an int to double
+		out.append(newLine);
+		out.append("\tdouble r;");
+		out.append(newLine);
+		out.append("\tif (a &lt; 10) {");
+		out.append(newLine);
+		out.append("\t\tr.b = a * 1000;");
+		out.append(newLine);
+		out.append("\t\tr.e = -3;");
+		out.append(newLine);
+		out.append("\t} else if (a &lt; 100) {");
+		out.append(newLine);
+		out.append("\t\tr.b = a * 100;");
+		out.append(newLine);
+		out.append("\t\tr.e = -2;");
+		out.append(newLine);
+		out.append("\t} else if (a &lt; 1000) {");
+		out.append(newLine);
+		out.append("\t\tr.b = a * 10;");
+		out.append(newLine);
+		out.append("\t\tr.e = -1;");
+		out.append(newLine);
+		out.append("\t} else if (a &lt; 10000) { //Our model supports up to 100 levels, so this should be the most we can check");
+		out.append(newLine);
+		out.append("\t\tr.b = a;");
+		out.append(newLine);
+		out.append("\t\tr.e = 0;");
+		out.append(newLine);
+		out.append("\t}");
+		out.append(newLine);
+		out.append("\treturn r;");
+		out.append(newLine);
+		out.append("}");
+		out.append(newLine);
 		
 		out.append("</declaration>");
 		
@@ -810,7 +602,6 @@ public class VariablesModelReactantCentered extends VariablesModel {
 			out.append(r.getId() + "_");
 			first = false;
 		}
-		//out.append(", Crono;");
 		out.append(";");
 		
 		out.append(newLine);
@@ -832,278 +623,12 @@ public class VariablesModelReactantCentered extends VariablesModel {
 		out.append("//Reaction " + r1Id + " (" + m.getReactant(r1Id).get(ALIAS).as(String.class) + ") " + (!r2Id.equals(rOutput)?("AND " + r2Id + " (" + m.getReactant(r2Id).get(ALIAS).as(String.class) + ") "):"") + (r.get(INCREMENT).as(Integer.class)>0?"-->":"--|") + " " + (r2Id.equals(rOutput)?(r2Id + " (" + m.getReactant(r2Id).get(ALIAS).as(String.class) + ")"):(rOutput + " (" + m.getReactant(rOutput).get(ALIAS).as(String.class) + ")")));
 		out.append(newLine);
 		
-		Table timesL, timesU;
-		Property property = r.get(TIMES_LOWER);
-		if (property != null) {
-			timesL = property.as(Table.class);
-		} else {
-			timesL = r.get(TIMES).as(Table.class);
-		}
-		property = r.get(TIMES_UPPER);
-		if (property != null) {
-			timesU = property.as(Table.class);
-		} else {
-			timesU = r.get(TIMES).as(Table.class);
-		}
-
-		assert timesL.getRowCount() == m.getReactant(r2Id).get(NUMBER_OF_LEVELS).as(Integer.class) + 1 : "Incorrect number of rows in 'times lower' table of '"
-				+ r + "'.";
-		assert timesU.getRowCount() == m.getReactant(r2Id).get(NUMBER_OF_LEVELS).as(Integer.class) + 1 : "Incorrect number of rows in 'times upper' table of '"
-			+ r + "'.";
-		assert timesL.getColumnCount() == m.getReactant(r1Id).get(NUMBER_OF_LEVELS).as(Integer.class) + 1 : "Incorrect number of columns in 'times lower' table of '"
-				+ r + "'.";
-		assert timesU.getColumnCount() == m.getReactant(r1Id).get(NUMBER_OF_LEVELS).as(Integer.class) + 1 : "Incorrect number of columns in 'times upper' table of '"
-			+ r + "'.";
-		
-		// output rates table constant for this reaction
-		out.append("const double " + r.getId());
-		if (r.get(SCENARIO).as(Integer.class) == 0) {
-			out.append("_rLower[" + m.getReactant(r1Id).get(NUMBER_OF_LEVELS).as(Integer.class) + "+1] := {");
-		} else {
-			out.append("_rLower[" + m.getReactant(r2Id).get(NUMBER_OF_LEVELS).as(Integer.class) + "+1][" + m.getReactant(r1Id).get(NUMBER_OF_LEVELS).as(Integer.class) + "+1] := {");
-		}
-		out.append(newLine);
-		
-		if (r.get(SCENARIO).as(Integer.class) == 0) {
-			if (r.get(INCREMENT).as(Integer.class) >= 0) {
-				// for each column
-				for (int col = 0; col < timesL.getColumnCount(); col++) {
-					out.append(formatTime(timesL.get(0, col)));
-					
-					// seperate value with a comma if it is not the last one
-					if (col < timesL.getColumnCount() - 1) {
-						out.append(", ");
-					}
-				}
-			} else {
-				// for each column
-				for (int col = 0; col < timesL.getColumnCount(); col++) {
-					out.append(formatTime(timesL.get(1, col)));
-					
-					// seperate value with a comma if it is not the last one
-					if (col < timesL.getColumnCount() - 1) {
-						out.append(", ");
-					}
-				}
-			}
-		} else {
-			// for each row
-			for (int row = 0; row < timesL.getRowCount(); row++) {
-				out.append("\t\t{");
-				
-				// for each column
-				for (int col = 0; col < timesL.getColumnCount(); col++) {
-					out.append(formatTime(timesL.get(row, col)));
-					
-					// seperate value with a comma if it is not the last one
-					if (col < timesL.getColumnCount() - 1) {
-						out.append(", ");
-					}
-				}
-				
-				out.append("}");
-	
-				// end row line with a comma if it is not the last one
-				if (row < timesL.getRowCount() - 1) {
-					out.append(",");
-				}
-				out.append(newLine);
-			}
-		}
-
-		out.append("};");
-		out.append(newLine);
-		
-		// output times table constant for this reaction
-		out.append("const double " + r.getId());
-		if (r.get(SCENARIO).as(Integer.class) == 0) {
-			out.append("_rUpper[" + m.getReactant(r1Id).get(NUMBER_OF_LEVELS).as(Integer.class) + "+1] := {");
-		} else {
-			out.append("_rUpper[" + m.getReactant(r2Id).get(NUMBER_OF_LEVELS).as(Integer.class) + "+1][" + m.getReactant(r1Id).get(NUMBER_OF_LEVELS).as(Integer.class) + "+1] := {");
-		}
-		out.append(newLine);
-
-		if (r.get(SCENARIO).as(Integer.class) == 0) {
-			if (r.get(INCREMENT).as(Integer.class) >= 0) {
-				// for each column
-				for (int col = 0; col < timesU.getColumnCount(); col++) {
-					out.append(formatTime(timesU.get(0, col)));
-					
-					// seperate value with a comma if it is not the last one
-					if (col < timesU.getColumnCount() - 1) {
-						out.append(", ");
-					}
-				}
-			} else {
-				// for each column
-				for (int col = 0; col < timesU.getColumnCount(); col++) {
-					out.append(formatTime(timesU.get(1, col)));
-					
-					// seperate value with a comma if it is not the last one
-					if (col < timesU.getColumnCount() - 1) {
-						out.append(", ");
-					}
-				}
-			}
-		} else {
-			// for each row
-			for (int row = 0; row < timesU.getRowCount(); row++) {
-				out.append("\t\t{");
-				
-				// for each column
-				for (int col = 0; col < timesU.getColumnCount(); col++) {
-					out.append(formatTime(timesU.get(row, col)));
-	
-					// seperate value with a comma if it is not the last one
-					if (col < timesU.getColumnCount() - 1) {
-						out.append(", ");
-					}
-				}
-	
-				out.append("}");
-	
-				// end row line with a comma if it is not the last one
-				if (row < timesU.getRowCount() - 1) {
-					out.append(",");
-				}
-				out.append(newLine);
-			}
-		}
-		
-		out.append("};");
-		out.append(newLine);
-		
-		/*
-		// output times table constant for this reaction
-		out.append("const int " + r.getId());
-		if (r.get(SCENARIO).as(Integer.class) == 0) {
-			out.append("_tLower[" + m.getReactant(r1Id).get(NUMBER_OF_LEVELS).as(Integer.class) + "+1] := {");
-		} else {
-			out.append("_tLower[" + m.getReactant(r2Id).get(NUMBER_OF_LEVELS).as(Integer.class) + "+1][" + m.getReactant(r1Id).get(NUMBER_OF_LEVELS).as(Integer.class) + "+1] := {");
-		}
-		out.append(newLine);
-		
-		if (r.get(SCENARIO).as(Integer.class) == 0) {
-			if (r.get(INCREMENT).as(Integer.class) >= 0) {
-				// for each column
-				for (int col = 0; col < timesL.getColumnCount(); col++) {
-					out.append(super.formatTime(timesL.get(0, col)));
-					
-					// seperate value with a comma if it is not the last one
-					if (col < timesL.getColumnCount() - 1) {
-						out.append(", ");
-					}
-				}
-			} else {
-				// for each column
-				for (int col = 0; col < timesL.getColumnCount(); col++) {
-					out.append(super.formatTime(timesL.get(1, col)));
-					
-					// seperate value with a comma if it is not the last one
-					if (col < timesL.getColumnCount() - 1) {
-						out.append(", ");
-					}
-				}
-			}
-		} else {
-			// for each row
-			for (int row = 0; row < timesL.getRowCount(); row++) {
-				out.append("\t\t{");
-				
-				// for each column
-				for (int col = 0; col < timesL.getColumnCount(); col++) {
-					out.append(super.formatTime(timesL.get(row, col)));
-					
-					// seperate value with a comma if it is not the last one
-					if (col < timesL.getColumnCount() - 1) {
-						out.append(", ");
-					}
-				}
-				
-				out.append("}");
-	
-				// end row line with a comma if it is not the last one
-				if (row < timesL.getRowCount() - 1) {
-					out.append(",");
-				}
-				out.append(newLine);
-			}
-		}
-
-		out.append("};");
-		out.append(newLine);
-		
-		// output times table constant for this reaction
-		out.append("const int " + r.getId());
-		if (r.get(SCENARIO).as(Integer.class) == 0) {
-			out.append("_tUpper[" + m.getReactant(r1Id).get(NUMBER_OF_LEVELS).as(Integer.class) + "+1] := {");
-		} else {
-			out.append("_tUpper[" + m.getReactant(r2Id).get(NUMBER_OF_LEVELS).as(Integer.class) + "+1][" + m.getReactant(r1Id).get(NUMBER_OF_LEVELS).as(Integer.class) + "+1] := {");
-		}
-		out.append(newLine);
-
-		if (r.get(SCENARIO).as(Integer.class) == 0) {
-			if (r.get(INCREMENT).as(Integer.class) >= 0) {
-				// for each column
-				for (int col = 0; col < timesU.getColumnCount(); col++) {
-					out.append(super.formatTime(timesU.get(0, col)));
-					
-					// seperate value with a comma if it is not the last one
-					if (col < timesU.getColumnCount() - 1) {
-						out.append(", ");
-					}
-				}
-			} else {
-				// for each column
-				for (int col = 0; col < timesU.getColumnCount(); col++) {
-					out.append(super.formatTime(timesU.get(1, col)));
-					
-					// seperate value with a comma if it is not the last one
-					if (col < timesU.getColumnCount() - 1) {
-						out.append(", ");
-					}
-				}
-			}
-		} else {
-			// for each row
-			for (int row = 0; row < timesU.getRowCount(); row++) {
-				out.append("\t\t{");
-				
-				// for each column
-				for (int col = 0; col < timesU.getColumnCount(); col++) {
-					out.append(super.formatTime(timesU.get(row, col)));
-	
-					// seperate value with a comma if it is not the last one
-					if (col < timesU.getColumnCount() - 1) {
-						out.append(", ");
-					}
-				}
-	
-				out.append("}");
-	
-				// end row line with a comma if it is not the last one
-				if (row < timesU.getRowCount() - 1) {
-					out.append(",");
-				}
-				out.append(newLine);
-			}
-		}
-		
-		out.append("};");
-		out.append(newLine);
-		*/
-		
 		out.append("timeActivity " + r.getId() + ";");
 		out.append(newLine);
+		out.append("const double k_" + r.getId() + " = " + formatDouble(r.get(Model.Properties.SCENARIO_PARAMETER_K).as(Double.class) / (m.getProperties().get(Model.Properties.SECS_POINT_SCALE_FACTOR).as(Double.class) * r.get(Model.Properties.LEVELS_SCALE_FACTOR + "_reaction").as(Double.class))) + ";");
+		out.append(newLine);
 		out.append(newLine);
 		
-//		// output process instantiation
-//		final String name = getReactionName(r);
-//		out.append(name + " = Reaction_" + name + "(" + r1Id + ", " + r2Id + ", " + rOutput + ", " + name + "_tLower, " + name + "_tUpper, " + r.get(INCREMENT).as(Integer.class)
-//				+ ", reacting[" + m.getReactant(r1Id).get(REACTANT_INDEX).as(Integer.class) + "], reacting[" + m.getReactant(r2Id).get(REACTANT_INDEX).as(Integer.class) + "]"
-//				+ ", reacting[" + m.getReactant(rOutput).get(REACTANT_INDEX).as(Integer.class) + "]);");
-//		out.append(newLine);
-//		out.append(newLine);
 	}
 
 
@@ -1122,7 +647,6 @@ public class VariablesModelReactantCentered extends VariablesModel {
 				outString = new StringWriter();
 				Vector<Reaction> influencingReactions = new Vector<Reaction>();
 				for (Reaction re : m.getReactionCollection()) {
-					//m.getMapCytoscapeIDtoReactantID().get(r.get(Model.Properties.CYTOSCAPE_ID).as(String.class))
 					if (re.get(OUTPUT_REACTANT).as(String.class).equals(r.getId()))  { //If the reactant is downstream of a reaction, count that reaction
 						influencingReactions.add(re);
 					}
@@ -1134,43 +658,51 @@ public class VariablesModelReactantCentered extends VariablesModel {
 				}
 				r.let(HAS_INFLUENCING_REACTIONS).be(true);
 				
-				StringBuilder template = new StringBuilder("<template><name>Reactant_" + r.getId() + "</name><parameter>int&amp; R, const int MAX</parameter><declaration>int[-1, 1] delta;\ntime_t tL, tU;\nclock c;\ndouble rateLower, rateUpper;\n\nvoid update() {\n\trateLower = ");
-				if (influencingReactions.size() == 1) {
-					Reaction re = influencingReactions.get(0);
-					int scenario = re.get(SCENARIO).as(Integer.class),
-						increment = re.get(INCREMENT).as(Integer.class);
-					String subtr1 = (increment > 0)?"":"subtract(zero, ",
-						   subtr2 = (increment > 0)?"":")";
+				StringBuilder template = new StringBuilder("<template><name>Reactant_" + r.getId() + "</name><parameter>int&amp; R, const int MAX</parameter><declaration>int[-1, 1] delta;\ntime_t tL, tU;\nclock c;\ndouble rateLower, rateUpper;\n\nvoid update() {\n");
+				template.append("\tdouble\n");
+				for (Reaction re : influencingReactions) {
+					int scenario = re.get(SCENARIO).as(Integer.class);
+					boolean activeR1, activeR2;
+					if (scenario == 0 || scenario == 1) {
+						activeR1 = true;
+						if (re.get(INCREMENT).as(Integer.class) >= 0) {
+							activeR2 = false;
+						} else {
+							activeR2 = true;
+						}
+					} else if (scenario == 2) {
+						activeR1 = re.get(Model.Properties.REACTANT_IS_ACTIVE_INPUT + "E1").as(Boolean.class);
+						activeR2 = re.get(Model.Properties.REACTANT_IS_ACTIVE_INPUT + "E2").as(Boolean.class);
+					} else {
+						//TODO: this should never happen, because we have already made these checks
+						activeR1 = activeR2 = true;
+					}
 					switch (scenario) {
 						case 0:
-							template.append(subtr1 + re.getId() + "_rLower[" + m.getReactant(re.get(Model.Properties.CATALYST).as(String.class)).getId() + "]" + subtr2 + ";\n\trateUpper = ");
-							template.append(subtr1 + re.getId() + "_rUpper[" + m.getReactant(re.get(Model.Properties.CATALYST).as(String.class)).getId() + "]" + subtr2 + ";\n\t");
-							template.append(re.getId() + ".T = " + "round(inverse(" + re.getId() + "_rLower[" + m.getReactant(re.get(Model.Properties.CATALYST).as(String.class)).getId() + "]));\n"); //+ re.getId() + "_tLower[" + m.getReactant(re.get(Model.Properties.CATALYST).as(String.class)).getId() + "];\n");
+							template.append("\t\t" + re.getId() + "_rLower = scenario1(k_" + re.getId() + ", int_to_double(" + m.getReactant(re.get(Model.Properties.CATALYST).as(String.class)).getId() + "), int_to_double(" + m.getReactant(re.get(Model.Properties.CATALYST).as(String.class)).getId() + "Levels), " + activeR1 + "),\n");
+							template.append("\t\t" + re.getId() + "_rUpper = " + re.getId() + "_rLower,\n");
 							break;
-						case 1:
-						case 2: //In this case, CATALYST = E1, REACTANT = E2 (the two upstream reactants)
-							template.append(subtr1 + re.getId() + "_rLower[" + m.getReactant(re.get(Model.Properties.REACTANT).as(String.class)).getId() + "][" + m.getReactant(re.get(Model.Properties.CATALYST).as(String.class)).getId() + "]" + subtr2 + ";\n\trateUpper = ");
-							template.append(subtr1 + re.getId() + "_rUpper[" + m.getReactant(re.get(Model.Properties.REACTANT).as(String.class)).getId() + "][" + m.getReactant(re.get(Model.Properties.CATALYST).as(String.class)).getId() + "]" + subtr2 + ";\n\t");
-							template.append(re.getId() + ".T = " + "round(inverse(" + re.getId() + "_rLower[" + m.getReactant(re.get(Model.Properties.REACTANT).as(String.class)).getId() + "][" + m.getReactant(re.get(Model.Properties.CATALYST).as(String.class)).getId() + "]));\n"); //+ re.getId() + "_tLower[" + m.getReactant(re.get(Model.Properties.REACTANT).as(String.class)).getId() + "][" + m.getReactant(re.get(Model.Properties.CATALYST).as(String.class)).getId() + "];\n");
+						case 1: case 2:
+							template.append("\t\t" + re.getId() + "_rLower = scenario2_3(k_" + re.getId() + ", int_to_double(" + m.getReactant(re.get(Model.Properties.REACTANT).as(String.class)).getId() + "), int_to_double(" + m.getReactant(re.get(Model.Properties.REACTANT).as(String.class)).getId() + "Levels), " + activeR2 + ", int_to_double(" + m.getReactant(re.get(Model.Properties.CATALYST).as(String.class)).getId() + "), int_to_double(" + m.getReactant(re.get(Model.Properties.CATALYST).as(String.class)).getId() + "Levels), " + activeR1 + "),\n");
+							template.append("\t\t" + re.getId() + "_rUpper = " + re.getId() + "_rLower,\n");
 							break;
 						default:
 							break;
 					}
+				}
+				template.append("\trateLower = ");
+				if (influencingReactions.size() == 1) {
+					Reaction re = influencingReactions.get(0);
+					int increment = re.get(INCREMENT).as(Integer.class);
+					String subtr1 = (increment > 0)?"":"subtract(zero, ",
+						   subtr2 = (increment > 0)?"":")";
+					template.append(subtr1 + re.getId() + "_rLower" + subtr2 + ";\n\trateUpper = rateLower;\n");
+//					template.append(subtr1 + "rateLower" + subtr2 + ";\n");
+					template.append("\t" + re.getId() + ".T = round(inverse(" + re.getId() + "_rLower));\n");
 				} else {
 					StringBuilder computation = new StringBuilder("zero");
 					for (Reaction re : influencingReactions) {
-						int scenario = re.get(SCENARIO).as(Integer.class);
-						switch (scenario) {
-							case 0:
-								computation.append(", " + re.getId() + "_rLower[" + m.getReactant(re.get(Model.Properties.CATALYST).as(String.class)).getId() + "])");
-								break;
-							case 1:
-							case 2: //In this case, CATALYST = E1, REACTANT = E2 (the two upstream reactants)
-								computation.append(", " + re.getId() + "_rLower[" + m.getReactant(re.get(Model.Properties.REACTANT).as(String.class)).getId() + "][" + m.getReactant(re.get(Model.Properties.CATALYST).as(String.class)).getId() + "])");
-								break;
-							default:
-								break;
-						}
+						computation.append(", " + re.getId() + "_rLower)");
 						if (re.get(Model.Properties.INCREMENT).as(Integer.class) > 0) {
 							computation.insert(0, "add(");
 						} else {
@@ -1178,38 +710,27 @@ public class VariablesModelReactantCentered extends VariablesModel {
 						}
 					}
 					template.append(computation);
-					template.append(";\n\trateUpper = ");
-					computation = new StringBuilder("zero");
+					template.append(";\n\trateUpper = rateLower;\n");
+//					computation = new StringBuilder("zero");
+//					for (Reaction re : influencingReactions) {
+//						computation.append(", " + re.getId() + "_rUpper)");
+//						if (re.get(Model.Properties.INCREMENT).as(Integer.class) > 0) {
+//							computation.insert(0, "add(");
+//						} else {
+//							computation.insert(0, "subtract(");
+//						}
+//					}
+//					computation.append(";\n");
+//					template.append(computation);
 					for (Reaction re : influencingReactions) {
 						int scenario = re.get(SCENARIO).as(Integer.class);
 						switch (scenario) {
 							case 0:
-								computation.append(", " + re.getId() + "_rUpper[" + m.getReactant(re.get(Model.Properties.CATALYST).as(String.class)).getId() + "])");
+								template.append("\t" + re.getId() + ".T = " + "round(inverse(" + re.getId() + "_rLower));\n");
 								break;
 							case 1:
 							case 2: //In this case, CATALYST = E1, REACTANT = E2 (the two upstream reactants)
-								computation.append(", " + re.getId() + "_rUpper[" + m.getReactant(re.get(Model.Properties.REACTANT).as(String.class)).getId() + "][" + m.getReactant(re.get(Model.Properties.CATALYST).as(String.class)).getId() + "])");
-								break;
-							default:
-								break;
-						}
-						if (re.get(Model.Properties.INCREMENT).as(Integer.class) > 0) {
-							computation.insert(0, "add(");
-						} else {
-							computation.insert(0, "subtract(");
-						}
-					}
-					computation.append(";\n");
-					template.append(computation);
-					for (Reaction re : influencingReactions) {
-						int scenario = re.get(SCENARIO).as(Integer.class);
-						switch (scenario) {
-							case 0:
-								template.append("\t" + re.getId() + ".T = " + "round(inverse(" + re.getId() + "_rLower[" + m.getReactant(re.get(Model.Properties.CATALYST).as(String.class)).getId() + "]));\n"); //+ re.getId() + "_tLower[" + m.getReactant(re.get(Model.Properties.CATALYST).as(String.class)).getId() + "];\n");
-								break;
-							case 1:
-							case 2: //In this case, CATALYST = E1, REACTANT = E2 (the two upstream reactants)
-								template.append("\t" + re.getId() + ".T = " + "round(inverse(" + re.getId() + "_rLower[" + m.getReactant(re.get(Model.Properties.REACTANT).as(String.class)).getId() + "][" + m.getReactant(re.get(Model.Properties.CATALYST).as(String.class)).getId() + "]));\n"); //+ re.getId() + "_tLower[" + m.getReactant(re.get(Model.Properties.REACTANT).as(String.class)).getId() + "][" + m.getReactant(re.get(Model.Properties.CATALYST).as(String.class)).getId() + "];\n");
+								template.append("\t" + re.getId() + ".T = " + "round(inverse(" + re.getId() + "_rLower));\n");
 								break;
 							default:
 								break;
@@ -1306,10 +827,6 @@ public class VariablesModelReactantCentered extends VariablesModel {
 	}
 	
 	protected String getReactionName(Reaction r) {
-		/*String r1Id = r.get(CATALYST).as(String.class);
-		String r2Id = r.get(REACTANT).as(String.class);
-		String rOutput = r.get(Model.Properties.OUTPUT_REACTANT).as(String.class);
-		return r1Id + "_" + r2Id + ((rOutput.equals(r2Id))? "" : "_" + rOutput);*/
 		return r.getId(); //The (UPPAAL) ID of the reaction is already set when we create it in the model
 	}
 	
@@ -1320,6 +837,8 @@ public class VariablesModelReactantCentered extends VariablesModel {
 		out.append(newLine);
 		out.append("int " + r.getId() + " := " + r.get(INITIAL_LEVEL).as(Integer.class) + ";");
 		out.append(newLine);
+		out.append("const int " + r.getId() + "Levels := " + r.get(NUMBER_OF_LEVELS).as(Integer.class) + ";");
+		out.append(newLine);
 		out.append(newLine);
 	}
 	
@@ -1328,40 +847,25 @@ public class VariablesModelReactantCentered extends VariablesModel {
 		if (time == INFINITE_TIME) {
 			return "{0, 0}";
 		} else {
-			int b, e;
-			double d = 1.0 / time; //time is guaranteed not to be 0, because we use 0 as a signal that rounding is not good enough, and increase time scale
-			e = (int)Math.round(Math.log10(d)) - 3;
-			b = (int)Math.round(d * Math.pow(10, -e));
-			if (b < 10) { //We always want 4 figures
-				b = b * 1000;
-				e = e - 3;
-			} else if (b < 100) {
-				b = b * 100;
-				e = e - 2;
-			} else if (b < 1000) {
-				b = b * 10;
-				e = e - 1;
-			}
-			return "{" + b + ", " + e + "}";
+			return formatDouble(1.0 / time); //time is guaranteed not to be 0, because we use 0 as a signal that rounding is not good enough, and increase time scale
 		}
 	}
-	/*protected String formatTime(int time) {
-		if (time == INFINITE_TIME) {
-			return "{0, 0}";
-		} else {
-			int b, e;
-			double d = 1.0 / time; //time is guaranteed not to be 0, because we use 0 as a signal that rounding is not good enough, and increase time scale
-			e = (int)Math.round(Math.log10(d)) - 2;
-			b = (int)Math.round(d * Math.pow(10, -e));
-			if (b < 10) { //We always want 3 figures
-				b = b * 100;
-				e = e - 2;
-			} else if (b < 100) {
-				b = b * 10;
-				e = e - 1;
-			}
-			return "{" + b + ", " + e + "}";
+	
+	private String formatDouble(double d) {
+		int b, e; 
+		e = (int)Math.round(Math.log10(d)) - 3;
+		b = (int)Math.round(d * Math.pow(10, -e));
+		if (b < 10) { //We always want 4 figures
+			b = b * 1000;
+			e = e - 3;
+		} else if (b < 100) {
+			b = b * 100;
+			e = e - 2;
+		} else if (b < 1000) {
+			b = b * 10;
+			e = e - 1;
 		}
-	}*/
+		return "{" + b + ", " + e + "}";
+	}
 
 }
