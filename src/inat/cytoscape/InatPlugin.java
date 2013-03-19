@@ -391,11 +391,11 @@ public class InatPlugin extends CytoscapePlugin {
 				
 				if (attributeName.equals(SECONDS_PER_POINT)) {
 					if (newAttributeValue != null) {
-						double value = 10;
+						double value = 1;
 						try {
 							value = Double.parseDouble(newAttributeValue.toString());
 						} catch (Exception e) {
-							value = 10;
+							value = 1;
 						}
 						DecimalFormat df = new DecimalFormat("#.########");
 						changeSecondsPerPointbutton.setText(df.format(value) + " seconds/step");

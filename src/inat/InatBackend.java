@@ -293,7 +293,7 @@ public class InatBackend {
 					
 					if (attributeName.equals(SECONDS_PER_POINT)) {
 						if (oldAttributeValue == null) { //This way you can choose whatever scale you want also at the beginning (when you first have to choose a sec/step value)
-							oldAttributeValue = 12;
+							oldAttributeValue = 1;
 						}
 						
 						double newSecondsPerPoint = 0, oldSecondsPerPoint = 0, factor = 0;

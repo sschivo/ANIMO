@@ -51,7 +51,7 @@ public class ChangeSecondsAction extends CytoscapeAction {
 		double currentSecondsPerPoint;
 		if (!networkAttributes.hasAttribute(network.getIdentifier(), SECONDS_PER_POINT)) {
 			message = "Missing number of seconds per point for the network.\nPlease insert the number of real-life seconds a simulation point will represent";
-			currentSecondsPerPoint = 12;
+			currentSecondsPerPoint = 1;
 		} else {
 			message = "Please insert the number of real-life seconds a simulation point will represent";
 			currentSecondsPerPoint = networkAttributes.getDoubleAttribute(network.getIdentifier(), SECONDS_PER_POINT);
