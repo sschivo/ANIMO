@@ -5,6 +5,7 @@ import inat.model.Model;
 
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.MouseListener;
 import java.util.Collections;
 import java.util.Hashtable;
 import java.util.Iterator;
@@ -110,6 +111,19 @@ private static final long serialVersionUID = -7020762010666811781L;
 		this.add(contentV);
 		slider.setValue(slider.getMaximum() / 2);
 		boundValue.setText("" + slider.getValue());
+	}
+	
+	public void setEnabled(boolean enabled) {
+		combo1.setEnabled(enabled);
+		combo2.setEnabled(enabled);
+		slider.setEnabled(enabled);
+	}
+	
+	public void addMouseListener(MouseListener ml) {
+		super.addMouseListener(ml);
+		combo1.addMouseListener(ml);
+		combo2.addMouseListener(ml);
+		slider.addMouseListener(ml);
 	}
 	
 	public void setReactantIDs(Model m) {
