@@ -5,6 +5,7 @@ import inat.model.Model;
 
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.util.Collections;
 import java.util.Hashtable;
 import java.util.Iterator;
 import java.util.Vector;
@@ -26,8 +27,8 @@ public class StateFormula extends JPanel {
 private static final long serialVersionUID = -7020762010666811781L;
 
 	public static char REACTANT_NAME_DELIMITER = '@';
-	private String[] reactantAliases, reactantIdentifiers;
-	private JComboBox<String> combo1;
+	private ReactantId[] reactants;
+	private JComboBox<ReactantId> combo1;
 	private JComboBox<BoundType> combo2;
 	private JLabel boundValue;
 	private JSlider slider;
@@ -41,8 +42,7 @@ private static final long serialVersionUID = -7020762010666811781L;
 		final CyAttributes nodeAttrib = Cytoscape.getNodeAttributes();
 		//reactantAliases = new String[network.getNodeCount()];
 		//reactantIdentifiers = new String[network.getNodeCount()];
-		Vector<String> aliases = new Vector<String>(),
-					   identif = new Vector<String>();
+		Vector<ReactantId> reactantsV = new Vector<ReactantId>();
 		Iterator<Node> nodes = (Iterator<Node>) network.nodesIterator();
 		//for (int i = 0; nodes.hasNext(); i++) {
 		while (nodes.hasNext()) {
@@ -52,24 +52,23 @@ private static final long serialVersionUID = -7020762010666811781L;
 				continue;
 			}
 			//reactantIdentifiers[i] = node.getIdentifier();
-			identif.add(node.getIdentifier());
+			String identif = node.getIdentifier(),
+				   alias = identif;
 			if (nodeAttrib.hasAttribute(node.getIdentifier(), Model.Properties.CANONICAL_NAME)) {
 				//reactantAliases[i] = nodeAttrib.getStringAttribute(node.getIdentifier(), Model.Properties.CANONICAL_NAME);
-				aliases.add(nodeAttrib.getStringAttribute(node.getIdentifier(), Model.Properties.CANONICAL_NAME));
-			} else {
-				//reactantAliases[i] = reactantIdentifiers[i];
-				aliases.add(node.getIdentifier());
+				alias = nodeAttrib.getStringAttribute(node.getIdentifier(), Model.Properties.CANONICAL_NAME);
 			}
+			reactantsV.add(new ReactantId(alias, identif));
 		}
-		reactantIdentifiers = identif.toArray(new String[]{""});
-		reactantAliases = aliases.toArray(new String[]{""});
-		combo1 = new JComboBox<String>(reactantAliases);
+		Collections.sort(reactantsV);
+		reactants = reactantsV.toArray(new ReactantId[]{});
+		combo1 = new JComboBox<ReactantId>(reactants);
 		combo1.addActionListener(new ActionListener() {
 			
 			@Override
 			public void actionPerformed(ActionEvent arg0) {
-				int idx = combo1.getSelectedIndex();
-				int nLevels = nodeAttrib.getIntegerAttribute(reactantIdentifiers[idx], Model.Properties.NUMBER_OF_LEVELS);
+				ReactantId reactant = (ReactantId)combo1.getSelectedItem();
+				int nLevels = nodeAttrib.getIntegerAttribute(reactant.getIdentifier(), Model.Properties.NUMBER_OF_LEVELS);
 				if (slider != null) {
 					slider.setMaximum(nLevels);
 					int space = (slider.getMaximum() - slider.getMinimum() + 1) / 5;
@@ -120,7 +119,8 @@ private static final long serialVersionUID = -7020762010666811781L;
 	public StateFormula getSelectedFormula() {
 		if (selectedFormula == null) {
 			//String selectedID = REACTANT_NAME_DELIMITER + reactantIdentifiers[combo1.getSelectedIndex()] + REACTANT_NAME_DELIMITER;
-			selectedFormula = new ActivityBound(new ReactantName(reactantIdentifiers[combo1.getSelectedIndex()], reactantAliases[combo1.getSelectedIndex()]), (BoundType)combo2.getSelectedItem(), "" + slider.getValue());
+			ReactantId reactant = (ReactantId)combo1.getSelectedItem();
+			selectedFormula = new ActivityBound(new ReactantName(reactant.getIdentifier(), reactant.getAlias()), (BoundType)combo2.getSelectedItem(), "" + slider.getValue());
 		}
 		return selectedFormula;
 	}
@@ -131,5 +131,31 @@ private static final long serialVersionUID = -7020762010666811781L;
 	
 	public String toHumanReadable() {
 		return getSelectedFormula().toHumanReadable();
+	}
+	
+	private class ReactantId implements Comparable<ReactantId> {
+		private String alias, identifier;
+		
+		public ReactantId(String alias, String identifier) {
+			this.alias = alias;
+			this.identifier = identifier;
+		}
+		
+		public String getAlias() {
+			return alias;
+		}
+		
+		public String getIdentifier() {
+			return identifier;
+		}
+		
+		public String toString() {
+			return getAlias();
+		}
+		
+		@Override
+		public int compareTo(ReactantId o) {
+			return this.alias.compareTo(o.alias);
+		}
 	}
 }

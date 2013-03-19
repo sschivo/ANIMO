@@ -15,9 +15,7 @@ import inat.model.Reaction;
 import inat.util.XmlConfiguration;
 
 import java.io.BufferedReader;
-import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileWriter;
 import java.io.InputStream;
@@ -77,7 +75,7 @@ public class UppaalModelAnalyserSMC implements ModelAnalyser<LevelResult> {
 	 * @return The parsed SMCResult containing the response given by UPPAAL (be it boolean or numerical)
 	 * @throws AnalysisException
 	 */
-	public SMCResult analyzeSMC(Model m, String probabilisticQuery) throws AnalysisException {
+	public SMCResult analyzeSMC(final Model m, String probabilisticQuery) throws AnalysisException {
 		SMCResult result = null;
 		try {
 			final VariablesModel variablesModel;
@@ -115,10 +113,6 @@ public class UppaalModelAnalyserSMC implements ModelAnalyser<LevelResult> {
 			File fileOutput = new File(nomeFileOutput);
 			fileOutput.deleteOnExit();
 			
-			File fIn = new File(nomeFileModello.substring(0, nomeFileModello.lastIndexOf(".")) + ".out"),
-				 fEr = new File(nomeFileModello.substring(0, nomeFileModello.lastIndexOf(".")) + ".err");
-				
-			
 			//the following string is used in order to make sure that the name of .xtr output files is unique even when we are called by an application which is multi-threaded itself (it supposes of course that the input file is unique =))
 			String[] cmd = new String[3];
 			
@@ -138,43 +132,52 @@ public class UppaalModelAnalyserSMC implements ModelAnalyser<LevelResult> {
 				cmd[2] = verifytaSMCPath;				
 			}
 			cmd[2] += " -s -o2 -t0 \"" + nomeFileModello + "\" \"" + nomeFileQuery + "\"";// > \"" + nomeFileOutput + "\"";//2>&1";
-			Runtime rt = Runtime.getRuntime();
-			long startTime = System.currentTimeMillis();
-			//System.err.println("(1) Ora eseguo il processo");
-			final Process proc = rt.exec(cmd);
-			//System.err.println("(1) Lanciato");
+			ProcessBuilder pb = new ProcessBuilder(cmd[0], cmd[1], cmd[2]);
+			pb.redirectErrorStream(true);
+			if (monitor != null) {
+				monitor.setStatus("Analyzing model with UPPAAL.");
+			}
+			System.err.print("\tUPPAAL analysis of " + nomeFileModello);
+			final long startTime = System.currentTimeMillis();
+			final Process proc = pb.start();
+			final Vector<SMCResult> resultVector = new Vector<SMCResult>(1); //this has no other reason than to hack around the fact that an internal class needs to have all variables it uses declared as final
+			final Vector<Exception> errors = new Vector<Exception>(); //same reason as above
+			final InputStream inputStream = proc.getInputStream();
+			if (inputStream.markSupported()) {
+				inputStream.mark(10485760); //10 Mbyte to replay a bit of the trace in case of error
+			}
+			new Thread() {
+				@Override
+				public void run() {
+					try {
+						SMCResult result = new UppaalModelAnalyserSMC.VariablesInterpreterConcrete(monitor).analyseSMC(m, inputStream, startTime);
+						resultVector.add(result);
+					} catch (Exception e) {
+						System.err.println("Eccezione " + e);
+						e.printStackTrace(System.err);
+						errors.add(e);
+					}
+				}
+			}.start();
 			if (actionTask != null) {
 				taskStatus = 0;
-				//System.err.println("(1) actionTask mi e' stato passato, quindi posso usare multithread");
 				new Thread() { //wait for the process to end correctly
 					@Override
 					public void run() {
 						try {
-							//System.err.println("(2) Ora aspetto");
 							proc.waitFor();
-							//System.err.println("(2) Finito di aspettare");
 						} catch (InterruptedException ex) {
-							//System.err.println("(2) InterruptedException. taskStatus = " + taskStatus);
-							if (taskStatus == 0) {
-								taskStatus = 2;
-							}
+							taskStatus = 2;
 						}
-						if (taskStatus == 0) { //I update only if it was not already updated
-							taskStatus = 1;
-						}
+						taskStatus = 1;
 					}
 				}.start();
-				//System.err.println("(1) Lanciato nr 2");
 				new Thread() { //wait for the process to end by user cancellation
 					@Override
 					public void run() {
-						//System.err.println("(3) Inizia 3");
 						while (taskStatus == 0) {
 							if (actionTask.needToStop()) {
-								//System.err.println("(3) needToStop: distruggo il processo");
 								taskStatus = 2;
-								proc.destroy();
-								//System.err.println("(3) Processo distrutto");
 								return;
 							}
 							try {
@@ -185,90 +188,69 @@ public class UppaalModelAnalyserSMC implements ModelAnalyser<LevelResult> {
 						}
 					}
 				}.start();
-				//System.err.println("(1) Lanciato nr 3");
-				InputStreamReader srIn = new InputStreamReader(proc.getInputStream()),
-								  srEr = new InputStreamReader(proc.getErrorStream());
-				BufferedReader brIn = new BufferedReader(srIn),
-							   brEr = new BufferedReader(srEr);
-				BufferedWriter bwIn = new BufferedWriter(new FileWriter(fIn)),
-							   bwEr = new BufferedWriter(new FileWriter(fEr));
-				fIn.deleteOnExit();
-				fEr.deleteOnExit();
-				String line = null;
 				while (taskStatus == 0) {
-					try {
-						Thread.sleep(100);
-						while (srIn.ready() && (line = brIn.readLine()) != null) {
-							bwIn.append(line);
-							bwIn.newLine();
-							bwIn.flush();
-						}
-						while (srEr.ready() && (line = brEr.readLine()) != null) {
-							bwEr.append(line);
-							bwEr.newLine();
-							bwEr.flush();
-						}
-					} catch (Exception ex) {
-						
-					}
+					Thread.sleep(100);
 				}
-				//Read the last things from the input and error before passing them to the analyser
-				while ((line = brIn.readLine()) != null) {
-					bwIn.append(line);
-					bwIn.newLine();
-					bwIn.flush();
-				}
-				while ((line = brEr.readLine()) != null) {
-					bwEr.append(line);
-					bwEr.newLine();
-					bwEr.flush();
-				}
-				bwIn.close();
-				bwEr.close();
-				//System.err.println("(1) Finito di aspettare. Ora taskStatus = " + taskStatus);
-				if (taskStatus == 2) { //the process has been cancelled: we need to exit
-					//System.err.println("(1) Il processo era stato terminato, quindi distruggo (di nuovo??)");
+				if (taskStatus == 2) {
+					System.err.println(" was interrupted by the user");
 					proc.destroy();
-					//System.err.println("(1) Distrutto il processo");
 					throw new AnalysisException("User interrupted");
 				}
+				while (resultVector.isEmpty()) { //if the verifyta process is completed, we may still need to wait for the analysis thread to complete
+					Thread.sleep(100);
+				}
 			} else {
-				//System.err.println("(1) Niente actionTask: tutto un thread. Aspetto per il processo.");
 				try {
 					proc.waitFor();
-					//System.err.println("(1) Processo terminato");
 				} catch (InterruptedException ex){
-					//System.err.println("(1) Interrotto il processo: lo distruggo");
 					proc.destroy();
 					throw new Exception("Interrupted (1)");
 				}
+				while (resultVector.isEmpty()) { //if the verifyta process is completed, we may still need to wait for the analysis thread to complete
+					Thread.sleep(100);
+				}
 			}
-			long endTime = System.currentTimeMillis();
-			System.err.println("\tUPPAAL analysis of " + nomeFileModello + " took " + RunAction.timeDifferenceFormat(startTime, endTime));
-			if (proc.exitValue() != 0) {
+			if (!errors.isEmpty()) {
+				Exception ex = errors.firstElement();
+				throw new AnalysisException("Error during analysis", ex);
+			}
+			if (proc.exitValue() != 0 && ((result = resultVector.firstElement()) == null || (result.getResultType() == SMCResult.RESULT_TYPE_TRACE && result.getLevelResult().isEmpty()))) {
 				StringBuilder errorBuilder = new StringBuilder();
 				errorBuilder.append("[" + nomeFileModello + "] Verify result: " + proc.exitValue() + "\n");
-				BufferedReader br = new BufferedReader(new InputStreamReader(proc.getErrorStream()));
+				if (result == null) {
+					errorBuilder.append(" null result\n");
+				} else if (result.getResultType() == SMCResult.RESULT_TYPE_TRACE && result.getLevelResult().isEmpty()) {
+					errorBuilder.append(" empty trace result\n");
+				} else {
+					errorBuilder.append(" result is " + result + "\n");
+				}
+				if (inputStream.markSupported()) {
+					try {
+						inputStream.reset();
+					} catch (Exception ex) {
+						errorBuilder.append(" (could not reset stream to diagnose error)");
+						System.err.println("Stream reset failed");
+					}
+				}
+				BufferedReader br = new BufferedReader(new InputStreamReader(inputStream/*proc.getErrorStream()*/));
 				String line = null;
-				while ((line = br.readLine()) != null) {
-					errorBuilder.append(line + "\n");
+				try {
+					while ((line = br.readLine()) != null) {
+						errorBuilder.append(line + "\n");
+					}
+				} catch (Exception exc) {
+					errorBuilder.append(" (moreover, exception " + exc + ")");
 				}
 				errorBuilder.append(" (current directory: " + new File(".").getAbsolutePath() + ")\n");
+				
 				throw new Exception(errorBuilder.toString());
+			} else {
+				result = resultVector.firstElement();
 			}
-			
-			startTime = System.currentTimeMillis();
-			result = new UppaalModelAnalyserSMC.VariablesInterpreterConcrete(monitor).analyseSMC(m, /*proc.getInputStream()*/new FileInputStream(fIn), /*proc.getErrorStream()*/ new FileInputStream(fEr));//new FileInputStream(nomeFileOutput));
-			endTime = System.currentTimeMillis();
-			System.err.println("\tParsing the result produced by UPPAAL took " + RunAction.timeDifferenceFormat(startTime, endTime));
-			
 			//N B: it is responsibility of the caller to close all streams when the process is done!!!
 			proc.getErrorStream().close();
 			proc.getInputStream().close();
 			proc.getOutputStream().close();
-			
-			//new File(nomeFileOutput).delete();
-			
 		} catch (Exception e) {
 			throw new AnalysisException("Error during analysis", e);
 		}
@@ -526,7 +508,7 @@ public class UppaalModelAnalyserSMC implements ModelAnalyser<LevelResult> {
 		 * @return The parsed SMCResult containing the boolean/numerical query answer
 		 * @throws Exception
 		 */
-		public SMCResult analyseSMC(Model m, InputStream smcOutput, InputStream smcErr) throws Exception {
+		public SMCResult analyseSMC(Model m, InputStream smcOutput, long startTime) throws Exception {
 			BufferedReader br = new BufferedReader(new InputStreamReader(smcOutput));
 			SMCResult res;
 			
@@ -539,16 +521,15 @@ public class UppaalModelAnalyserSMC implements ModelAnalyser<LevelResult> {
 			
 			try {
 				while ((line = br.readLine()) != null) {
-					System.err.println(line);
 					if (!line.contains(objective)) {
 						continue;
 					}
+					System.err.println(" took " + RunAction.timeDifferenceFormat(startTime, System.currentTimeMillis()));
 					boolean boolResult = true;
 					if (line.contains("NOT")) {
 						boolResult = false;
 					}
 					line = br.readLine();
-					System.err.println(line);
 					if (line == null) { //Property is just true or false
 						res = new SMCResult(boolResult, findConfidence(line, br));
 						br.close();
@@ -556,10 +537,10 @@ public class UppaalModelAnalyserSMC implements ModelAnalyser<LevelResult> {
 					} else { //There are other components to the answer
 						if (line.startsWith("Showing example trace") || line.startsWith("Showing counter example")) { //has a trace result
 							if (monitor != null) {
-								monitor.setStatus("Property is " + (boolResult?"true":"false") + ". Parsing example trace.");
+								monitor.setStatus("Property is " + (boolResult?"true":"false") + ". Parsing " + (boolResult?"":"counter") + "example trace.");
 							}
 							SimpleLevelResult trace = null;
-							trace = analyseTraceNonSimulation(m, smcErr, -1);
+							trace = analyseNormalTraceFromStream(m, br, -1);
 							res = new SMCResult(boolResult, trace);
 							br.close();
 							return res;
@@ -825,16 +806,15 @@ public class UppaalModelAnalyserSMC implements ModelAnalyser<LevelResult> {
 		 * showing the activity levels of that reactant for each time point of the trace.
 		 * @throws Exception
 		 */
-		public SimpleLevelResult analyseTraceNonSimulation(Model m, InputStream output, int timeTo) throws Exception {
+		public SimpleLevelResult analyseNormalTrace(Model m, InputStream output, int timeTo) throws Exception {
 			BufferedReader br = new BufferedReader(new InputStreamReader(output));
 //			String line = null;
 //			while ((line = br.readLine()) != null && !line.startsWith("Showing example trace")); //"Showing example trace" is written on a different stream!
 			
-			return analyseTraceNonSimulationFromStream(m, br, timeTo);
+			return analyseNormalTraceFromStream(m, br, timeTo);
 		}
 		
-		private SimpleLevelResult analyseTraceNonSimulationFromStream(Model m, BufferedReader br, int timeTo) throws Exception {
-			long startTime = System.currentTimeMillis();
+		private SimpleLevelResult analyseNormalTraceFromStream(Model m, BufferedReader br, int timeTo) throws Exception {
 			//rand = new Random(randInitializer.nextLong());
 			lastComputed = -1; //Lascialo a -1! Quando chiedo di calcolare il random dentro un intervallo, se lastComputed e' < 0 uso come lastComputed il lowerBound dell'intervallo.
 			
@@ -850,9 +830,6 @@ public class UppaalModelAnalyserSMC implements ModelAnalyser<LevelResult> {
 			HashMap<String, Double> numberOfLevels = new HashMap<String, Double>();
 //			int readAheadLimit = 1000; //Used to define the buffer to memorize the last line when we put a mark to read ahead the next line
 			
-//			while ((line = br.readLine()) != null) {
-//				System.err.println(line);
-//			}
 			
 			int minTime = m.getProperties().get(Model.Properties.MINIMUM_DURATION).as(Integer.class), //Use the global minimum instead of the local minimum for time table values
 					maxTime = m.getProperties().get(Model.Properties.MAXIMUM_DURATION).as(Integer.class);
@@ -876,6 +853,9 @@ public class UppaalModelAnalyserSMC implements ModelAnalyser<LevelResult> {
 					if (reactantId.equals("globalTime") || reactantId.equals("r")
 						|| reactantId.startsWith("reactant") || reactantId.startsWith("output") //private variables are not taken into account
 						|| reactantId.equals("r1") || reactantId.equals("r2")
+						|| reactantId.endsWith(".r")
+						|| reactantId.endsWith(".reactant") || reactantId.endsWith(".output")
+						|| reactantId.endsWith(".r1") || reactantId.endsWith(".r2")
 						|| reactantId.endsWith(".e") || reactantId.endsWith(".b")
 						|| reactantId.endsWith(".c") || reactantId.endsWith(".delta")
 						|| reactantId.endsWith(".tL") || reactantId.endsWith(".tU")) continue;
@@ -960,14 +940,7 @@ public class UppaalModelAnalyserSMC implements ModelAnalyser<LevelResult> {
 ////				}
 //			}
 			
-			long endTime = System.currentTimeMillis();
-			System.err.println(" took " + RunAction.timeDifferenceFormat(startTime, endTime));
-			startTime = System.currentTimeMillis();
-			
-			if (monitor != null) {
-				monitor.setStatus("Analyzing UPPAAL output trace.");
-				startTime = System.currentTimeMillis();
-			}
+			long startTime = System.currentTimeMillis();
 			
 			lastTimeLB = timeLB;
 			lastTimeUB = timeUB;
@@ -1100,10 +1073,23 @@ public class UppaalModelAnalyserSMC implements ModelAnalyser<LevelResult> {
 					double lastValue = values.get(values.lastKey());
 					values.put((double)timeTo, lastValue);
 				}
+			} else {
+				double lastPoint = -1;
+				for (String k : levels.keySet()) {
+					double t = levels.get(k).lastKey();
+					if (lastPoint == -1 || t > lastPoint) {
+						lastPoint = t;
+					}
+				}
+				for (String reactantName : levels.keySet()) {
+					SortedMap<Double, Double> values = levels.get(reactantName);
+					double lastValue = values.get(values.lastKey());
+					values.put((double)lastPoint, lastValue);
+				}
 			}
 			//}
 			
-			endTime = System.currentTimeMillis();
+			long endTime = System.currentTimeMillis();
 			System.err.println("\tParsing the result produced by UPPAAL took " + RunAction.timeDifferenceFormat(startTime, endTime));
 			
 			return new SimpleLevelResult(maxNumberOfLevels, levels);
