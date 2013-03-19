@@ -1,5 +1,6 @@
 package inat.cytoscape;
 
+import inat.InatBackend;
 import inat.analyser.SMCResult;
 import inat.analyser.uppaal.ResultAverager;
 import inat.analyser.uppaal.SimpleLevelResult;
@@ -8,6 +9,7 @@ import inat.exceptions.InatException;
 import inat.model.Model;
 import inat.model.Reactant;
 import inat.network.UPPAALClient;
+import inat.util.XmlConfiguration;
 
 import java.awt.event.ActionEvent;
 import java.io.File;
@@ -164,11 +166,18 @@ public class RunAction extends InatActionTask {
 				this.monitor.setStatus("Creating model representation");
 				this.monitor.setPercentCompleted(0);
 				
+				boolean generateTables = false;
+				XmlConfiguration configuration = InatBackend.get().configuration();
+				String modelType = configuration.get(XmlConfiguration.MODEL_TYPE_KEY, null);
+				if (modelType.equals(XmlConfiguration.MODEL_TYPE_REACTION_CENTERED_TABLES)) {
+					generateTables = true;
+				}
+				
 				final Model model;
 				if (smcUppaal.isSelected()) {
-					model = Model.generateModelFromCurrentNetwork(this.monitor, null);
+					model = Model.generateModelFromCurrentNetwork(this.monitor, null, generateTables);
 				} else {
-					model = Model.generateModelFromCurrentNetwork(this.monitor, nMinutesToSimulate);
+					model = Model.generateModelFromCurrentNetwork(this.monitor, nMinutesToSimulate, generateTables);
 				}
 				
 				boolean noReactantsPlotted = true;

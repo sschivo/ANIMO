@@ -5,7 +5,6 @@ import giny.model.Edge;
 import giny.model.Node;
 import inat.InatBackend;
 import inat.analyser.uppaal.VariablesModel;
-import inat.analyser.uppaal.VariablesModelSMC;
 import inat.exceptions.InatException;
 import inat.util.Table;
 import inat.util.XmlConfiguration;
@@ -268,11 +267,13 @@ public class Model implements Serializable {
 	 * when checking the presence of all necessary parameters (see checkParameters()) we will also check that
 	 * the upper bound is not "too large" for UPPAAL to understand it. The parameter can be < 0 or null to
 	 * indicate that no simulation is requested.
+	 * @param generateTables Whether to generate the time tables, or just find minimum and maximum to set the
+	 * reaction activityRatio when the slider is used
 	 * @return The intermediate ANIMO model
 	 * @throws InatException
 	 */
 	@SuppressWarnings("unchecked")
-	public static Model generateModelFromCurrentNetwork(TaskMonitor monitor, Integer nMinutesToSimulate) throws InatException {
+	public static Model generateModelFromCurrentNetwork(TaskMonitor monitor, Integer nMinutesToSimulate, boolean generateTables) throws InatException {
 		final String NUMBER_OF_LEVELS = Model.Properties.NUMBER_OF_LEVELS, //The total number of levels for a node (=reactant), or for the whole network (the name of the property is the same)
 		SECONDS_PER_POINT = Model.Properties.SECONDS_PER_POINT, //The number of real-life seconds represented by a single UPPAAL time unit
 		SECS_POINT_SCALE_FACTOR = Model.Properties.SECS_POINT_SCALE_FACTOR, //The scale factor for the UPPAAL time settings, allowing to keep the same scenario parameters, while varying the "density" of simulation sample points
@@ -569,55 +570,114 @@ public class Model implements Serializable {
 			r.let(Model.Properties.R1_IS_DOWNSTREAM).be(reactant1IsDownstream);
 			r.let(Model.Properties.R2_IS_DOWNSTREAM).be(reactant2IsDownstream);
 			
-			//System.err.println("Calcolo i tempi per la reazione " + nodeAttributes.getStringAttribute(edge.getSource().getIdentifier(), CANONICAL_NAME) + " -- " + nodeAttributes.getStringAttribute(edge.getTarget().getIdentifier(), CANONICAL_NAME) + ", con activeR1 = " + activeR1 + ", activeR2 = " + activeR2);
-			List<Double> times = scenario.generateTimes(1 + nLevelsR1, activeR1, reactant1IsDownstream, 1 + nLevelsR2, activeR2, reactant2IsDownstream);
-			Table timesLTable = new Table(nLevelsR2 + 1, nLevelsR1 + 1);
-			Table timesUTable = new Table(nLevelsR2 + 1, nLevelsR1 + 1);
-			
-			int minTime = Integer.MAX_VALUE,
-				maxTime = Integer.MIN_VALUE;
-			for (int j = 0; j < nLevelsR2 + 1; j++) {
-				for (int k = 0; k < nLevelsR1 + 1; k++) {
-					Double t = times.get(j * (nLevelsR1 + 1) + k);
-					if (Double.isInfinite(t)) {
-						timesLTable.set(j, k, VariablesModel.INFINITE_TIME);
-						timesUTable.set(j, k, VariablesModel.INFINITE_TIME);
-					} else if (uncertainty == 0) {
-						timesLTable.set(j, k, (int)Math.round(secStepFactor * levelsScaleFactor * t));
-						timesUTable.set(j, k, (int)Math.round(secStepFactor * levelsScaleFactor * t));
-						if (timesLTable.get(j, k) < minTime) {
-							minTime = timesLTable.get(j, k);
-						}
-						if (timesUTable.get(j, k) > maxTime) {
-							maxTime = timesUTable.get(j, k);
-						}
-					} else {
-						timesLTable.set(j, k, Math.max(0, (int)Math.round(secStepFactor * levelsScaleFactor * t * (1 - uncertainty / 100.0))));
-						timesUTable.set(j, k, Math.max(0, (int)Math.round(secStepFactor * levelsScaleFactor * t * (1 + uncertainty / 100.0))));
-						if (timesLTable.get(j, k) < minTime) {
-							minTime = timesLTable.get(j, k);
-						}
-						if (timesUTable.get(j, k) > maxTime) {
-							maxTime = timesUTable.get(j, k);
+			if (generateTables) {
+				//System.err.println("Calcolo i tempi per la reazione " + nodeAttributes.getStringAttribute(edge.getSource().getIdentifier(), CANONICAL_NAME) + " -- " + nodeAttributes.getStringAttribute(edge.getTarget().getIdentifier(), CANONICAL_NAME) + ", con activeR1 = " + activeR1 + ", activeR2 = " + activeR2);
+				List<Double> times = scenario.generateTimes(1 + nLevelsR1, activeR1, reactant1IsDownstream, 1 + nLevelsR2, activeR2, reactant2IsDownstream);
+				Table timesLTable = new Table(nLevelsR2 + 1, nLevelsR1 + 1);
+				Table timesUTable = new Table(nLevelsR2 + 1, nLevelsR1 + 1);
+				
+				int minTime = Integer.MAX_VALUE,
+					maxTime = Integer.MIN_VALUE;
+				for (int j = 0; j < nLevelsR2 + 1; j++) {
+					for (int k = 0; k < nLevelsR1 + 1; k++) {
+						Double t = times.get(j * (nLevelsR1 + 1) + k);
+						if (Double.isInfinite(t)) {
+							timesLTable.set(j, k, VariablesModel.INFINITE_TIME);
+							timesUTable.set(j, k, VariablesModel.INFINITE_TIME);
+						} else if (uncertainty == 0) {
+							timesLTable.set(j, k, (int)Math.round(secStepFactor * levelsScaleFactor * t));
+							timesUTable.set(j, k, (int)Math.round(secStepFactor * levelsScaleFactor * t));
+							if (timesLTable.get(j, k) < minTime) {
+								minTime = timesLTable.get(j, k);
+							}
+							if (timesUTable.get(j, k) > maxTime) {
+								maxTime = timesUTable.get(j, k);
+							}
+						} else {
+							timesLTable.set(j, k, Math.max(0, (int)Math.round(secStepFactor * levelsScaleFactor * t * (1 - uncertainty / 100.0))));
+							timesUTable.set(j, k, Math.max(0, (int)Math.round(secStepFactor * levelsScaleFactor * t * (1 + uncertainty / 100.0))));
+							if (timesLTable.get(j, k) < minTime) {
+								minTime = timesLTable.get(j, k);
+							}
+							if (timesUTable.get(j, k) > maxTime) {
+								maxTime = timesUTable.get(j, k);
+							}
 						}
 					}
 				}
-			}
-			if (minTime == Integer.MAX_VALUE) {
-				minTime = VariablesModelSMC.INFINITE_TIME;
-			}
-			if (maxTime == Integer.MIN_VALUE) {
-				maxTime = VariablesModelSMC.INFINITE_TIME;
-			}
-			r.let(TIMES_L).be(timesLTable);
-			r.let(TIMES_U).be(timesUTable);
-			r.let(MINIMUM_DURATION).be(minTime);
-			r.let(MAXIMUM_DURATION).be(maxTime);
-			if (minTime != VariablesModelSMC.INFINITE_TIME && (minTimeModel == Integer.MAX_VALUE || minTime < minTimeModel)) {
-				minTimeModel = minTime;
-			}
-			if (maxTime != VariablesModelSMC.INFINITE_TIME && (maxTimeModel == Integer.MIN_VALUE || maxTime > maxTimeModel)) {
-				maxTimeModel = maxTime;
+				if (minTime == Integer.MAX_VALUE) {
+					minTime = VariablesModel.INFINITE_TIME;
+				}
+				if (maxTime == Integer.MIN_VALUE) {
+					maxTime = VariablesModel.INFINITE_TIME;
+				}
+				r.let(TIMES_L).be(timesLTable);
+				r.let(TIMES_U).be(timesUTable);
+				r.let(MINIMUM_DURATION).be(minTime);
+				r.let(MAXIMUM_DURATION).be(maxTime);
+				if (minTime != VariablesModel.INFINITE_TIME && (minTimeModel == Integer.MAX_VALUE || minTime < minTimeModel)) {
+					minTimeModel = minTime;
+				}
+				if (maxTime != VariablesModel.INFINITE_TIME && (maxTimeModel == Integer.MIN_VALUE || maxTime > maxTimeModel)) {
+					maxTimeModel = maxTime;
+				}
+			} else { //No tabels were requested, so find only min and max time to be used in the computation of reaction activityRatio
+				Double maxValueFormula = Double.POSITIVE_INFINITY, minValueFormula;
+				int maxValueInTables, minValueInTables;
+				int colMax, rowMax, incrementColMax, incrementRowMax, colMin, rowMin;
+				if (activeR1 && !activeR2) {
+					colMax = 0; rowMax = nLevelsR2; //The largest number should be in the lower-left corner (the first not to be considered INFINITE_TIME)
+					incrementColMax = 1; incrementRowMax = -1;
+					colMin = nLevelsR1; rowMin = 0; //The smallest number should be in the top-right corner
+				} else if (activeR1 && activeR2) {
+					colMax = 0; rowMax = 0; //The largest number should be in the top-left corner (the first != INF)
+					incrementColMax = 1; incrementRowMax = 1;
+					colMin = nLevelsR1; rowMin = nLevelsR2; //The smallest number should be in the lower right corner
+				} else if (!activeR1 && !activeR2) {
+					colMax = nLevelsR1; rowMax = nLevelsR2; //The largest number should be in the lower right corner (the first != INF)
+					incrementColMax = -1; incrementRowMax = -1;
+					colMin = 0; rowMin = 0; //The smallest number should be in the top-left corner
+				} else if (!activeR1 && activeR2) {
+					colMax = nLevelsR1; rowMax = 0; //The largest number should be in the top-right corner (the first != INF)
+					incrementColMax = -1; incrementRowMax = 1;
+					colMin = 0; rowMin = nLevelsR2; //The smallest number should be in the lower-left corner
+				} else {
+					//TODO: this should never happen, as we have already considered all 4 possibilities for activeR1 and activeR2
+					colMax = rowMax = colMin = rowMin = incrementColMax = incrementRowMax = 1;
+				}
+				minValueFormula = scenario.computeFormula(colMin, nLevelsR1, activeR1, rowMin, nLevelsR2, activeR2);
+				while (Double.isInfinite(maxValueFormula) && colMax >= 0 && colMax <= nLevelsR1 && rowMax >= 0 && rowMax <= nLevelsR2) {
+					colMax = colMax + incrementColMax;
+					rowMax = rowMax + incrementRowMax;
+					maxValueFormula = scenario.computeFormula(colMax, nLevelsR1, activeR1, rowMax, nLevelsR2, activeR2);
+				}
+				
+				if (Double.isInfinite(minValueFormula)) {
+					minValueInTables = VariablesModel.INFINITE_TIME;
+				} else {
+					if (uncertainty == 0) {
+						minValueInTables = Math.max(0, (int)Math.round(secStepFactor * levelsScaleFactor * minValueFormula));
+					} else {
+						minValueInTables = Math.max(0, (int)Math.round(secStepFactor * levelsScaleFactor * minValueFormula * (1 - uncertainty / 100.0)));
+					}
+				}
+				if (Double.isInfinite(maxValueFormula)) {
+					maxValueInTables = VariablesModel.INFINITE_TIME;
+				} else {
+					if (uncertainty == 0) {
+						maxValueInTables = Math.max(0, (int)Math.round(secStepFactor * levelsScaleFactor * maxValueFormula));
+					} else {
+						maxValueInTables = Math.max(0, (int)Math.round(secStepFactor * levelsScaleFactor * maxValueFormula * (1 + uncertainty / 100.0)));
+					}
+				}
+				r.let(MINIMUM_DURATION).be(minValueInTables);
+				r.let(MAXIMUM_DURATION).be(maxValueInTables);
+				if (minValueInTables != VariablesModel.INFINITE_TIME && (minTimeModel == Integer.MAX_VALUE || minValueInTables < minTimeModel)) {
+					minTimeModel = minValueInTables;
+				}
+				if (maxValueInTables != VariablesModel.INFINITE_TIME && (maxTimeModel == Integer.MIN_VALUE || maxValueInTables > maxTimeModel)) {
+					maxTimeModel = maxValueInTables;
+				}
 			}
 			
 			String r1Id = r.get(CATALYST).as(String.class);
@@ -628,11 +688,11 @@ public class Model implements Serializable {
 			model.add(r);
 		}
 		if (minTimeModel == Integer.MAX_VALUE) {
-			minTimeModel = VariablesModelSMC.INFINITE_TIME;
+			minTimeModel = VariablesModel.INFINITE_TIME;
 		}
 		model.getProperties().let(MINIMUM_DURATION).be(minTimeModel);
 		if (maxTimeModel == Integer.MIN_VALUE) {
-			maxTimeModel = VariablesModelSMC.INFINITE_TIME;
+			maxTimeModel = VariablesModel.INFINITE_TIME;
 		}
 		model.getProperties().let(MAXIMUM_DURATION).be(maxTimeModel);
 		
@@ -1005,8 +1065,7 @@ public class Model implements Serializable {
 		
 		
 		edges = (Iterator<Edge>) network.edgesIterator();
-		for (@SuppressWarnings("unused")
-		int i = 0; edges.hasNext(); i++) {
+		while (edges.hasNext()) {
 			Edge edge = edges.next();
 			if (!edgeAttributes.getBooleanAttribute(edge.getIdentifier(), ENABLED)) continue;
 			double levelsScaleFactor;// = nodeAttributes.getDoubleAttribute(edge.getSource().getIdentifier(), LEVELS_SCALE_FACTOR) / nodeAttributes.getDoubleAttribute(edge.getTarget().getIdentifier(), LEVELS_SCALE_FACTOR);

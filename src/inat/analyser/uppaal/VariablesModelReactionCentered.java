@@ -26,7 +26,7 @@ import org.w3c.dom.Document;
  * Produces an UPPAAL model to be used with the UPPAAL SMC engine.
  * For comments on what the different functions do, refer to the VariablesModel class.
  */
-public class VariablesModelSMC extends VariablesModel {
+public class VariablesModelReactionCentered extends VariablesModel {
 
 	private static final String REACTANT_INDEX = Model.Properties.REACTANT_INDEX,
 								OUTPUT_REACTANT = Model.Properties.OUTPUT_REACTANT,

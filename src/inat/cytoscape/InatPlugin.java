@@ -540,26 +540,46 @@ public class InatPlugin extends CytoscapePlugin {
 				
 				
 				final String reactionCenteredTitle = "Reaction-centered model",
+							 reactionCenteredTablesTitle = "Reaction-centered model with tables",
 							 reactantCenteredTitle = "Reactant-centered model";
 				final JRadioButton useReactionCentered = new JRadioButton(reactionCenteredTitle),
+								   useReactionCenteredTables = new JRadioButton(reactionCenteredTablesTitle),
 								   useReactantCentered = new JRadioButton(reactantCenteredTitle);
 				useReactionCentered.setToolTipText("Advised when the network is not reaction-heavy");
-				useReactantCentered.setToolTipText("Advised when the network is reaction-heavy (experimental, uses more memory)");
+				useReactionCenteredTables.setToolTipText("Advised when the network is not reaction-heavy. Also, tends to use more memory.");
+				useReactantCentered.setToolTipText("Advised when the network is reaction-heavy (experimental)");
 				final ButtonGroup reactionCenteredGroup = new ButtonGroup();
 				reactionCenteredGroup.add(useReactionCentered);
+				reactionCenteredGroup.add(useReactionCenteredTables);
 				reactionCenteredGroup.add(useReactantCentered);
-				Boolean reactionCent = true;
+				String modelType = null;
 				try {
-					reactionCent = new Boolean(configuration.get(XmlConfiguration.REACTION_CENTERED_KEY));
+					modelType = configuration.get(XmlConfiguration.MODEL_TYPE_KEY);
 				} catch (Exception ex) {
-					reactionCent = true;
+					modelType = XmlConfiguration.DEFAULT_MODEL_TYPE;
 				}
-				useReactionCentered.setSelected(reactionCent);
-				useReactantCentered.setSelected(!reactionCent);
-				JPanel reactionCenteredPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-				reactionCenteredPanel.add(useReactionCentered);
-				reactionCenteredPanel.add(useReactantCentered);
-				content.add(new LabelledField("Model type", reactionCenteredPanel), new GridBagConstraints(0, 2, 1, 1, 1.0, 0.5, GridBagConstraints.CENTER, GridBagConstraints.BOTH, new Insets(0, 0, 0, 0), 0, 0));
+				if (modelType.equals(XmlConfiguration.MODEL_TYPE_REACTION_CENTERED)) {
+					useReactionCentered.setSelected(true);
+					useReactionCenteredTables.setSelected(false);
+					useReactantCentered.setSelected(false);
+				} else if (modelType.equals(XmlConfiguration.MODEL_TYPE_REACTION_CENTERED_TABLES)) {
+					useReactionCentered.setSelected(false);
+					useReactionCenteredTables.setSelected(true);
+					useReactantCentered.setSelected(false);
+				} else if (modelType.equals(XmlConfiguration.MODEL_TYPE_REACTANT_CENTERED)) {
+					useReactionCentered.setSelected(false);
+					useReactionCenteredTables.setSelected(false);
+					useReactantCentered.setSelected(true);
+				} else {
+					useReactionCentered.setSelected(true);
+					useReactionCenteredTables.setSelected(false);
+					useReactantCentered.setSelected(false);
+				}
+				JPanel modelTypePanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+				modelTypePanel.add(useReactionCentered);
+				modelTypePanel.add(useReactionCenteredTables);
+				modelTypePanel.add(useReactantCentered);
+				content.add(new LabelledField("Model type", modelTypePanel), new GridBagConstraints(0, 2, 1, 1, 1.0, 0.5, GridBagConstraints.CENTER, GridBagConstraints.BOTH, new Insets(0, 0, 0, 0), 0, 0));
 				
 				
 				JPanel buttonsPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
@@ -584,11 +604,17 @@ public class InatPlugin extends CytoscapePlugin {
 							uncertaintyValue = "0";
 						}
 						configuration.set(XmlConfiguration.UNCERTAINTY_KEY, uncertaintyValue);
-						String useReactionCenteredValue = Boolean.TRUE.toString();
-						if (useReactantCentered.isSelected()) {
-							useReactionCenteredValue = Boolean.FALSE.toString();
+						String modelTypeValue = XmlConfiguration.DEFAULT_MODEL_TYPE;
+						if (useReactionCentered.isSelected()) {
+							modelTypeValue = XmlConfiguration.MODEL_TYPE_REACTION_CENTERED;
+						} else if (useReactionCenteredTables.isSelected()) {
+							modelTypeValue = XmlConfiguration.MODEL_TYPE_REACTION_CENTERED_TABLES;
+						} else if (useReactantCentered.isSelected()) {
+							modelTypeValue = XmlConfiguration.MODEL_TYPE_REACTANT_CENTERED;
+						} else {
+							modelTypeValue = XmlConfiguration.DEFAULT_MODEL_TYPE;
 						}
-						configuration.set(XmlConfiguration.REACTION_CENTERED_KEY, useReactionCenteredValue);
+						configuration.set(XmlConfiguration.MODEL_TYPE_KEY, modelTypeValue);
 						try {
 							configuration.writeConfigFile();
 						} catch (Exception ex) {

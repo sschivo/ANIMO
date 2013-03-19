@@ -1,9 +1,11 @@
 package inat.cytoscape;
 
+import inat.InatBackend;
 import inat.analyser.SMCResult;
 import inat.analyser.uppaal.UppaalModelAnalyserSMC;
 import inat.analyser.uppaal.modelchecking.PathFormula;
 import inat.model.Model;
+import inat.util.XmlConfiguration;
 
 import java.awt.Dialog;
 import java.awt.event.ActionEvent;
@@ -19,6 +21,7 @@ import javax.swing.BoxLayout;
 import javax.swing.JButton;
 import javax.swing.JDialog;
 import javax.swing.JOptionPane;
+import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
 
 import cytoscape.Cytoscape;
@@ -144,7 +147,13 @@ public class ModelCheckAction extends InatActionTask {
 				this.monitor.setStatus("Creating model representation");
 				this.monitor.setPercentCompleted(0);
 				
-				final Model model = Model.generateModelFromCurrentNetwork(this.monitor, null);
+				boolean generateTables = false;
+				XmlConfiguration configuration = InatBackend.get().configuration();
+				String modelType = configuration.get(XmlConfiguration.MODEL_TYPE_KEY, null);
+				if (modelType.equals(XmlConfiguration.MODEL_TYPE_REACTION_CENTERED_TABLES)) {
+					generateTables = true;
+				}
+				final Model model = Model.generateModelFromCurrentNetwork(this.monitor, null, generateTables);
 				
 				//Convert the names of the reactants in the formula from their Cytoscape ID to the reactant names in the generated model
 				//JOptionPane.showMessageDialog(Cytoscape.getDesktop(), "Formula pre-sostituzioni: " + formulaToCheck);
@@ -221,6 +230,11 @@ public class ModelCheckAction extends InatActionTask {
 			SwingUtilities.invokeLater(new Runnable() {
 				public void run() {
 					JOptionPane.showMessageDialog(Cytoscape.getDesktop(), "Property \"" + humanFormula + "\"" + System.getProperty("line.separator") + "is " + result.toString(), "Result", JOptionPane.INFORMATION_MESSAGE);
+					if (result.getResultType() == SMCResult.RESULT_TYPE_TRACE) { //We have a trace to show
+						double scale = model.getProperties().get(Model.Properties.SECONDS_PER_POINT).as(Double.class) / 60.0;
+						final InatResultPanel resultViewer = new InatResultPanel(model, result.getLevelResult(), scale, Cytoscape.getCurrentNetwork());
+						resultViewer.addToPanel(Cytoscape.getDesktop().getCytoPanel(SwingConstants.EAST));
+					}
 				}
 			});
 			

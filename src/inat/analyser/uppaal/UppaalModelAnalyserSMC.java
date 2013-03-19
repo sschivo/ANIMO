@@ -15,13 +15,16 @@ import inat.model.Reaction;
 import inat.util.XmlConfiguration;
 
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileWriter;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Random;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.Vector;
@@ -79,11 +82,15 @@ public class UppaalModelAnalyserSMC implements ModelAnalyser<LevelResult> {
 		try {
 			final VariablesModel variablesModel;
 			XmlConfiguration configuration = InatBackend.get().configuration();
-			String reactionCentered = configuration.get(XmlConfiguration.REACTION_CENTERED_KEY, null);
-			if (reactionCentered == null || new Boolean(reactionCentered)) {
-				variablesModel = new VariablesModelSMC(); //Reaction-centered model
-			} else {
+			String modelType = configuration.get(XmlConfiguration.MODEL_TYPE_KEY, null);
+			if (modelType == null || modelType.equals(XmlConfiguration.MODEL_TYPE_REACTION_CENTERED)) {
+				variablesModel = new VariablesModelReactionCentered(); //Reaction-centered model
+			} else if (modelType.equals(XmlConfiguration.MODEL_TYPE_REACTION_CENTERED_TABLES)) {
+				variablesModel = new VariablesModelReactionCenteredTables(); //Reaction-centered with tables
+			} else if (modelType.equals(XmlConfiguration.MODEL_TYPE_REACTANT_CENTERED)) {
 				variablesModel = new VariablesModelReactantCentered(); //Reactant-centered model
+			} else {
+				variablesModel = new VariablesModelReactionCentered(); //Reaction-centered model
 			}
 			final String uppaalModel = variablesModel.transform(m);
 			
@@ -108,6 +115,10 @@ public class UppaalModelAnalyserSMC implements ModelAnalyser<LevelResult> {
 			File fileOutput = new File(nomeFileOutput);
 			fileOutput.deleteOnExit();
 			
+			File fIn = new File(nomeFileModello.substring(0, nomeFileModello.lastIndexOf(".")) + ".out"),
+				 fEr = new File(nomeFileModello.substring(0, nomeFileModello.lastIndexOf(".")) + ".err");
+				
+			
 			//the following string is used in order to make sure that the name of .xtr output files is unique even when we are called by an application which is multi-threaded itself (it supposes of course that the input file is unique =))
 			String[] cmd = new String[3];
 			
@@ -126,18 +137,24 @@ public class UppaalModelAnalyserSMC implements ModelAnalyser<LevelResult> {
 				cmd[1] = "-c";
 				cmd[2] = verifytaSMCPath;				
 			}
-			cmd[2] += " -s -o2 \"" + nomeFileModello + "\" \"" + nomeFileQuery + "\"";// > \"" + nomeFileOutput + "\"";//2>&1";
+			cmd[2] += " -s -o2 -t0 \"" + nomeFileModello + "\" \"" + nomeFileQuery + "\"";// > \"" + nomeFileOutput + "\"";//2>&1";
 			Runtime rt = Runtime.getRuntime();
 			long startTime = System.currentTimeMillis();
+			//System.err.println("(1) Ora eseguo il processo");
 			final Process proc = rt.exec(cmd);
+			//System.err.println("(1) Lanciato");
 			if (actionTask != null) {
 				taskStatus = 0;
+				//System.err.println("(1) actionTask mi e' stato passato, quindi posso usare multithread");
 				new Thread() { //wait for the process to end correctly
 					@Override
 					public void run() {
 						try {
+							//System.err.println("(2) Ora aspetto");
 							proc.waitFor();
+							//System.err.println("(2) Finito di aspettare");
 						} catch (InterruptedException ex) {
+							//System.err.println("(2) InterruptedException. taskStatus = " + taskStatus);
 							if (taskStatus == 0) {
 								taskStatus = 2;
 							}
@@ -147,13 +164,17 @@ public class UppaalModelAnalyserSMC implements ModelAnalyser<LevelResult> {
 						}
 					}
 				}.start();
+				//System.err.println("(1) Lanciato nr 2");
 				new Thread() { //wait for the process to end by user cancellation
 					@Override
 					public void run() {
+						//System.err.println("(3) Inizia 3");
 						while (taskStatus == 0) {
 							if (actionTask.needToStop()) {
+								//System.err.println("(3) needToStop: distruggo il processo");
 								taskStatus = 2;
 								proc.destroy();
+								//System.err.println("(3) Processo distrutto");
 								return;
 							}
 							try {
@@ -164,17 +185,60 @@ public class UppaalModelAnalyserSMC implements ModelAnalyser<LevelResult> {
 						}
 					}
 				}.start();
+				//System.err.println("(1) Lanciato nr 3");
+				InputStreamReader srIn = new InputStreamReader(proc.getInputStream()),
+								  srEr = new InputStreamReader(proc.getErrorStream());
+				BufferedReader brIn = new BufferedReader(srIn),
+							   brEr = new BufferedReader(srEr);
+				BufferedWriter bwIn = new BufferedWriter(new FileWriter(fIn)),
+							   bwEr = new BufferedWriter(new FileWriter(fEr));
+				fIn.deleteOnExit();
+				fEr.deleteOnExit();
+				String line = null;
 				while (taskStatus == 0) {
-					Thread.sleep(100);
+					try {
+						Thread.sleep(100);
+						while (srIn.ready() && (line = brIn.readLine()) != null) {
+							bwIn.append(line);
+							bwIn.newLine();
+							bwIn.flush();
+						}
+						while (srEr.ready() && (line = brEr.readLine()) != null) {
+							bwEr.append(line);
+							bwEr.newLine();
+							bwEr.flush();
+						}
+					} catch (Exception ex) {
+						
+					}
 				}
+				//Read the last things from the input and error before passing them to the analyser
+				while ((line = brIn.readLine()) != null) {
+					bwIn.append(line);
+					bwIn.newLine();
+					bwIn.flush();
+				}
+				while ((line = brEr.readLine()) != null) {
+					bwEr.append(line);
+					bwEr.newLine();
+					bwEr.flush();
+				}
+				bwIn.close();
+				bwEr.close();
+				//System.err.println("(1) Finito di aspettare. Ora taskStatus = " + taskStatus);
 				if (taskStatus == 2) { //the process has been cancelled: we need to exit
+					//System.err.println("(1) Il processo era stato terminato, quindi distruggo (di nuovo??)");
 					proc.destroy();
+					//System.err.println("(1) Distrutto il processo");
 					throw new AnalysisException("User interrupted");
 				}
 			} else {
+				//System.err.println("(1) Niente actionTask: tutto un thread. Aspetto per il processo.");
 				try {
 					proc.waitFor();
+					//System.err.println("(1) Processo terminato");
 				} catch (InterruptedException ex){
+					//System.err.println("(1) Interrotto il processo: lo distruggo");
 					proc.destroy();
 					throw new Exception("Interrupted (1)");
 				}
@@ -194,7 +258,7 @@ public class UppaalModelAnalyserSMC implements ModelAnalyser<LevelResult> {
 			}
 			
 			startTime = System.currentTimeMillis();
-			result = new UppaalModelAnalyserSMC.VariablesInterpreterConcrete(monitor).analyseSMC(m, proc.getInputStream());//new FileInputStream(nomeFileOutput));
+			result = new UppaalModelAnalyserSMC.VariablesInterpreterConcrete(monitor).analyseSMC(m, /*proc.getInputStream()*/new FileInputStream(fIn), /*proc.getErrorStream()*/ new FileInputStream(fEr));//new FileInputStream(nomeFileOutput));
 			endTime = System.currentTimeMillis();
 			System.err.println("\tParsing the result produced by UPPAAL took " + RunAction.timeDifferenceFormat(startTime, endTime));
 			
@@ -240,11 +304,15 @@ public class UppaalModelAnalyserSMC implements ModelAnalyser<LevelResult> {
 		try {
 			final VariablesModel variablesModel;
 			XmlConfiguration configuration = InatBackend.get().configuration();
-			String reactionCentered = configuration.get(XmlConfiguration.REACTION_CENTERED_KEY, null);
-			if (reactionCentered == null || new Boolean(reactionCentered)) {
-				variablesModel = new VariablesModelSMC(); //Reaction-centered model
-			} else {
+			String modelType = configuration.get(XmlConfiguration.MODEL_TYPE_KEY, null);
+			if (modelType == null || modelType.equals(XmlConfiguration.MODEL_TYPE_REACTION_CENTERED)) {
+				variablesModel = new VariablesModelReactionCentered(); //Reaction-centered model
+			} else if (modelType.equals(XmlConfiguration.MODEL_TYPE_REACTION_CENTERED_TABLES)) {
+				variablesModel = new VariablesModelReactionCenteredTables(); //Reaction-centered with tables
+			} else if (modelType.equals(XmlConfiguration.MODEL_TYPE_REACTANT_CENTERED)) {
 				variablesModel = new VariablesModelReactantCentered(); //Reactant-centered model
+			} else {
+				variablesModel = new VariablesModelReactionCentered(); //Reaction-centered model
 			}
 			final String uppaalModel = variablesModel.transform(m);
 			final String uppaalQuery; //"E<> (globalTime > " + timeTo + ")";
@@ -458,7 +526,7 @@ public class UppaalModelAnalyserSMC implements ModelAnalyser<LevelResult> {
 		 * @return The parsed SMCResult containing the boolean/numerical query answer
 		 * @throws Exception
 		 */
-		public SMCResult analyseSMC(Model m, InputStream smcOutput) throws Exception {
+		public SMCResult analyseSMC(Model m, InputStream smcOutput, InputStream smcErr) throws Exception {
 			BufferedReader br = new BufferedReader(new InputStreamReader(smcOutput));
 			SMCResult res;
 			
@@ -471,23 +539,32 @@ public class UppaalModelAnalyserSMC implements ModelAnalyser<LevelResult> {
 			
 			try {
 				while ((line = br.readLine()) != null) {
-					//System.err.println(line);
+					System.err.println(line);
 					if (!line.contains(objective)) {
 						continue;
 					}
+					boolean boolResult = true;
 					if (line.contains("NOT")) {
-						res = new SMCResult(false, findConfidence(line, br));
+						boolResult = false;
+					}
+					line = br.readLine();
+					System.err.println(line);
+					if (line == null) { //Property is just true or false
+						res = new SMCResult(boolResult, findConfidence(line, br));
 						br.close();
 						return res;
-					} else {
-						line = br.readLine();
-						if (line == null) {
-							res = new SMCResult(true, findConfidence(line, br));
+					} else { //There are other components to the answer
+						if (line.startsWith("Showing example trace") || line.startsWith("Showing counter example")) { //has a trace result
+							if (monitor != null) {
+								monitor.setStatus("Property is " + (boolResult?"true":"false") + ". Parsing example trace.");
+							}
+							SimpleLevelResult trace = null;
+							trace = analyseTraceNonSimulation(m, smcErr, -1);
+							res = new SMCResult(boolResult, trace);
 							br.close();
 							return res;
-						}
-						if ((line.indexOf("runs) H") != -1) || (line.indexOf("runs) Pr(..)/Pr(..)") != -1)) { //it has boolean result
-							res = new SMCResult(true, findConfidence(line, br));
+						} else if ((line.indexOf("runs) H") != -1) || (line.indexOf("runs) Pr(..)/Pr(..)") != -1)) { //it has boolean result with confidence
+							res = new SMCResult(boolResult, findConfidence(line, br));
 							br.close();
 							return res;
 						} else { //the result is between lower and upper bound
@@ -515,9 +592,14 @@ public class UppaalModelAnalyserSMC implements ModelAnalyser<LevelResult> {
 					}
 				}
 			} catch (Exception ex) {
+				System.err.println("Eccezione " + ex);
+				ex.printStackTrace(System.err);
 				throw new Exception("Unable to understand UPPAAL SMC output: " + readTheRest(line, br), ex);
 			}
 			
+			if (br.markSupported()) {
+				br.reset();
+			}
 			throw new Exception("Unable to understand UPPAAL SMC output: " + readTheRest(line, br));
 		}
 		
@@ -604,24 +686,30 @@ public class UppaalModelAnalyserSMC implements ModelAnalyser<LevelResult> {
 		 */
 		public SimpleLevelResult analyse(Model m, InputStream output, int timeTo) throws Exception {
 			long startTime = System.currentTimeMillis();
-			Map<String, SortedMap<Double, Double>> levels = new HashMap<String, SortedMap<Double, Double>>();
 			
 			BufferedReader br = new BufferedReader(new InputStreamReader(output));
 			String line = null;
-			Pattern simPointPattern = Pattern.compile("\\([-+]?[0-9]*\\.?[0-9]+([eE][-+]?[0-9]+)?\\,[0-9]*\\)");
-			int maxNumberOfLevels = m.getProperties().get(NUMBER_OF_LEVELS).as(Integer.class);
-			HashMap<String, Double> numberOfLevels = new HashMap<String, Double>();
 			
 			while ((line = br.readLine()) != null && !line.startsWith(" -- Property is satisfied."));
 			
 			long endTime = System.currentTimeMillis();
 			System.err.println(" took " + RunAction.timeDifferenceFormat(startTime, endTime));
-			startTime = System.currentTimeMillis();
+			
+			return analyseFromStream(m, br, timeTo);
+		}
+		
+		private SimpleLevelResult analyseFromStream(Model m, BufferedReader br, int timeTo) throws Exception {
+			long startTime, endTime;
+			String line = null;
+			Pattern simPointPattern = Pattern.compile("\\([-+]?[0-9]*\\.?[0-9]+([eE][-+]?[0-9]+)?\\,[0-9]*\\)");
+			int maxNumberOfLevels = m.getProperties().get(NUMBER_OF_LEVELS).as(Integer.class);
+			HashMap<String, Double> numberOfLevels = new HashMap<String, Double>();
+			Map<String, SortedMap<Double, Double>> levels = new HashMap<String, SortedMap<Double, Double>>();
 			
 			if (monitor != null) {
 				monitor.setStatus("Analyzing UPPAAL output trace.");
-				startTime = System.currentTimeMillis();
 			}
+			startTime = System.currentTimeMillis();
 			
 			for (Reactant r : m.getReactantCollection()) {
 				Integer nLvl = r.get(NUMBER_OF_LEVELS).as(Integer.class);
@@ -690,7 +778,7 @@ public class UppaalModelAnalyserSMC implements ModelAnalyser<LevelResult> {
 						if (reaction != null) {
 							chosenMap = reaction.get(Model.Properties.CYTOSCAPE_ID).as(String.class);
 							//int minTime = reaction.get(Model.Properties.MINIMUM_DURATION).as(Integer.class); //We use global instead of local minimum: see definition of minTime
-							if (level == 0 || level == VariablesModelSMC.INFINITE_TIME || minTime == VariablesModelSMC.INFINITE_TIME) { //I put also level == 0 because otherwise we go in the "else" and we divide by 0 =)
+							if (level == 0 || level == VariablesModelReactionCentered.INFINITE_TIME || minTime == VariablesModelReactionCentered.INFINITE_TIME) { //I put also level == 0 because otherwise we go in the "else" and we divide by 0 =)
 								level = 0;
 							} else if (activityIntervalWidth > -2) { //If there are not orders of magnitude of difference between minimum and maximum, we can simply use a normal linear scale as we did before
 								level = 1.0 * minTime / level;
@@ -701,7 +789,7 @@ public class UppaalModelAnalyserSMC implements ModelAnalyser<LevelResult> {
 						}
 					}
 					rMap = levels.get(chosenMap);
-					if (rMap.isEmpty() || (rMap.get(rMap.lastKey()) != level && time <= timeTo)) { //if we didn't register a variation, we don't plot a point
+					if (rMap.isEmpty() || timeTo == -1 || (rMap.get(rMap.lastKey()) != level && time <= timeTo)) { //if we didn't register a variation, we don't plot a point
 																								   //Also, if the current time is already over the requested simulation time, we don't put it in the data (but still read the values, to clear the stream)
 						rMap.put(time, (double)level);
 					}
@@ -711,11 +799,13 @@ public class UppaalModelAnalyserSMC implements ModelAnalyser<LevelResult> {
 			
 			//if (time < timeTo) { //if the state of the system remains unchanged from a certain time on (and so UPPAAL terminates on that point), but we asked for a later time, we add a final point where all data remain unchanged, so that the user can see the "evolution" up to the requested point
 			//we do it always, because there can be some situations in which reactants are not read while time increases, and thus we can reach the end of time without having an updated value for each reactant
+			if (timeTo != -1) {
 				for (String reactantName : levels.keySet()) {
 					SortedMap<Double, Double> values = levels.get(reactantName);
 					double lastValue = values.get(values.lastKey());
 					values.put((double)timeTo, lastValue);
 				}
+			}
 			//}
 			
 			endTime = System.currentTimeMillis();
@@ -723,5 +813,379 @@ public class UppaalModelAnalyserSMC implements ModelAnalyser<LevelResult> {
 			
 			return new SimpleLevelResult(maxNumberOfLevels, levels);
 		}
+		
+		
+		
+		/**
+		 * Parse the UPPAAL output containing a trace run on the given model until the given time
+		 * @param m The model on which the trace is based
+		 * @param output The stream from which to read the trace
+		 * @param timeTo The time up to which the simulation trace arrives (or should arrive)
+		 * @return The SimpleLevelResult containing a series for each of the reactants in the model,
+		 * showing the activity levels of that reactant for each time point of the trace.
+		 * @throws Exception
+		 */
+		public SimpleLevelResult analyseTraceNonSimulation(Model m, InputStream output, int timeTo) throws Exception {
+			BufferedReader br = new BufferedReader(new InputStreamReader(output));
+//			String line = null;
+//			while ((line = br.readLine()) != null && !line.startsWith("Showing example trace")); //"Showing example trace" is written on a different stream!
+			
+			return analyseTraceNonSimulationFromStream(m, br, timeTo);
+		}
+		
+		private SimpleLevelResult analyseTraceNonSimulationFromStream(Model m, BufferedReader br, int timeTo) throws Exception {
+			long startTime = System.currentTimeMillis();
+			//rand = new Random(randInitializer.nextLong());
+			lastComputed = -1; //Lascialo a -1! Quando chiedo di calcolare il random dentro un intervallo, se lastComputed e' < 0 uso come lastComputed il lowerBound dell'intervallo.
+			
+			Map<String, SortedMap<Double, Double>> levels = new HashMap<String, SortedMap<Double, Double>>();
+			
+			String line = null, lastLine = null;
+			Pattern globalTimeLowerBoundPattern = Pattern.compile("[' ']globalTime>[=]?[-+]?[0-9]*\\.?[0-9]+([eE][-+]?[0-9]+)?");  //Pattern.compile("globalTime[=][0-9]+"); //The new pattern supports also numbers like 3.434252e+06, which can occur(!!)
+			Pattern globalTimeUpperBoundPattern = Pattern.compile("[' ']globalTime<[=]?[-+]?[0-9]*\\.?[0-9]+([eE][-+]?[0-9]+)?");
+			Pattern globalTimePrecisePattern = Pattern.compile(" globalTime[=][-+]?[0-9]*\\.?[0-9]+([eE][-+]?[0-9]+)?");
+			Pattern statePattern = Pattern.compile("[A-Za-z0-9_\\.]+[' ']*[=][' ']*[0-9]+");
+			int timeLB = -1, timeUB = -1, lastTimeLB = -1, lastTimeUB = -1; //This is done so that when parsing the lines we correctly set the initial value for every variable (also the .T's), because we will read the latest value of those variables ALSO for time = 0
+			int maxNumberOfLevels = m.getProperties().get(Model.Properties.NUMBER_OF_LEVELS).as(Integer.class);
+			HashMap<String, Double> numberOfLevels = new HashMap<String, Double>();
+//			int readAheadLimit = 1000; //Used to define the buffer to memorize the last line when we put a mark to read ahead the next line
+			
+//			while ((line = br.readLine()) != null) {
+//				System.err.println(line);
+//			}
+			
+			int minTime = m.getProperties().get(Model.Properties.MINIMUM_DURATION).as(Integer.class), //Use the global minimum instead of the local minimum for time table values
+					maxTime = m.getProperties().get(Model.Properties.MAXIMUM_DURATION).as(Integer.class);
+			double activityIntervalWidth = Math.log10(1.0 * minTime / maxTime);
+			while ((line = br.readLine()) != null) {
+				if (!line.startsWith("State"))
+					continue;
+				line = br.readLine(); //the "State:" string has a \n at the end, so we need to read the next line
+//				line = br.readLine(); //the second line contains informations about which we don't care. We want variable values
+				line = br.readLine();
+				Matcher stateMatcher = statePattern.matcher(line);
+				String s = null;
+				while (stateMatcher.find()) {
+					s = stateMatcher.group();
+					String reactantId = null;
+					if (s.indexOf(' ') >= 0 && s.indexOf(' ') < s.indexOf('=')) {
+						reactantId = s.substring(0, s.indexOf(' '));
+					} else {
+						reactantId = s.substring(0, s.indexOf('='));
+					}
+					if (reactantId.equals("globalTime") || reactantId.equals("r")
+						|| reactantId.startsWith("reactant") || reactantId.startsWith("output") //private variables are not taken into account
+						|| reactantId.equals("r1") || reactantId.equals("r2")
+						|| reactantId.endsWith(".e") || reactantId.endsWith(".b")
+						|| reactantId.endsWith(".c") || reactantId.endsWith(".delta")
+						|| reactantId.endsWith(".tL") || reactantId.endsWith(".tU")) continue;
+					if (reactantId.endsWith(".T")) {
+						reactantId = m.getReaction(reactantId.substring(0, reactantId.lastIndexOf(".T"))).get(Model.Properties.CYTOSCAPE_ID).as(String.class);
+					}
+					// put the reactant into the result map
+					levels.put(reactantId, new TreeMap<Double, Double>());
+					
+					double level = Integer.valueOf(s.substring(s.indexOf("=") + 1).trim());
+					if (m.getReactant(reactantId) != null) { //it is a reactant, so rescale the value as activity level, using the maximum number of levels
+						Reactant r = m.getReactant(reactantId);
+						Integer nLvl = r.get(NUMBER_OF_LEVELS).as(Integer.class);
+						if (nLvl == null) {
+							Property nameO = r.get(ALIAS);
+							String name;
+							if (nameO == null) {
+								name = r.getId();
+							} else {
+								name = nameO.as(String.class);
+							}
+							String inputLevels = JOptionPane.showInputDialog("Missing number of levels for reactant \"" + name + "\" (" + r.getId() + ").\nPlease insert the max number of levels for \"" + name + "\"", maxNumberOfLevels);
+							if (inputLevels != null) {
+								try {
+									nLvl = new Integer(inputLevels);
+								} catch (Exception ex) {
+									nLvl = maxNumberOfLevels;
+								}
+							} else {
+								nLvl = maxNumberOfLevels;
+							}
+						}
+						numberOfLevels.put(r.getId(), (double)nLvl);
+						if (nLvl != maxNumberOfLevels) {
+							level = level / (double)numberOfLevels.get(reactantId) * (double)maxNumberOfLevels;
+						}
+					} else { //It is not a reactant: for the moment, this can only mean that it is a reaction duration
+						if (level == 0 || level == VariablesModelReactionCentered.INFINITE_TIME || minTime == VariablesModelReactionCentered.INFINITE_TIME) { //I put also level == 0 because otherwise we go in the "else" and we divide by 0 =)
+							level = 0;
+						} else if (activityIntervalWidth > -2) { //If there are not orders of magnitude of difference between minimum and maximum, we can simply use a normal linear scale as we did before
+							level = 1.0 * minTime / level;
+						} else {
+							//level = 1.0 * minTime / level;
+							level = (activityIntervalWidth - Math.log10(1.0 * minTime / level)) / activityIntervalWidth;
+						}
+					}
+					
+					SortedMap<Double, Double> rMap = levels.get(reactantId);
+					rMap.put(0.0, level);
+				}
+				break;
+			}
+			
+//			// add initial concentrations and get number of levels
+//			for (Reactant r : m.getReactantCollection()) {
+//				Integer nLvl = r.get(NUMBER_OF_LEVELS).as(Integer.class);
+//				if (nLvl == null) {
+//					Property nameO = r.get(ALIAS);
+//					String name;
+//					if (nameO == null) {
+//						name = r.getId();
+//					} else {
+//						name = nameO.as(String.class);
+//					}
+//					String inputLevels = JOptionPane.showInputDialog("Missing number of levels for reactant \"" + name + "\" (" + r.getId() + ").\nPlease insert the max number of levels for \"" + name + "\"", maxNumberOfLevels);
+//					if (inputLevels != null) {
+//						try {
+//							nLvl = new Integer(inputLevels);
+//						} catch (Exception ex) {
+//							nLvl = maxNumberOfLevels;
+//						}
+//					} else {
+//						nLvl = maxNumberOfLevels;
+//					}
+//				}
+//				numberOfLevels.put(r.getId(), (double)nLvl);
+//				
+////				if (levels.containsKey(r.getId())) {
+////					double initialLevel = r.get(Model.Properties.INITIAL_LEVEL).as(Integer.class);
+////					initialLevel = initialLevel / (double)nLvl * (double)maxNumberOfLevels; //of course, the initial "concentration" itself needs to be rescaled correctly
+////					levels.get(r.getId()).put(0.0, initialLevel);
+////				}
+//			}
+			
+			long endTime = System.currentTimeMillis();
+			System.err.println(" took " + RunAction.timeDifferenceFormat(startTime, endTime));
+			startTime = System.currentTimeMillis();
+			
+			if (monitor != null) {
+				monitor.setStatus("Analyzing UPPAAL output trace.");
+				startTime = System.currentTimeMillis();
+			}
+			
+			lastTimeLB = timeLB;
+			lastTimeUB = timeUB;
+			lastLine = line;
+			double currentTime = 0; //we use it to see where we are along the simulation run (we get its value from the parseLine function), and thus compute a % of advancement with respect to timeTo
+			int lastPercent = 0;
+			while ((line = br.readLine()) != null) {
+				if (!line.startsWith("State")) continue;
+				br.readLine(); //as said before, the "State:" string ends with \n, so we need to read the next line in order to get the actual state data
+				//br.readLine(); //and the line after that contains only the states of the processes, while we are interested in variable values, which are in the 3rd line
+				line = " " + br.readLine(); //If I don't add a space at the start of the line, the patterns will not match correctly. I need a space in front of the "globalTime" string because otherwise I would also match things like clockOfWhichIDontReallyCare-globalTime<=12345
+				//System.err.print(line);
+				Matcher timeMatcherPrecise = globalTimePrecisePattern.matcher(line);
+				if (!timeMatcherPrecise.find()) {
+					Matcher timeMatcherLB = globalTimeLowerBoundPattern.matcher(line),
+							timeMatcherUB = globalTimeUpperBoundPattern.matcher(line);
+					int newTimeUB = -1, newTimeLB = -1;
+					if (timeMatcherLB.find()) {
+						String valueLB = (timeMatcherLB.group()).split(">")[1];;
+						if (valueLB.substring(0, 1).equals("=")) {
+							if (valueLB.substring(1, 2).equals("-")) {
+								newTimeLB = (int)Math.round(Double.parseDouble(valueLB.substring(2, valueLB.length())));
+							} else {
+								newTimeLB = (int)Math.round(Double.parseDouble(valueLB.substring(1, valueLB.length())));
+							}
+						} else {
+							if (valueLB.substring(0, 1).equals("-")) {
+								newTimeLB = (int)(Math.round(Double.parseDouble(valueLB.substring(1, valueLB.length())))); //why +1??
+							} else {
+								newTimeLB = (int)(Math.round(Double.parseDouble(valueLB.substring(0, valueLB.length())))); //why +1??
+							}
+						}
+						//System.err.print(" ma il tempo LB si': " + newTimeLB);
+					} else {
+						newTimeLB = 0;
+						//System.err.print(" ne' il tempo LB");
+					}
+					
+					if (timeMatcherUB.find()) {
+						String valueUB = (timeMatcherUB.group()).split("<")[1];;
+						if (valueUB.substring(0, 1).equals("=")) {
+							if (valueUB.substring(1, 2).equals("-")) {
+								newTimeUB = (int)Math.round(Double.parseDouble(valueUB.substring(2, valueUB.length())));
+							} else {
+								newTimeUB = (int)Math.round(Double.parseDouble(valueUB.substring(1, valueUB.length())));
+							}
+						} else {
+							if (valueUB.substring(0, 1).equals("-")) {
+								newTimeUB = (int)(Math.round(Double.parseDouble(valueUB.substring(1, valueUB.length())))); //why +1??
+							} else {
+								newTimeUB = (int)(Math.round(Double.parseDouble(valueUB.substring(0, valueUB.length())))); //why +1??
+							}
+						}
+						//System.err.println(" ma il tempo UB si': " + newTimeUB);
+					} else {
+						newTimeUB = newTimeLB;
+						//System.err.println(" ne' il tempo UB");
+					}
+					//System.err.println("Tempi letti: [" + newTimeLB + ", " + newTimeUB + "]");
+					
+					if (newTimeLB > timeLB || newTimeUB > timeUB) {
+						//System.err.println("La mia scusa e' che " + newTimeLB + " > " + timeLB + " o che " + newTimeUB + " > " + timeUB);
+						//System.err.println("  Analizzo quindi la riga " + lastLine);
+						currentTime = parseLine(m, timeLB, timeUB, timeTo, lastLine, numberOfLevels, maxNumberOfLevels, statePattern, levels);
+						timeLB = newTimeLB;
+						timeUB = newTimeUB;
+						lastLine = line;
+					} else {
+						lastLine = line;
+					}
+				} else {
+					String value = (timeMatcherPrecise.group().split("=")[1]);
+					int newTimeLB = -1;
+					if (value.substring(0, 1).equals("=")) {
+						if (value.substring(1, 2).equals("-")) {
+							newTimeLB = (int)Math.round(Double.parseDouble(value.substring(2, value.length())));
+						} else {
+							newTimeLB = (int)Math.round(Double.parseDouble(value.substring(1, value.length())));
+						}
+					} else {
+						if (value.substring(0, 1).equals("-")) {
+							newTimeLB = (int)(Math.round(Double.parseDouble(value.substring(1, value.length())))); //why +1??
+						} else {
+							newTimeLB = (int)(Math.round(Double.parseDouble(value.substring(0, value.length())))); //why +1??
+						}
+					}
+					int newTimeUB = newTimeLB;
+					
+					if (lastTimeLB == timeLB) {
+						if (newTimeLB > timeLB) {
+							lastTimeLB = newTimeLB;
+							lastTimeUB = newTimeUB;
+							lastLine = line;
+						} else {
+							//This actually cannot happen, because the first time we find that newTime > lastTime we also set time = lastTime (and we parse lastLine)
+						}
+					} else {
+						if (newTimeLB == lastTimeLB) {
+							//we don't need to parse now
+							lastLine = line;
+						} else if (newTimeLB > lastTimeLB) {
+							//System.err.println("La mia (2a) scusa e' che " + newTimeLB + " > " + lastTimeLB);
+							timeLB = lastTimeLB;
+							timeUB = lastTimeUB;
+							currentTime = parseLine(m, timeLB, timeUB, timeTo, lastLine, numberOfLevels, maxNumberOfLevels, statePattern, levels);
+						}
+					}
+				}
+				
+				if (monitor != null && timeTo != -1) {
+					int currentPercent = (int)Math.round(currentTime / timeTo * 100);
+					monitor.setPercentCompleted(currentPercent);
+					if (currentPercent - lastPercent > 0) {
+						double remainingTimeEstimation = (double)(System.currentTimeMillis() - startTime) / currentPercent * (100.0 - currentPercent + 1);
+						monitor.setEstimatedTimeRemaining(Math.round(remainingTimeEstimation));
+						lastPercent = currentPercent;
+					}
+				}
+			}
+			//The parse of the latest values needs to be done when we are sure there will be no more changes (i.e. at the end)
+			timeLB = lastTimeLB;
+			timeUB = lastTimeUB;
+			parseLine(m, timeLB, timeUB, timeTo, lastLine, numberOfLevels, maxNumberOfLevels, statePattern, levels);
+			
+			//if (time < timeTo) { //if the state of the system remains unchanged from a certain time on (and so UPPAAL terminates on that point), but we asked for a later time, we add a final point where all data remain unchanged, so that the user can see the "evolution" up to the requested point
+			//we do it always, because there can be some situations in which reactants are not read while time increases, and thus we can reach the end of time without having an updated value for each reactant
+			if (timeTo != -1) {
+				for (String reactantName : levels.keySet()) {
+					SortedMap<Double, Double> values = levels.get(reactantName);
+					double lastValue = values.get(values.lastKey());
+					values.put((double)timeTo, lastValue);
+				}
+			}
+			//}
+			
+			endTime = System.currentTimeMillis();
+			System.err.println("\tParsing the result produced by UPPAAL took " + RunAction.timeDifferenceFormat(startTime, endTime));
+			
+			return new SimpleLevelResult(maxNumberOfLevels, levels);
+			
+		}
+		
+		private Random rand = new Random();
+		//private static Random randInitializer = new Random(); //This way we can safely call this analyzer also in the same millisecond
+		private double lastComputed;
+		private double chooseTime(double lowerBound, double upperBound) {
+			if (lowerBound == upperBound) {
+				lastComputed = lowerBound;
+			} else {
+				if (lastComputed < 0) {
+					lastComputed = lowerBound;
+				}
+				lastComputed = (rand.nextDouble() * (upperBound - lastComputed)) + lastComputed; //(rand.nextDouble() * (upperBound - lowerBound)) + lowerBound;
+			}
+			//System.err.println("[" + lowerBound + ", " + upperBound + "] --> " + lastComputed);
+			return lastComputed;
+		}
+		
+		private double parseLine(Model m, double timeLB, double timeUB, int timeTo, String line, Map<String, Double> numberOfLevels, int maxNumberOfLevels, Pattern statePattern, Map<String, SortedMap<Double, Double>> levels) {
+			Matcher stateMatcher = statePattern.matcher(line);
+			String s = null;
+			double time = chooseTime(timeLB, timeUB);
+			//System.err.println("[" + timeLB + ", " + timeUB + "] --> t = " + time + " Parso la linea " + line);
+			//System.err.print("===========[" + timeLB + ", " + timeUB + "] --> " + time + ":");
+			String reactantId, reactionId = "";
+			Reaction reaction = null;
+			int minTime = m.getProperties().get(Model.Properties.MINIMUM_DURATION).as(Integer.class), //Use the global minimum instead of the local minimum for time table values
+				maxTime = m.getProperties().get(Model.Properties.MAXIMUM_DURATION).as(Integer.class);
+			double activityIntervalWidth = Math.log10(1.0 * minTime / maxTime);
+			while (stateMatcher.find()) {
+				s = stateMatcher.group();
+				reactantId = null;
+				if (s.indexOf(' ') >= 0 && s.indexOf(' ') < s.indexOf('=')) {
+					reactantId = s.substring(0, s.indexOf(' '));
+				} else {
+					reactantId = s.substring(0, s.indexOf('='));
+				}
+				/*if (reactantId.equals("c") || reactantId.equals("globalTime") || reactantId.equals("r")
+					|| reactantId.startsWith("input_reactant_") || reactantId.startsWith("output_reactant_")
+					|| reactantId.equals("r1") || reactantId.equals("r2") || maximumValues.get(reactantId) == null) continue; //we check whether it is a private variable*/
+				if (!reactantId.endsWith(".T") && !levels.containsKey(reactantId)) continue;
+				// we can determine the level of activation
+				double level = Integer.valueOf(s.substring(s.indexOf("=") + 1).trim());
+				String chosenMap = reactantId;
+				if (m.getReactant(reactantId) != null) { //it is a reactant, so rescale the value as activity level, using the maximum number of levels
+					if (numberOfLevels.get(reactantId) != maxNumberOfLevels) {
+						level = level / (double)numberOfLevels.get(reactantId) * (double)maxNumberOfLevels;
+					}
+				} else { //It is not a reactant: for the moment, this can only mean that it is a reaction duration
+					reactionId = reactantId.substring(0, reactantId.lastIndexOf(".T")); //It is in the form R6_R4.T, so we remove the ".T" and keep the rest, which is used as reaction ID in the Model object
+					reaction = m.getReaction(reactionId);
+					if (reaction != null) {
+						chosenMap = reaction.get(Model.Properties.CYTOSCAPE_ID).as(String.class);
+						//int minTime = reaction.get(Model.Properties.MINIMUM_DURATION).as(Integer.class); //We use global instead of local minimum: see definition of minTime
+						if (level == 0 || level == VariablesModelReactionCentered.INFINITE_TIME || minTime == VariablesModelReactionCentered.INFINITE_TIME) { //I put also level == 0 because otherwise we go in the "else" and we divide by 0 =)
+							level = 0;
+						} else if (activityIntervalWidth > -2) { //If there are not orders of magnitude of difference between minimum and maximum, we can simply use a normal linear scale as we did before
+							level = 1.0 * minTime / level;
+						} else {
+							//level = 1.0 * minTime / level;
+							level = (activityIntervalWidth - Math.log10(1.0 * minTime / level)) / activityIntervalWidth;
+						}
+					}
+				}
+				
+				SortedMap<Double, Double> rMap = levels.get(chosenMap);
+				if (rMap.isEmpty() || (rMap.get(rMap.lastKey()) != level)) { //if we didn't register a variation, we don't plot a point
+					/*if (rMap.lastKey() < time - 1) { //We use this piece to explicitly keep a level constant when it is not varying (i.e., the graph will never contain non-vertical,non-horizontal lines)
+						rMap.put((double)(time - 1), rMap.get(rMap.lastKey()));
+					}*/
+					//System.err.println("  e aggiungo il punto (" + time + ", " + level + ")");
+					rMap.put(time, level);
+					//System.err.println(chosenMap + " = " + level);
+				}
+			}
+			//System.err.println("===========");
+			return time;
+		}
 	}
+	
 }

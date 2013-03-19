@@ -1,7 +1,8 @@
 package fitting;
 import fitting.multithread.ThreadPool;
+import inat.InatBackend;
 import inat.analyser.LevelResult;
-import inat.analyser.uppaal.UppaalModelAnalyserFasterSymbolicConcretized;
+import inat.analyser.uppaal.UppaalModelAnalyserSMC;
 import inat.analyser.uppaal.VariablesModel;
 import inat.cytoscape.ComponentTitledBorder;
 import inat.cytoscape.LabelledField;
@@ -15,6 +16,7 @@ import inat.model.Reaction;
 import inat.model.Scenario;
 import inat.util.Pair;
 import inat.util.Table;
+import inat.util.XmlConfiguration;
 
 import java.awt.BorderLayout;
 import java.awt.Component;
@@ -164,9 +166,15 @@ public class ParameterFitter {
 		//System.err.println("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
 		window = new JFrame("Parameter fitter");
 		model = null;
+		boolean generateTables = false;
+		XmlConfiguration configuration = InatBackend.get().configuration();
+		String modelType = configuration.get(XmlConfiguration.MODEL_TYPE_KEY, null);
+		if (modelType.equals(XmlConfiguration.MODEL_TYPE_REACTION_CENTERED_TABLES)) {
+			generateTables = true;
+		}
 		try {
 			//System.err.println("Costruisco il modello");
-			model = Model.generateModelFromCurrentNetwork(null, (int)Math.round(nMinutesToSimulate));
+			model = Model.generateModelFromCurrentNetwork(null, (int)Math.round(nMinutesToSimulate), generateTables);
 
 			//System.err.println("Modello costruito");
 			
@@ -1127,7 +1135,7 @@ public class ParameterFitter {
 						/*File outputCSV = estrattore.mediaVeloce(uppaalModel.getAbsolutePath(), uppaalQuery.getAbsolutePath(), 1, false, false);*/
 						//int timeTo = (int)(TIME_TO * 60.0 / analyzedModel.getProperties().get(Model.Properties.SECONDS_PER_POINT).as(Double.class));
 						try {
-							LevelResult result = new UppaalModelAnalyserFasterSymbolicConcretized(null, null).analyze(analyzedModel, timeTo);
+							LevelResult result = new UppaalModelAnalyserSMC(null, null).analyze(analyzedModel, timeTo);
 							Pair<Boolean, Double> comparisonResult = compareResults(result);
 							if (comparisonResult.first) {
 								synchronized(acceptableConfigurations) {

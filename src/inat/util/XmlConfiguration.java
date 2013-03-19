@@ -64,9 +64,12 @@ public class XmlConfiguration {
 	public static final String UNCERTAINTY_KEY = "/ANIMO/Uncertainty";
 	private static final String DEFAULT_UNCERTAINTY = "5";
 	
-	//Whether we use a reaction-centered model (default). The alternative is reactant-centered.
-	public static final String REACTION_CENTERED_KEY = "/ANIMO/ReactionCenteredModel";
-	private static final String DEFAULT_REACTION_CENTERED = Boolean.TRUE.toString();
+	//We can use reaction-centered model (default), reaction-centered with tables, and reactant-centered.
+	public static final String MODEL_TYPE_KEY = "/ANIMO/ModelType";
+	public static final String MODEL_TYPE_REACTION_CENTERED = "ReactionCentered",
+							   MODEL_TYPE_REACTION_CENTERED_TABLES = "ReactionCenteredTables",
+							   MODEL_TYPE_REACTANT_CENTERED = "ReactantCentered";
+	public static final String DEFAULT_MODEL_TYPE = MODEL_TYPE_REACTION_CENTERED;
 	
 	/**
 	 * The document that backs this configuration.
@@ -110,11 +113,11 @@ public class XmlConfiguration {
 		} else {
 			sourceConfig.put(UNCERTAINTY_KEY, DEFAULT_UNCERTAINTY);
 		}
-		v = this.get(REACTION_CENTERED_KEY, null);
+		v = this.get(MODEL_TYPE_KEY, null);
 		if (v != null) {
-			sourceConfig.put(REACTION_CENTERED_KEY, v);
+			sourceConfig.put(MODEL_TYPE_KEY, v);
 		} else {
-			sourceConfig.put(REACTION_CENTERED_KEY, DEFAULT_REACTION_CENTERED);
+			sourceConfig.put(MODEL_TYPE_KEY, DEFAULT_MODEL_TYPE);
 		}
 		try {
 			writeConfigFile();
@@ -158,7 +161,7 @@ public class XmlConfiguration {
 		
 		sourceConfig.put(UNCERTAINTY_KEY, DEFAULT_UNCERTAINTY);
 		
-		sourceConfig.put(REACTION_CENTERED_KEY, DEFAULT_REACTION_CENTERED);
+		sourceConfig.put(MODEL_TYPE_KEY, DEFAULT_MODEL_TYPE);
 		
 		writeConfigFile(configuration);
 	}
@@ -200,9 +203,9 @@ public class XmlConfiguration {
 		uncertaintyNode.appendChild(document.createTextNode(sourceConfig.get(UNCERTAINTY_KEY)));
 		rootElement.appendChild(uncertaintyNode);
 		
-		Element reactionCenteredNode = document.createElement("ReactionCenteredModel");
-		reactionCenteredNode.appendChild(document.createTextNode(sourceConfig.get(REACTION_CENTERED_KEY)));
-		rootElement.appendChild(reactionCenteredNode);
+		Element modelTypeNode = document.createElement("ModelType");
+		modelTypeNode.appendChild(document.createTextNode(sourceConfig.get(MODEL_TYPE_KEY)));
+		rootElement.appendChild(modelTypeNode);
 		
 		TransformerFactory transformerFactory = TransformerFactory.newInstance();
 		Transformer transformer = transformerFactory.newTransformer();
