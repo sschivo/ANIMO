@@ -185,6 +185,9 @@ public class PathFormula extends JPanel {
 		return selectedFormula;
 	}
 	
+	public boolean supportsPriorities() {
+		return getSelectedFormula().supportsPriorities();
+	}
 	
 	public String toString() {
 		return getSelectedFormula().toString();

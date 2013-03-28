@@ -81,6 +81,8 @@ private static final long serialVersionUID = -7020762010666811781L;
 						labelTable.put(i, new JLabel("" + i));
 					}
 					slider.setLabelTable(labelTable);
+					int init = nodeAttrib.getIntegerAttribute(reactant.getIdentifier(), Model.Properties.INITIAL_LEVEL);
+					slider.setValue(init);
 				}
 			}
 			
@@ -137,6 +139,10 @@ private static final long serialVersionUID = -7020762010666811781L;
 			selectedFormula = new ActivityBound(new ReactantName(reactant.getIdentifier(), reactant.getAlias()), (BoundType)combo2.getSelectedItem(), "" + slider.getValue());
 		}
 		return selectedFormula;
+	}
+	
+	public boolean supportsPriorities() {
+		return getSelectedFormula().supportsPriorities();
 	}
 	
 	public String toString() {

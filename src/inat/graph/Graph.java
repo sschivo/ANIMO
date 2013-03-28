@@ -2,17 +2,20 @@ package inat.graph;
 
 import inat.InatBackend;
 import inat.analyser.LevelResult;
+import inat.util.HeatChart;
 import inat.util.XmlConfiguration;
 
 import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Cursor;
+import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.FontMetrics;
 import java.awt.Frame;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
+import java.awt.Image;
 import java.awt.Rectangle;
 import java.awt.RenderingHints;
 import java.awt.Stroke;
@@ -46,10 +49,12 @@ import java.util.Vector;
 
 import javax.swing.JCheckBoxMenuItem;
 import javax.swing.JFrame;
+import javax.swing.JLabel;
 import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JPopupMenu;
+import javax.swing.SwingUtilities;
 
 import cytoscape.Cytoscape;
 
@@ -68,6 +73,7 @@ public class Graph extends JPanel implements MouseListener, MouseMotionListener,
 								SHOW_THIN_AXES = "Show thin axes",
 								SET_Y_LABEL_LABEL = "Set Y label",
 								STEP_SHAPED_GRAPH_LABEL = "Step-shaped graph",
+								HEATMAP_GRAPH_LABEL = "Heat-map graph",
 								CSV_FILE_EXTENSION = ".csv",
 								CSV_FILE_DESCRIPTION = "CSV file",
 								DEFAULT_CSV_FILE = "/local/schivos/Data_0-240_TNF100.csv", //"/local/schivos/aData1_0-1440_normalized_MK2_JNK1_IKK_with_stddev.csv", //"/local/schivos/aData1_0-1440_times5_normalized_better_onlyMK2_JNK1_IKK_con_stddev.csv",
@@ -100,6 +106,8 @@ public class Graph extends JPanel implements MouseListener, MouseMotionListener,
 	private Rectangle zoomRectangleBounds = null; //The bounds inside which to draw the zoom rectangle when showing it to the user
 	private double xRedLine = 0.0; //The vertical red line we paint to indicate a specific X coordinate in the graph. It can be called from the external user (for example, the slider in ANIMO)
 	private boolean stepShapedLines = false; //Whether to show the series as a step-shaped graphs, or in a more "smooth" way. Default is smooth.
+	private boolean useHeatMap = false; //Whether to show the graph as a "heat map", using HeatChart class by Tom Castle
+	private JCheckBoxMenuItem heatMapGraph;
 	private int oldLegendX = 0, oldLegendY = 0; //Used to move the legend
 	private int SCALA = 1; //used to implement some kind of "zooming" (see the events related to mouse wheel)
 	private final int BORDER_X = 25, BORDER_Y = 25; //width of the border around the graph area (in pixel). Notice that it is scaled with SCALA, like all other constants for the drawing
@@ -130,6 +138,7 @@ public class Graph extends JPanel implements MouseListener, MouseMotionListener,
 		JCheckBoxMenuItem showSizeM = new JCheckBoxMenuItem(SHOW_SIZE_LABEL);
 		JMenuItem setYLabel = new JMenuItem(SET_Y_LABEL_LABEL);
 		JCheckBoxMenuItem stepShapedGraph = new JCheckBoxMenuItem(STEP_SHAPED_GRAPH_LABEL);
+		heatMapGraph = new JCheckBoxMenuItem(HEATMAP_GRAPH_LABEL);
 		JCheckBoxMenuItem showThinAxes = new JCheckBoxMenuItem(SHOW_THIN_AXES);
 		open.addActionListener(this);
 		save.addActionListener(this);
@@ -143,6 +152,7 @@ public class Graph extends JPanel implements MouseListener, MouseMotionListener,
 		setYLabel.addActionListener(this);
 		showThinAxes.addActionListener(this);
 		stepShapedGraph.addActionListener(this);
+		heatMapGraph.addActionListener(this);
 		popupMenu.add(open);
 		popupMenu.add(save);
 		popupMenu.add(export);
@@ -156,6 +166,7 @@ public class Graph extends JPanel implements MouseListener, MouseMotionListener,
 			popupMenu.add(showThinAxes);
 		}
 		popupMenu.add(stepShapedGraph);
+		popupMenu.add(heatMapGraph);
 		//popupMenu.addSeparator();
 		//popupMenu.add(close);
 		this.add(popupMenu);
@@ -517,83 +528,7 @@ public class Graph extends JPanel implements MouseListener, MouseMotionListener,
 		}
 		
 	}
-	/*public void drawAxesOLD(Graphics2D g, Rectangle bounds) {
-		FontMetrics fm = g.getFontMetrics();
-		g.setPaint(FOREGROUND_COLOR);
-		g.drawLine(bounds.x - 10 * SCALA, bounds.height + bounds.y, bounds.x + bounds.width + 10 * SCALA, bounds.height + bounds.y);
-		g.drawLine(bounds.x, bounds.height + bounds.y + 10 * SCALA, bounds.x, bounds.y - 10 * SCALA);
-		g.drawLine(bounds.x + bounds.width + 10 * SCALA, bounds.y + bounds.height, bounds.x + bounds.width, bounds.y + bounds.height - 5 * SCALA);
-		g.drawLine(bounds.x + bounds.width + 10 * SCALA, bounds.y + bounds.height, bounds.x + bounds.width, bounds.y + bounds.height + 5 * SCALA);
-		g.drawLine(bounds.x, bounds.y - 10 * SCALA, bounds.x - 5 * SCALA, bounds.y);
-		g.drawLine(bounds.x, bounds.y - 10 * SCALA, bounds.x + 5 * SCALA, bounds.y);
-		
-		int xTick = bounds.x,
-		yTick = bounds.y + bounds.height;
-		double minX = scale.getMinX(),
-			   maxX = scale.getMaxX(),
-			   scaleX = scale.getXScale();
-		int interval = (int)(maxX - minX + 1);
-		int increase = 1;
-		//awful heuristic in order to get some ticks 
-		while (interval > 0) {
-			interval = interval / 10;
-			increase = increase * 10;
-		}
-		while ((maxX - minX + 1) / increase < 8) {
-			increase = increase / 10;
-		}
-		if (increase < 1) increase = 1;
-		//questa condizione dice: se le due etichette pi� lunghe si sovrappongono perch� sono troppo vicine..
-		while (increase * scaleX < 5 * SCALA + fm.stringWidth(new Integer((int)maxX).toString())) {
-		//if ((maxX - minX + 1) / increase > 20) { //questa invece si limitava a vedere se venivano troppe (in assoluto) tick: ma non sappiamo quanto � largo il grafico!
-			increase = increase * 2;
-		}
-		int xStartString = bounds.x + bounds.width;
-		if (xSeriesName != null) {
-			xStartString -= fm.stringWidth(xSeriesName) - 5 * SCALA;
-		}
-		for (int i=increase; i<maxX && (xTick + increase * scaleX + fm.stringWidth(new Integer(i).toString())) < xStartString; i+=increase) {
-			xTick = (int) (bounds.x + scaleX * (i - minX));
-			if (xTick < bounds.x) continue;
-			if (xTick > bounds.x + bounds.width) break;
-			g.drawLine(xTick, yTick - 5 * SCALA, xTick, yTick + 5 * SCALA);
-			String label = new Integer(i).toString();
-			g.drawString(label, xTick - fm.stringWidth(label)/2, yTick + 3 * SCALA + fm.getHeight());
-		}
-		
-		xTick = bounds.x;
-		yTick = bounds.y + bounds.height;
-		double minY = scale.getMinY(),
-			   maxY = scale.getMaxY(),
-			   scaleY = scale.getYScale();
-		interval = (int)(maxY - minY + 1);
-		increase = 1;
-		while (interval > 0) {
-			interval = interval / 10;
-			increase = increase * 10;
-		}
-		while ((maxY - minY + 1) / increase < 8) {
-			increase = increase / 10;
-		}
-		if (increase < 1) increase = 1;
-		while (increase * scaleY < fm.getHeight()) {
-			increase = increase * 2;
-		}
-		for (int i=increase; i < maxY; i+=increase) {
-			yTick = (int)(bounds.y + bounds.height - scaleY * (i - minY));
-			if (yTick > bounds.y + bounds.height) continue;
-			if (yTick < bounds.y) break;
-			g.drawLine(xTick - 5 * SCALA, yTick, xTick + 5 * SCALA, yTick);
-			String label = new Integer(i).toString();
-			g.drawString(label, xTick - fm.stringWidth(label) - 5 * SCALA, yTick - 3 * SCALA + fm.getHeight()/2);
-		}
-		
-		if (xSeriesName != null) {
-			g.drawString(xSeriesName, xStartString, bounds.y + bounds.height + 3 * SCALA + fm.getHeight());
-		}
-		
-		
-	}*/
+	
 	
 	public void drawLegend(Graphics2D g, Rectangle bounds) {
 		//g.clearRect(bounds.x, bounds.y, bounds.width, bounds.height);
@@ -630,9 +565,82 @@ public class Graph extends JPanel implements MouseListener, MouseMotionListener,
 		g.setStroke(oldStroke);
 	}
 	
+	private Image heatMapImg = null;
+	private HeatChart heatMapChart = null;
+	private Rectangle heatMapBounds = null;
 	public void paint(Graphics g1) {
 		try {
 			Graphics2D g = (Graphics2D)g1;
+			if (useHeatMap) { //TODO: will not work when we consider overlay graphs (will show nothing at all).
+				if (heatMapImg == null || needRedraw) {
+					try {
+						int countSeries = 0;
+						for (Series s : data) {
+							if (!s.isSlave()) countSeries++;
+						}
+						double[][] graphValues = new double[countSeries][];
+						String[] seriesNames = new String[countSeries];
+						int nPoints = 200; //TODO: Totally arbitrary!
+						String[] timePoints = new String[nPoints];
+						int i = 0, j = 0;
+						double x, xIncr;
+						x = this.scale.getMinX();
+						xIncr = (this.scale.getMaxX() - this.scale.getMinX()) / nPoints;
+						while (x < this.scale.getMaxX() && j < nPoints) {
+							timePoints[j++] = "" + Math.round(x) + " ";
+							x += xIncr;
+						}
+						x = this.scale.getMinX();
+						for (Series s : data) {
+							if (s.isSlave()) continue;
+							seriesNames[i] = s.getName() + " ";
+							P[] points = s.getData();
+							graphValues[i] = new double[nPoints];
+							int k = 0;
+							double lastY = points[k].y;
+							x = this.scale.getMinX();
+							j = 0;
+							while (x < this.scale.getMaxX() && j < graphValues[i].length) {
+								if (points[0].x <= x) { //We make sure that the x we consider is inside the interval where this series has values
+									while (k < points.length && points[k].x < x) {
+										lastY = points[k].y;
+										k++;
+									}
+									graphValues[i][j++] = lastY;
+								}
+								x += xIncr;
+							}
+							i++;
+						}
+						heatMapChart = new HeatChart(graphValues);
+						heatMapChart.setYValues(seriesNames);
+						heatMapChart.setXValues(timePoints);
+						heatMapChart.setYAxisLabel(this.yLabel);
+						heatMapChart.setXAxisLabel(this.xSeriesName);
+						heatMapChart.setXAxisValuesFrequency(timePoints.length / 20);
+						heatMapChart.setXValuesHorizontal(true);
+						heatMapChart.setAxisLabelsFont(new Font("Sans-Serif", Font.PLAIN, 12 * SCALA));
+						heatMapChart.setAxisValuesFont(new Font("Sans-Serif", Font.PLAIN, 10 * SCALA));
+						heatMapChart.setChartSize(new Dimension(this.getWidth(), this.getHeight()));
+						heatMapImg = heatMapChart.getChartImage();
+						heatMapBounds = heatMapChart.getChartBounds();
+					} catch (Exception ex) {
+						System.err.println(ex);
+						ex.printStackTrace(System.err);
+					}
+				}
+				g.drawImage(heatMapImg, 0, 0, null);
+				if (xRedLine > 0) { //Esattamente i minuti in tempo umano, ovvero il numero che leggo nell'asse x
+					g.setPaint(Color.BLACK);
+					Stroke olStroke = g.getStroke();
+					g.setStroke(new BasicStroke(3 * SCALA));
+					Rectangle bounds = heatMapBounds;
+					double scaleLine = bounds.width / this.scale.getMaxX();
+					g.drawLine((int)Math.round(bounds.x + xRedLine * scaleLine), bounds.height + bounds.y, (int)Math.round(bounds.x + xRedLine * scaleLine), bounds.y - 10 * SCALA);
+					g.setStroke(olStroke);
+				}
+				return;
+			}
 			Graphics2D gBackground;
 			if (needRedraw) {
 				bufferedImage = new BufferedImage(this.getWidth(), this.getHeight(), BufferedImage.TYPE_INT_RGB);
@@ -747,76 +755,17 @@ public class Graph extends JPanel implements MouseListener, MouseMotionListener,
 			ByteArrayOutputStream baos = new ByteArrayOutputStream();
 			PrintStream ps = new PrintStream(baos);
 			ex.printStackTrace(ps);
-			JOptionPane.showMessageDialog(Cytoscape.getDesktop(), baos.toString(), "Error", JOptionPane.ERROR_MESSAGE);
+			ps.flush();
+			String labelContent = "<html>" + baos.toString().replaceAll("\\n", "<br/>") + "</html>";
+			final JLabel label = new JLabel(labelContent);
+			SwingUtilities.invokeLater(new Runnable() {
+				public void run() {
+					JOptionPane.showMessageDialog(Cytoscape.getDesktop(), label, "Error", JOptionPane.ERROR_MESSAGE);
+				}
+			});
 		}
 	}
 	
-	/*public void paint(Graphics g1) {
-		Graphics2D g = (Graphics2D)g1;
-		Font oldFont = g.getFont();
-		Font newFont = new Font(oldFont.getName(), oldFont.getStyle(), oldFont.getSize() * SCALA);
-		g.setFont(newFont);
-		if (!movingLegend) {
-			g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-		}
-		//g.clearRect(0, 0, this.getWidth(), this.getHeight());
-		g.setPaint(BACKGROUND_COLOR);
-		Rectangle bounds = new Rectangle(this.getBounds());
-		bounds.x = bounds.y = 0; //we don't care where we are inside our containing object: we only need the width and height of the drawing area. The starting x and y are of course 0.
-		g.fill(bounds);
-		FontMetrics fm = g.getFontMetrics();
-		maxLabelLength = 0;
-		bounds.setBounds(bounds.x + BORDER_X * SCALA, bounds.y + BORDER_Y * SCALA, bounds.width - 2 * BORDER_X * SCALA, bounds.height - 2 * BORDER_Y * SCALA);
-		
-		resetCol();
-		Stroke oldStroke = g.getStroke();
-		g.setStroke(new BasicStroke(2 * SCALA));
-		Stroke fineStroke = new BasicStroke(1 * SCALA);
-		for (Series series : data) {
-			if (series.isSlave()) continue; //first plot all masters, then all slaves: this way we are sure that the master has set all it needs and the slave can lazily copy the same settings
-			
-			if (series.getColor() == null || series.getChangeColor()) {
-				if (!series.getChangeColor()) {
-					g.setPaint(nextCol());
-				} else {
-					g.setPaint(randomCol());
-					series.setChangeColor(false);
-				}
-			} else {
-				g.setPaint(series.getColor());
-			}
-			series.plot(g, bounds);
-			if (series.isMaster()) {
-				series.getSlave().plot(g, bounds);
-			}
-			double labelLength = fm.stringWidth(series.getName());
-			if (labelLength > maxLabelLength) {
-				maxLabelLength = labelLength;
-			}
-		}
-		
-		if (legendBounds == null || !customLegendPosition) {
-			int nGraphs = 0;
-			for (Series s : data) {
-				if (!s.isSlave()) nGraphs++;
-			}
-			legendBounds = new Rectangle(bounds.width - 35 * SCALA - (int)maxLabelLength, bounds.y + 20 * SCALA, 35 * SCALA + (int)maxLabelLength, 20 * SCALA * nGraphs);
-		}
-		g.setStroke(fineStroke);
-		if (showLegend) {
-			drawLegend(g, legendBounds);
-		}
-		
-		
-		drawAxes(g, bounds);
-		
-		if (drawingZoomRectangle) {
-			drawZoomRectangle(g);
-		}
-
-		g.setStroke(oldStroke);
-		g.setFont(oldFont);
-	}*/
 	
 	/*
 	 * Add a new set of Series from a given LevelResult, marking all as shown
@@ -839,6 +788,13 @@ public class Graph extends JPanel implements MouseListener, MouseMotionListener,
 		}
 		String[] graphNames = result.getReactantIds().toArray(new String[] {""});
 		int nColonne = graphNames.length;
+		if (nColonne <= 10) {
+			useHeatMap = false;
+			heatMapGraph.setSelected(false);
+		} else {
+			useHeatMap = true;
+			heatMapGraph.setSelected(true);
+		}
 		Vector<Vector<P>> grafici = new Vector<Vector<P>>(nColonne);
 		xSeriesName = null;
 		for (int i=0;i<nColonne;i++) {
@@ -1127,6 +1083,16 @@ public class Graph extends JPanel implements MouseListener, MouseMotionListener,
 		scale.setMaxX(new Double(maxX));
 		scale.setMinY(new Double(minY));
 		scale.setMaxY(new Double(maxY));
+		for (GraphScaleListener gl : scaleListeners) {
+			gl.scaleChanged(scale);
+		}
+	}
+	
+	public void setDrawArea(double minX, double maxX, double minY, double maxY) {
+		scale.setMinX(minX);
+		scale.setMaxX(maxX);
+		scale.setMinY(minY);
+		scale.setMaxY(maxY);
 		for (GraphScaleListener gl : scaleListeners) {
 			gl.scaleChanged(scale);
 		}
@@ -1506,6 +1472,10 @@ public class Graph extends JPanel implements MouseListener, MouseMotionListener,
 				this.repaint();
 			} else if (menu.getText().equals(STEP_SHAPED_GRAPH_LABEL)) {
 				this.stepShapedLines = !this.stepShapedLines;
+				needRedraw = true;
+				this.repaint();
+			} else if (menu.getText().equals(HEATMAP_GRAPH_LABEL)) {
+				this.useHeatMap = ! this.useHeatMap;
 				needRedraw = true;
 				this.repaint();
 			}

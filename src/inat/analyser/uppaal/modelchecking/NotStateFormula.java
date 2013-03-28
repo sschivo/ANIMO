@@ -16,6 +16,11 @@ public class NotStateFormula extends StateFormula {
 	}
 	
 	@Override
+	public boolean supportsPriorities() {
+		return negatedFormula.supportsPriorities();
+	}
+	
+	@Override
 	public String toString() {
 		return "not (" + negatedFormula.toString() + ")";
 	}

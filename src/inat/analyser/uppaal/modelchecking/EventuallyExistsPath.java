@@ -16,6 +16,11 @@ public class EventuallyExistsPath extends PathFormula {
 	}
 	
 	@Override
+	public boolean supportsPriorities() {
+		return stateFormula.supportsPriorities();
+	}
+	
+	@Override
 	public String toString() {
 		return "E<> (" + stateFormula.toString() + ")";
 	}

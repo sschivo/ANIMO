@@ -57,7 +57,7 @@ public class ResultAverager {
 			results.add((SimpleLevelResult)(analyzer.analyze(m, timeTo)));
 			endTime = System.currentTimeMillis();
 			sumTimes += (endTime - startTime);
-			monitor.setEstimatedTimeRemaining(Math.round(sumTimes / i * (nRuns - i + 1)));
+			monitor.setEstimatedTimeRemaining(Math.round(sumTimes / (i + 1) * (nRuns - i)));
 		}
 		return results;
 	}

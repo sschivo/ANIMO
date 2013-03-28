@@ -16,6 +16,11 @@ public class EventuallyAllPaths extends PathFormula {
 	}
 	
 	@Override
+	public boolean supportsPriorities() {
+		return false;
+	}
+	
+	@Override
 	public String toString() {
 		return "E[] (" + stateFormula.toString() + ")";
 	}

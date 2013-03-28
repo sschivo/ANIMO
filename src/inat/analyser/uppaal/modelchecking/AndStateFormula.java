@@ -18,6 +18,11 @@ public class AndStateFormula extends StateFormula {
 	}
 	
 	@Override
+	public boolean supportsPriorities() {
+		return (this.first.supportsPriorities() && this.second.supportsPriorities());
+	}
+	
+	@Override
 	public String toString() {
 		return "(" + first + ") && (" + second + ")";
 	}

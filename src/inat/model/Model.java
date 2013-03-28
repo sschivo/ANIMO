@@ -79,7 +79,10 @@ public class Model implements Serializable {
 								   SCENARIO_PARAMETER_STOT = "Stot",
 								   SCENARIO_PARAMETER_K2_KM = "k2/km",
 								   SCENARIO_ONLY_PARAMETER = "parameter",
-								   SCENARIO_PARAMETER_K = "k";
+								   SCENARIO_PARAMETER_K = "k",
+								   MODEL_CHECKING_TYPE = "model checking type";
+		public static final int STATISTICAL_MODEL_CHECKING = 1,
+								NORMAL_MODEL_CHECKING = 2;
 	}
 
 	
@@ -849,7 +852,9 @@ public class Model implements Serializable {
 			throw new InatException("No reactants selected for plot: select at least one reactant to be plotted in the graph.");
 		}*/
 		if (noReactantsPlotted) {
-			//tante cocole al'ombrela
+			if (JOptionPane.showConfirmDialog((JTask)monitor, "No graphs will be shown. Do you still want to continue?", "No reactants selected for plotting", JOptionPane.YES_NO_OPTION) == JOptionPane.NO_OPTION) {
+				throw new InatException("Model generation cancelled by the user");
+			}
 		}
 		
 		Iterator<Edge> edges = (Iterator<Edge>) network.edgesIterator();

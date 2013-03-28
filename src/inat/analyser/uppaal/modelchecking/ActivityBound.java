@@ -20,6 +20,11 @@ public class ActivityBound extends StateFormula {
 	}
 	
 	@Override
+	public boolean supportsPriorities() {
+		return true;
+	}
+	
+	@Override
 	public String toString() {
 		String b;
 		if (bound.equals(BoundType.EQ)) {

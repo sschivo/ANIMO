@@ -189,6 +189,12 @@ public class ModelCheckAction extends InatActionTask {
 				//formula = newFormula.toString();
 				//JOptionPane.showMessageDialog(Cytoscape.getDesktop(), "Formula post-sostituzioni: " + formulaToCheck);
 				
+				if (formulaToCheck.supportsPriorities()) {
+					model.getProperties().let(Model.Properties.MODEL_CHECKING_TYPE).be(Model.Properties.NORMAL_MODEL_CHECKING);
+				} else {
+					model.getProperties().let(Model.Properties.MODEL_CHECKING_TYPE).be(Model.Properties.STATISTICAL_MODEL_CHECKING);
+				}
+				
 				performModelChecking(model, formulaToCheck.toString(), formulaToCheck.toHumanReadable());
 				//JOptionPane.showMessageDialog(Cytoscape.getDesktop(), "Ho finito l'analisi senza riportare eccezioni!");
 				
@@ -234,6 +240,7 @@ public class ModelCheckAction extends InatActionTask {
 						double scale = model.getProperties().get(Model.Properties.SECONDS_PER_POINT).as(Double.class) / 60.0;
 						final InatResultPanel resultViewer = new InatResultPanel(model, result.getLevelResult(), scale, Cytoscape.getCurrentNetwork());
 						resultViewer.addToPanel(Cytoscape.getDesktop().getCytoPanel(SwingConstants.EAST));
+						resultViewer.setTitle(humanFormula + " (" + (result.getBooleanResult()?"True":"False") + ")");
 					}
 				}
 			});

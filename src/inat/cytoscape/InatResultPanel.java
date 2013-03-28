@@ -487,7 +487,11 @@ public class InatResultPanel extends JPanel implements ChangeListener, GraphScal
 			int nLevels = model.getProperties().get(Model.Properties.NUMBER_OF_LEVELS).as(Integer.class);
 			g.declareMaxYValue(nLevels);
 			double maxTime = scale * result.getTimeIndices().get(result.getTimeIndices().size()-1);
-			g.setDrawArea(0, (int)maxTime, 0, nLevels); //This is done because the graph automatically computes the area to be shown based on minimum and maximum values for X and Y, including StdDev. So, if the StdDev of a particular series (which represents an average) in a particular point is larger that the value of that series in that point, the minimum y value would be negative. As this is not very nice to see, I decided that we will recenter the graph to more strict bounds instead.
+//			int maxTimeInt = (int)maxTime;
+//			if (maxTimeInt < maxTime) { //If we get 6.2 as last time on the trace, we show up to 7, so that we let the user see also the end of the trace
+//				maxTimeInt++;
+//			}
+			g.setDrawArea(0, maxTime, 0, nLevels); //This is done because the graph automatically computes the area to be shown based on minimum and maximum values for X and Y, including StdDev. So, if the StdDev of a particular series (which represents an average) in a particular point is larger that the value of that series in that point, the minimum y value would be negative. As this is not very nice to see, I decided that we will recenter the graph to more strict bounds instead.
 														//Also, if the maximum value reached during the simulation is not the maximum activity level, the graph does not loook nice
 		}
 		this.add(g, BorderLayout.CENTER);
@@ -1045,12 +1049,7 @@ public class InatResultPanel extends JPanel implements ChangeListener, GraphScal
 				if (newTitle == null) {
 					return;
 				}
-				title = newTitle;
-				int currentIdx = cytoPanel.getSelectedIndex();
-				cytoPanel.remove(currentIdx);
-				cytoPanel.add(title, null, container, newTitle, currentIdx);
-				cytoPanel.setSelectedIndex(currentIdx);
-				resetDivider();
+				setTitle(newTitle);
 			}
 		});
 		
@@ -1082,6 +1081,19 @@ public class InatResultPanel extends JPanel implements ChangeListener, GraphScal
 		this.myIndex = cytoPanel.getCytoPanelComponentCount() - 1;
 		cytoPanel.setSelectedIndex(this.myIndex);
 		resetDivider();
+	}
+	
+	public void setTitle(String newTitle) {
+		title = newTitle;
+		int currentIdx = fCytoPanel.getSelectedIndex();
+		fCytoPanel.remove(currentIdx);
+		fCytoPanel.add(title, null, container, newTitle, currentIdx);
+		fCytoPanel.setSelectedIndex(currentIdx);
+		resetDivider();
+	}
+	
+	public String getTitle() {
+		return this.title;
 	}
 	
 	private void differenceButtonPressed(String caption) {

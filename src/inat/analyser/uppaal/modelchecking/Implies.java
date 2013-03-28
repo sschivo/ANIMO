@@ -19,6 +19,11 @@ public class Implies extends PathFormula {
 	}
 	
 	@Override
+	public boolean supportsPriorities() {
+		return false;
+	}
+	
+	@Override
 	public String toString() {
 		return first.toString() + " --> " + second.toString();
 	}

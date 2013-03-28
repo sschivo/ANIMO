@@ -16,6 +16,11 @@ public class AlwaysAllPaths extends PathFormula {
 	}
 	
 	@Override
+	public boolean supportsPriorities() {
+		return true;
+	}
+	
+	@Override
 	public String toString() {
 		return "A[] (" + stateFormula.toString() + ")";
 	}

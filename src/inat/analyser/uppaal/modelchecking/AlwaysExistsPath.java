@@ -16,6 +16,11 @@ public class AlwaysExistsPath extends PathFormula {
 	}
 	
 	@Override
+	public boolean supportsPriorities() {
+		return false;
+	}
+	
+	@Override
 	public String toString() {
 		return "A<> (" + stateFormula.toString() + ")";
 	}

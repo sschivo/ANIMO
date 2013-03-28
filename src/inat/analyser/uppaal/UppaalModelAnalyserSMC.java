@@ -131,7 +131,11 @@ public class UppaalModelAnalyserSMC implements ModelAnalyser<LevelResult> {
 				cmd[1] = "-c";
 				cmd[2] = verifytaSMCPath;				
 			}
-			cmd[2] += " -s -o2 -t0 \"" + nomeFileModello + "\" \"" + nomeFileQuery + "\"";// > \"" + nomeFileOutput + "\"";//2>&1";
+			if (m.getProperties().get(Model.Properties.MODEL_CHECKING_TYPE) != null && m.getProperties().get(Model.Properties.MODEL_CHECKING_TYPE).as(Integer.class) == Model.Properties.NORMAL_MODEL_CHECKING) {
+				cmd[2] += " -s -y -o2 -t0 \"" + nomeFileModello + "\" \"" + nomeFileQuery + "\"";// > \"" + nomeFileOutput + "\"";//2>&1";
+			} else {
+				cmd[2] += " -s \"" + nomeFileModello + "\" \"" + nomeFileQuery + "\"";
+			}
 			ProcessBuilder pb = new ProcessBuilder(cmd[0], cmd[1], cmd[2]);
 			pb.redirectErrorStream(true);
 			if (monitor != null) {
@@ -156,6 +160,8 @@ public class UppaalModelAnalyserSMC implements ModelAnalyser<LevelResult> {
 						System.err.println("Eccezione " + e);
 						e.printStackTrace(System.err);
 						errors.add(e);
+						proc.destroy();
+						taskStatus = 1;
 					}
 				}
 			}.start();
@@ -196,8 +202,10 @@ public class UppaalModelAnalyserSMC implements ModelAnalyser<LevelResult> {
 					proc.destroy();
 					throw new AnalysisException("User interrupted");
 				}
-				while (resultVector.isEmpty()) { //if the verifyta process is completed, we may still need to wait for the analysis thread to complete
-					Thread.sleep(100);
+				if (errors.isEmpty()) {
+					while (resultVector.isEmpty()) { //if the verifyta process is completed, we may still need to wait for the analysis thread to complete
+						Thread.sleep(100);
+					}
 				}
 			} else {
 				try {
@@ -419,8 +427,10 @@ public class UppaalModelAnalyserSMC implements ModelAnalyser<LevelResult> {
 					proc.destroy();
 					throw new AnalysisException("User interrupted");
 				}
-				while (resultVector.isEmpty()) { //if the verifyta process is completed, we may still need to wait for the analysis thread to complete
-					Thread.sleep(100);
+				if (errors.isEmpty()) {
+					while (resultVector.isEmpty()) { //if the verifyta process is completed, we may still need to wait for the analysis thread to complete
+						Thread.sleep(100);
+					}
 				}
 			} else {
 				try {
@@ -489,7 +499,6 @@ public class UppaalModelAnalyserSMC implements ModelAnalyser<LevelResult> {
 	}
 	
 	
-	//This is slightly different from the "official" one in the sense that it reads data directly from the input stream. This way, we don't have to read the whole stream to a string (with the consequent waste of memory) before giving an input to the interpreter
 	public class VariablesInterpreterConcrete {
 		
 		private static final String NUMBER_OF_LEVELS = Model.Properties.NUMBER_OF_LEVELS;
@@ -513,7 +522,7 @@ public class UppaalModelAnalyserSMC implements ModelAnalyser<LevelResult> {
 			SMCResult res;
 			
 			if (br.markSupported()) {
-				br.mark(800000);
+				br.mark(1024);
 			}
 			
 			String line = null;
@@ -658,6 +667,8 @@ public class UppaalModelAnalyserSMC implements ModelAnalyser<LevelResult> {
 		
 		/**
 		 * Parse the UPPAAL output containing a trace run on the given model until the given time
+		 * The trace is the result of one SMC simulation query in the form
+		 * simulate 1 [<=timeTo] { var1, var2, ..., varn }
 		 * @param m The model on which the trace is based
 		 * @param output The stream from which to read the trace
 		 * @param timeTo The time up to which the simulation trace arrives (or should arrive)
@@ -799,6 +810,7 @@ public class UppaalModelAnalyserSMC implements ModelAnalyser<LevelResult> {
 		
 		/**
 		 * Parse the UPPAAL output containing a trace run on the given model until the given time
+		 * The trace is the (counter)example resulting from a (true) <> query or (false) [] query.
 		 * @param m The model on which the trace is based
 		 * @param output The stream from which to read the trace
 		 * @param timeTo The time up to which the simulation trace arrives (or should arrive)
@@ -838,7 +850,7 @@ public class UppaalModelAnalyserSMC implements ModelAnalyser<LevelResult> {
 				if (!line.startsWith("State"))
 					continue;
 				line = br.readLine(); //the "State:" string has a \n at the end, so we need to read the next line
-//				line = br.readLine(); //the second line contains informations about which we don't care. We want variable values
+				line = br.readLine(); //the second line contains informations about which we don't care. We want variable values
 				line = br.readLine();
 				Matcher stateMatcher = statePattern.matcher(line);
 				String s = null;
@@ -858,10 +870,14 @@ public class UppaalModelAnalyserSMC implements ModelAnalyser<LevelResult> {
 						|| reactantId.endsWith(".r1") || reactantId.endsWith(".r2")
 						|| reactantId.endsWith(".e") || reactantId.endsWith(".b")
 						|| reactantId.endsWith(".c") || reactantId.endsWith(".delta")
-						|| reactantId.endsWith(".tL") || reactantId.endsWith(".tU")) continue;
+						|| reactantId.endsWith(".tL") || reactantId.endsWith(".tU")
+						|| reactantId.endsWith(".deltaNew") || reactantId.endsWith(".deltaOld")
+						|| reactantId.endsWith(".deltaOldOld") || reactantId.endsWith(".deltaOldOldOld")
+						|| reactantId.endsWith(".deltaAlternating")) continue;
 					if (reactantId.endsWith(".T")) {
 						reactantId = m.getReaction(reactantId.substring(0, reactantId.lastIndexOf(".T"))).get(Model.Properties.CYTOSCAPE_ID).as(String.class);
 					}
+					//System.err.println("Inserisco il reagente " + reactantId);
 					// put the reactant into the result map
 					levels.put(reactantId, new TreeMap<Double, Double>());
 					
@@ -945,21 +961,25 @@ public class UppaalModelAnalyserSMC implements ModelAnalyser<LevelResult> {
 			lastTimeLB = timeLB;
 			lastTimeUB = timeUB;
 			lastLine = line;
+			String lastState = null;
 			double currentTime = 0; //we use it to see where we are along the simulation run (we get its value from the parseLine function), and thus compute a % of advancement with respect to timeTo
 			int lastPercent = 0;
 			while ((line = br.readLine()) != null) {
 				if (!line.startsWith("State")) continue;
 				br.readLine(); //as said before, the "State:" string ends with \n, so we need to read the next line in order to get the actual state data
-				//br.readLine(); //and the line after that contains only the states of the processes, while we are interested in variable values, which are in the 3rd line
+				br.readLine(); //and the line after that contains only the states of the processes, while we are interested in variable values, which are in the 3rd line
 				line = " " + br.readLine(); //If I don't add a space at the start of the line, the patterns will not match correctly. I need a space in front of the "globalTime" string because otherwise I would also match things like clockOfWhichIDontReallyCare-globalTime<=12345
 				//System.err.print(line);
+				lastState = line;
 				Matcher timeMatcherPrecise = globalTimePrecisePattern.matcher(line);
 				if (!timeMatcherPrecise.find()) {
+					//System.err.print("Bounds:"); System.err.flush();
 					Matcher timeMatcherLB = globalTimeLowerBoundPattern.matcher(line),
 							timeMatcherUB = globalTimeUpperBoundPattern.matcher(line);
 					int newTimeUB = -1, newTimeLB = -1;
 					if (timeMatcherLB.find()) {
-						String valueLB = (timeMatcherLB.group()).split(">")[1];;
+						String valueLB = (timeMatcherLB.group()).split(">")[1];
+						//System.err.print(" (valueLB = " + valueLB + ") "); System.err.flush();
 						if (valueLB.substring(0, 1).equals("=")) {
 							if (valueLB.substring(1, 2).equals("-")) {
 								newTimeLB = (int)Math.round(Double.parseDouble(valueLB.substring(2, valueLB.length())));
@@ -980,7 +1000,8 @@ public class UppaalModelAnalyserSMC implements ModelAnalyser<LevelResult> {
 					}
 					
 					if (timeMatcherUB.find()) {
-						String valueUB = (timeMatcherUB.group()).split("<")[1];;
+						String valueUB = (timeMatcherUB.group()).split("<")[1];
+						//System.err.print(" (valueUB = " + valueUB + ") "); System.err.flush();
 						if (valueUB.substring(0, 1).equals("=")) {
 							if (valueUB.substring(1, 2).equals("-")) {
 								newTimeUB = (int)Math.round(Double.parseDouble(valueUB.substring(2, valueUB.length())));
@@ -999,7 +1020,7 @@ public class UppaalModelAnalyserSMC implements ModelAnalyser<LevelResult> {
 						newTimeUB = newTimeLB;
 						//System.err.println(" ne' il tempo UB");
 					}
-					//System.err.println("Tempi letti: [" + newTimeLB + ", " + newTimeUB + "]");
+					//System.err.println(" [" + newTimeLB + ", " + newTimeUB + "]");
 					
 					if (newTimeLB > timeLB || newTimeUB > timeUB) {
 						//System.err.println("La mia scusa e' che " + newTimeLB + " > " + timeLB + " o che " + newTimeUB + " > " + timeUB);
@@ -1012,6 +1033,7 @@ public class UppaalModelAnalyserSMC implements ModelAnalyser<LevelResult> {
 						lastLine = line;
 					}
 				} else {
+					//System.err.print("Tempo preciso:");
 					String value = (timeMatcherPrecise.group().split("=")[1]);
 					int newTimeLB = -1;
 					if (value.substring(0, 1).equals("=")) {
@@ -1028,6 +1050,7 @@ public class UppaalModelAnalyserSMC implements ModelAnalyser<LevelResult> {
 						}
 					}
 					int newTimeUB = newTimeLB;
+					//System.err.println(" " + newTimeLB);
 					
 					if (lastTimeLB == timeLB) {
 						if (newTimeLB > timeLB) {
@@ -1061,9 +1084,86 @@ public class UppaalModelAnalyserSMC implements ModelAnalyser<LevelResult> {
 				}
 			}
 			//The parse of the latest values needs to be done when we are sure there will be no more changes (i.e. at the end)
-			timeLB = lastTimeLB;
-			timeUB = lastTimeUB;
-			parseLine(m, timeLB, timeUB, timeTo, lastLine, numberOfLevels, maxNumberOfLevels, statePattern, levels);
+//			timeLB = lastTimeLB;
+//			timeUB = lastTimeUB;
+//			currentTime = parseLine(m, timeLB, timeUB, timeTo, lastLine, numberOfLevels, maxNumberOfLevels, statePattern, levels);
+			
+			if (lastState != null) {
+				//Now parse the latest point (the one commented above was not right: we actually need to read the time bounds)
+				
+				line = lastLine = lastState;
+				Matcher timeMatcherPrecise = globalTimePrecisePattern.matcher(line);
+				if (!timeMatcherPrecise.find()) {
+					Matcher timeMatcherLB = globalTimeLowerBoundPattern.matcher(line),
+							timeMatcherUB = globalTimeUpperBoundPattern.matcher(line);
+					int newTimeUB = -1, newTimeLB = -1;
+					if (timeMatcherLB.find()) {
+						String valueLB = (timeMatcherLB.group()).split(">")[1];;
+						if (valueLB.substring(0, 1).equals("=")) {
+							if (valueLB.substring(1, 2).equals("-")) {
+								newTimeLB = (int)Math.round(Double.parseDouble(valueLB.substring(2, valueLB.length())));
+							} else {
+								newTimeLB = (int)Math.round(Double.parseDouble(valueLB.substring(1, valueLB.length())));
+							}
+						} else {
+							if (valueLB.substring(0, 1).equals("-")) {
+								newTimeLB = (int)(Math.round(Double.parseDouble(valueLB.substring(1, valueLB.length())))); //why +1??
+							} else {
+								newTimeLB = (int)(Math.round(Double.parseDouble(valueLB.substring(0, valueLB.length())))); //why +1??
+							}
+						}
+						//System.err.println(" ma il tempo LB si': " + newTimeLB);
+					} else {
+						newTimeLB = 0;
+						//System.err.println(" ne' il tempo LB");
+					}
+					
+					if (timeMatcherUB.find()) {
+						String valueUB = (timeMatcherUB.group()).split("<")[1];;
+						if (valueUB.substring(0, 1).equals("=")) {
+							if (valueUB.substring(1, 2).equals("-")) {
+								newTimeUB = (int)Math.round(Double.parseDouble(valueUB.substring(2, valueUB.length())));
+							} else {
+								newTimeUB = (int)Math.round(Double.parseDouble(valueUB.substring(1, valueUB.length())));
+							}
+						} else {
+							if (valueUB.substring(0, 1).equals("-")) {
+								newTimeUB = (int)(Math.round(Double.parseDouble(valueUB.substring(1, valueUB.length())))); //why +1??
+							} else {
+								newTimeUB = (int)(Math.round(Double.parseDouble(valueUB.substring(0, valueUB.length())))); //why +1??
+							}
+						}
+						//System.err.println(" ma il tempo UB si': " + newTimeUB);
+					} else {
+						newTimeUB = newTimeLB;
+						//System.err.println(" ne' il tempo UB");
+					}
+					//System.err.println("Tempi letti: [" + newTimeLB + ", " + newTimeUB + "]");
+					
+					currentTime = parseLine(m, newTimeLB, newTimeUB, timeTo, lastState, numberOfLevels, maxNumberOfLevels, statePattern, levels);
+				} else {
+					String value = (timeMatcherPrecise.group().split("=")[1]);
+					int newTimeLB = -1;
+					if (value.substring(0, 1).equals("=")) {
+						if (value.substring(1, 2).equals("-")) {
+							newTimeLB = (int)Math.round(Double.parseDouble(value.substring(2, value.length())));
+						} else {
+							newTimeLB = (int)Math.round(Double.parseDouble(value.substring(1, value.length())));
+						}
+					} else {
+						if (value.substring(0, 1).equals("-")) {
+							newTimeLB = (int)(Math.round(Double.parseDouble(value.substring(1, value.length())))); //why +1??
+						} else {
+							newTimeLB = (int)(Math.round(Double.parseDouble(value.substring(0, value.length())))); //why +1??
+						}
+					}
+					int newTimeUB = newTimeLB;
+					//System.err.println("Tempo letto: " + newTimeLB);
+					
+					currentTime = parseLine(m, newTimeLB, newTimeUB, timeTo, lastState, numberOfLevels, maxNumberOfLevels, statePattern, levels);
+				}
+			}
+			
 			
 			//if (time < timeTo) { //if the state of the system remains unchanged from a certain time on (and so UPPAAL terminates on that point), but we asked for a later time, we add a final point where all data remain unchanged, so that the user can see the "evolution" up to the requested point
 			//we do it always, because there can be some situations in which reactants are not read while time increases, and thus we can reach the end of time without having an updated value for each reactant
@@ -1115,6 +1215,9 @@ public class UppaalModelAnalyserSMC implements ModelAnalyser<LevelResult> {
 		private double parseLine(Model m, double timeLB, double timeUB, int timeTo, String line, Map<String, Double> numberOfLevels, int maxNumberOfLevels, Pattern statePattern, Map<String, SortedMap<Double, Double>> levels) {
 			Matcher stateMatcher = statePattern.matcher(line);
 			String s = null;
+			if (timeLB == -1) {
+				timeLB = timeUB = 0;
+			}
 			double time = chooseTime(timeLB, timeUB);
 			//System.err.println("[" + timeLB + ", " + timeUB + "] --> t = " + time + " Parso la linea " + line);
 			//System.err.print("===========[" + timeLB + ", " + timeUB + "] --> " + time + ":");
@@ -1158,6 +1261,7 @@ public class UppaalModelAnalyserSMC implements ModelAnalyser<LevelResult> {
 						}
 					}
 				}
+				//System.err.print(chosenMap + " = " + level + ", ");
 				
 				SortedMap<Double, Double> rMap = levels.get(chosenMap);
 				if (rMap.isEmpty() || (rMap.get(rMap.lastKey()) != level)) { //if we didn't register a variation, we don't plot a point
@@ -1166,7 +1270,7 @@ public class UppaalModelAnalyserSMC implements ModelAnalyser<LevelResult> {
 					}*/
 					//System.err.println("  e aggiungo il punto (" + time + ", " + level + ")");
 					rMap.put(time, level);
-					//System.err.println(chosenMap + " = " + level);
+					//System.err.print(chosenMap + " = " + level + ", ");
 				}
 			}
 			//System.err.println("===========");

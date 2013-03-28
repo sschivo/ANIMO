@@ -180,6 +180,8 @@ public class RunAction extends InatActionTask {
 					model = Model.generateModelFromCurrentNetwork(this.monitor, nMinutesToSimulate, generateTables);
 				}
 				
+				model.getProperties().let(Model.Properties.MODEL_CHECKING_TYPE).be(Model.Properties.STATISTICAL_MODEL_CHECKING);
+				
 				boolean noReactantsPlotted = true;
 				for (Reactant r : model.getReactantCollection()) {
 					if (r.get(Model.Properties.ENABLED).as(Boolean.class) && r.get(Model.Properties.PLOTTED).as(Boolean.class)) {
