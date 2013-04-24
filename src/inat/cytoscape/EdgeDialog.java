@@ -165,8 +165,8 @@ public class EdgeDialog extends JDialog {
 			//boxScenario.add(Box.createGlue());
 			
 			Box boxScenarioAllParameters = new Box(BoxLayout.Y_AXIS);
-			boxScenarioAllParameters.add(new LabelledField("Reaction kinetics", boxComboScenario));
-			boxScenarioAllParameters.add(boxScenarioParameters);
+//			boxScenarioAllParameters.add(new LabelledField("Reaction kinetics", boxComboScenario));
+//			boxScenarioAllParameters.add(boxScenarioParameters);
 			Integer value;
 			if (edgeAttrib.hasAttribute(edge.getIdentifier(), UNCERTAINTY)) {
 				value = edgeAttrib.getIntegerAttribute(edge.getIdentifier(), UNCERTAINTY);
@@ -241,6 +241,8 @@ public class EdgeDialog extends JDialog {
 			incrementBox.add(Box.createHorizontalStrut(50));
 			incrementBox.add(negativeIncrement);
 			boxScenarioAllParameters.add(new LabelledField("Influence", incrementBox));
+			boxScenarioAllParameters.add(new LabelledField("Reaction kinetics", boxComboScenario));
+			boxScenarioAllParameters.add(boxScenarioParameters);
 			boxScenario.add(boxScenarioAllParameters);
 			
 			boxScenario.add(Box.createGlue());

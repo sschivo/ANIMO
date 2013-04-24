@@ -41,6 +41,7 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
+import java.util.Collections;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Random;
@@ -586,8 +587,9 @@ public class Graph extends JPanel implements MouseListener, MouseMotionListener,
 						double x, xIncr;
 						x = this.scale.getMinX();
 						xIncr = (this.scale.getMaxX() - this.scale.getMinX()) / nPoints;
+						DecimalFormat f = new DecimalFormat("#.####");
 						while (x < this.scale.getMaxX() && j < nPoints) {
-							timePoints[j++] = "" + Math.round(x) + " ";
+							timePoints[j++] = " " + f.format(x);
 							x += xIncr;
 						}
 						x = this.scale.getMinX();
@@ -613,10 +615,16 @@ public class Graph extends JPanel implements MouseListener, MouseMotionListener,
 							i++;
 						}
 						heatMapChart = new HeatChart(graphValues);
+						heatMapChart.setLowValue(this.scale.getMinY());
+						heatMapChart.setHighValue(this.scale.getMaxY());
 						heatMapChart.setYValues(seriesNames);
 						heatMapChart.setXValues(timePoints);
-						heatMapChart.setYAxisLabel(this.yLabel);
-						heatMapChart.setXAxisLabel(this.xSeriesName);
+						if (this.yLabel != null) {
+							heatMapChart.setYAxisLabel(this.yLabel);
+						}
+						if (this.xSeriesName != null) {
+							heatMapChart.setXAxisLabel(this.xSeriesName);
+						}
 						heatMapChart.setXAxisValuesFrequency(timePoints.length / 20);
 						heatMapChart.setXValuesHorizontal(true);
 						heatMapChart.setAxisLabelsFont(new Font("Sans-Serif", Font.PLAIN, 12 * SCALA));
@@ -905,6 +913,9 @@ public class Graph extends JPanel implements MouseListener, MouseMotionListener,
 				s.setName(s.getMaster().getName() + Series.SLAVE_SUFFIX);
 			}
 		}
+		
+		Collections.sort(data);
+		
 		customLegendPosition = false;
 		needRedraw = true;
 	}
@@ -1016,6 +1027,9 @@ public class Graph extends JPanel implements MouseListener, MouseMotionListener,
 				s.setEnabled(true);
 			}
 		}
+		
+		Collections.sort(data);
+		
 		customLegendPosition = false;
 		needRedraw = true;
 	}

@@ -189,11 +189,11 @@ public class ModelCheckAction extends InatActionTask {
 				//formula = newFormula.toString();
 				//JOptionPane.showMessageDialog(Cytoscape.getDesktop(), "Formula post-sostituzioni: " + formulaToCheck);
 				
-				if (formulaToCheck.supportsPriorities()) {
-					model.getProperties().let(Model.Properties.MODEL_CHECKING_TYPE).be(Model.Properties.NORMAL_MODEL_CHECKING);
-				} else {
+//				if (formulaToCheck.supportsPriorities()) { //TODO: unfortunately, we were discouraged from using priorities, so their use will be disabled from now on.
+//					model.getProperties().let(Model.Properties.MODEL_CHECKING_TYPE).be(Model.Properties.NORMAL_MODEL_CHECKING);
+//				} else {
 					model.getProperties().let(Model.Properties.MODEL_CHECKING_TYPE).be(Model.Properties.STATISTICAL_MODEL_CHECKING);
-				}
+//				}
 				
 				performModelChecking(model, formulaToCheck.toString(), formulaToCheck.toHumanReadable());
 				//JOptionPane.showMessageDialog(Cytoscape.getDesktop(), "Ho finito l'analisi senza riportare eccezioni!");

@@ -81,14 +81,14 @@ public class UppaalModelAnalyserSMC implements ModelAnalyser<LevelResult> {
 			final VariablesModel variablesModel;
 			XmlConfiguration configuration = InatBackend.get().configuration();
 			String modelType = configuration.get(XmlConfiguration.MODEL_TYPE_KEY, null);
-			if (modelType == null || modelType.equals(XmlConfiguration.MODEL_TYPE_REACTION_CENTERED)) {
-				variablesModel = new VariablesModelReactionCentered(); //Reaction-centered model
+			if (modelType == null || modelType.equals(XmlConfiguration.MODEL_TYPE_REACTANT_CENTERED)) {
+				variablesModel = new VariablesModelReactantCentered(); //Reactant-centered model
 			} else if (modelType.equals(XmlConfiguration.MODEL_TYPE_REACTION_CENTERED_TABLES)) {
 				variablesModel = new VariablesModelReactionCenteredTables(); //Reaction-centered with tables
-			} else if (modelType.equals(XmlConfiguration.MODEL_TYPE_REACTANT_CENTERED)) {
-				variablesModel = new VariablesModelReactantCentered(); //Reactant-centered model
-			} else {
+			} else if (modelType.equals(XmlConfiguration.MODEL_TYPE_REACTION_CENTERED)) {
 				variablesModel = new VariablesModelReactionCentered(); //Reaction-centered model
+			} else {
+				variablesModel = new VariablesModelReactantCentered(); //Reactant-centered model is the default
 			}
 			final String uppaalModel = variablesModel.transform(m);
 			
@@ -295,14 +295,14 @@ public class UppaalModelAnalyserSMC implements ModelAnalyser<LevelResult> {
 			final VariablesModel variablesModel;
 			XmlConfiguration configuration = InatBackend.get().configuration();
 			String modelType = configuration.get(XmlConfiguration.MODEL_TYPE_KEY, null);
-			if (modelType == null || modelType.equals(XmlConfiguration.MODEL_TYPE_REACTION_CENTERED)) {
-				variablesModel = new VariablesModelReactionCentered(); //Reaction-centered model
+			if (modelType == null || modelType.equals(XmlConfiguration.MODEL_TYPE_REACTANT_CENTERED)) {
+				variablesModel = new VariablesModelReactantCentered(); //Reactant-centered model
 			} else if (modelType.equals(XmlConfiguration.MODEL_TYPE_REACTION_CENTERED_TABLES)) {
 				variablesModel = new VariablesModelReactionCenteredTables(); //Reaction-centered with tables
-			} else if (modelType.equals(XmlConfiguration.MODEL_TYPE_REACTANT_CENTERED)) {
-				variablesModel = new VariablesModelReactantCentered(); //Reactant-centered model
-			} else {
+			} else if (modelType.equals(XmlConfiguration.MODEL_TYPE_REACTION_CENTERED)) {
 				variablesModel = new VariablesModelReactionCentered(); //Reaction-centered model
+			} else {
+				variablesModel = new VariablesModelReactantCentered(); //Reactant-centered model is the default
 			}
 			final String uppaalModel = variablesModel.transform(m);
 			final String uppaalQuery; //"E<> (globalTime > " + timeTo + ")";

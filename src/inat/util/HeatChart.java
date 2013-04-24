@@ -315,6 +315,11 @@ public class HeatChart {
 		return lowValue;
 	}
 	
+	
+	public void setLowValue(double lowValue) {
+		this.lowValue = lowValue;
+	}
+	
 	/**
 	 * Returns the high value. This is the value at which the high value colour
 	 * will be applied.
@@ -323,6 +328,10 @@ public class HeatChart {
 	 */
 	public double getHighValue() {
 		return highValue;
+	}
+	
+	public void setHighValue(double highValue) {
+		this.highValue = highValue;
 	}
 	
 	/**
@@ -1705,25 +1714,37 @@ public class HeatChart {
 			if (om instanceof ContinuousMapping) {
 				ContinuousMapping m = (ContinuousMapping)om;
 				int nPunti = m.getPointCount();
-				int idx = 1;
-				double minVal = 0, maxVal = 1;
+				int idx = 0;
+				double minVal = Double.POSITIVE_INFINITY, maxVal = Double.NEGATIVE_INFINITY, range = 0;
+				for (ContinuousMappingPoint p : m.getAllPoints()) {
+					if (p.getValue() < minVal) {
+						minVal = p.getValue();
+					}
+					if (p.getValue() > maxVal) {
+						maxVal = p.getValue();
+					}
+				}
+				range = maxVal - minVal;
+				double pointValue = Double.NaN;
 				for (;idx<nPunti;idx++) {
 					ContinuousMappingPoint punto = m.getPoint(idx);
-					if (punto.getValue() > value) {
-						maxVal = punto.getValue() - minVal;
+					if ((punto.getValue() - minVal) / range > value) {
+						pointValue = value * range + minVal;
 						break;
 					}
-					minVal = punto.getValue();
 				}
 				int idx1 = idx - 1,
 					idx2 = idx;
 				if (idx == nPunti) {
-					idx1 = idx2 = idx - 1;
+					return (Color)m.getPoint(nPunti - 1).getRange().equalValue;
 				}
 				ContinuousMappingPoint p1 = m.getPoint(idx1),
 									   p2 = m.getPoint(idx2);
+				minVal = p1.getValue();
+				maxVal = p2.getValue();
+				range = maxVal - minVal;
 				LinearNumberToColorInterpolator inter = new LinearNumberToColorInterpolator();
-				return (Color)inter.getRangeValue((value - minVal) / maxVal, p1.getRange().equalValue, p2.getRange().equalValue);
+				return (Color)inter.getRangeValue((pointValue - minVal) / range, p1.getRange().equalValue, p2.getRange().equalValue);
 			}
 		}
 		return new Color(0, 0, 0);

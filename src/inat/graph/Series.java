@@ -18,7 +18,7 @@ import java.awt.geom.Point2D;
  * the standard deviation of its master with (optional) vertical
  * bars and shading
  */
-public class Series {
+public class Series implements Comparable<Series> {
 	protected static int seriesCounter = 0;
 	
 	private P[] data = null;
@@ -55,6 +55,11 @@ public class Series {
 		this.data = data;
 		this.setScale(scale);
 		this.name = name;
+	}
+	
+	@Override
+	public int compareTo(Series s) {
+		return this.name.toLowerCase().compareTo(s.name.toLowerCase());
 	}
 	
 	public void setScale(Scale scale) {

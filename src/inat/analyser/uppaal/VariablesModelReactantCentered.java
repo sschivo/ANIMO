@@ -427,7 +427,7 @@ public class VariablesModelReactantCentered extends VariablesModel {
 		out.append(newLine);
 		out.append("");
 		out.append(newLine);
-		out.append("time_t pow(int a, int b) { // a ^ b (b &gt;= 0)"); // Integer power
+		out.append("time_t power(int a, int b) { // a ^ b (b &gt;= 0)"); // Integer power
 		out.append(newLine);
 		out.append("\ttime_t r = 1;");
 		out.append(newLine);
@@ -497,7 +497,7 @@ public class VariablesModelReactantCentered extends VariablesModel {
 		out.append(newLine);
 		out.append("\t}");
 		out.append(newLine);
-		out.append("\treturn a.b * pow(10, a.e);");
+		out.append("\treturn a.b * power(10, a.e);");
 		out.append(newLine);
 		out.append("}");
 		out.append(newLine);

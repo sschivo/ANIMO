@@ -571,9 +571,9 @@ public class InatPlugin extends CytoscapePlugin {
 					useReactionCenteredTables.setSelected(false);
 					useReactantCentered.setSelected(true);
 				} else {
-					useReactionCentered.setSelected(true);
+					useReactionCentered.setSelected(false);
 					useReactionCenteredTables.setSelected(false);
-					useReactantCentered.setSelected(false);
+					useReactantCentered.setSelected(true);
 				}
 				JPanel modelTypePanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
 				modelTypePanel.add(useReactionCentered);

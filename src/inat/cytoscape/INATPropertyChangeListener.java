@@ -15,8 +15,10 @@ import java.awt.event.MouseEvent;
 import java.awt.geom.Point2D;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.Vector;
 
@@ -63,11 +65,14 @@ import ding.view.NodeContextMenuListener;
 
 public class INATPropertyChangeListener implements PropertyChangeListener {
 	
-	private int currentEdgeNumber = -1, currentNodeNumber = -1;
+	//private int currentEdgeNumber = -1, currentNodeNumber = -1;
+	private Map<String, Integer> currentEdgeNumber = new HashMap<String, Integer>(),
+								 currentNodeNumber = new HashMap<String, Integer>(); //We keep count of the current number of nodes and edges for each network
 	private Object[] edgesArray = null;
 	private ColorsLegend legendColors;
 	private ShapesLegend legendShapes;
 
+	
 	public INATPropertyChangeListener(ColorsLegend legendColors, ShapesLegend legendShapes) {
 		this.legendColors = legendColors;
 		this.legendShapes = legendShapes;
@@ -604,6 +609,8 @@ public class INATPropertyChangeListener implements PropertyChangeListener {
 					}
 				} else if (e.getClickCount() == 1) {
 					if (Cytoscape.getDesktop().getCytoPanel(SwingConstants.WEST).getSelectedIndex() != InatPlugin.TAB_INDEX) {
+						drawingEdge = false;
+						firstNode = null;
 						return;
 					}
 					if (drawingEdge) { //Ctrl is not important, we just make sure that there was only one click
@@ -615,6 +622,7 @@ public class INATPropertyChangeListener implements PropertyChangeListener {
 								editor = CytoscapeEditorManager.getCurrentEditor();
 							}
 							editor.addEdge(firstNode, nv.getNode(), CytoscapeEditorManager.EDGE_TYPE, "DefaultEdge");
+							Cytoscape.firePropertyChange(Cytoscape.NETWORK_MODIFIED, null, null);
 						} else {
 							return;
 						}
@@ -630,12 +638,12 @@ public class INATPropertyChangeListener implements PropertyChangeListener {
 								editor = CytoscapeEditorManager.getCurrentEditor();
 							}
 							editor.addNode("node", CytoscapeEditorManager.NODE_TYPE, "DefaultNode", new Point2D.Double(e.getPoint().getX(), e.getPoint().getY()));
+							Cytoscape.firePropertyChange(Cytoscape.NETWORK_MODIFIED, null, null);
 							drawingEdge = false; //If we started an edge and added a node, we don't want to continue the edge
-						} else {
-							if (nv != null && ev == null) { //we are adding an edge (a Ctrl-click on an edge should add one of those handles..)
-								drawingEdge = true;
-								firstNode = nv.getNode();
-							}
+							firstNode = null;
+						} else if (nv != null && ev == null) { //we are adding an edge (a Ctrl-click on an edge should add one of those handles..)
+							drawingEdge = true;
+							firstNode = nv.getNode();
 						}
 					}
 				}
@@ -654,10 +662,10 @@ public class INATPropertyChangeListener implements PropertyChangeListener {
 			addMenus();
 			addDblClckListener();
 			CyNetwork network = Cytoscape.getCurrentNetwork();
-			currentEdgeNumber = network.getEdgeCount();
-			currentNodeNumber = network.getNodeCount();
+			currentEdgeNumber.put(network.getIdentifier(), network.getEdgeCount());
+			currentNodeNumber.put(network.getIdentifier(), network.getNodeCount());
 			edgesArray = network.edgesList().toArray();
-			//System.err.println("Numero iniziale di nodi: " + currentNodeNumber);
+			//System.err.println("Network viewa creatata per la rete \"" + network.getTitle() + "\"!! Numero iniziale di nodi: " + currentNodeNumber.get(network.getIdentifier()) + ", edgi " + currentEdgeNumber.get(network.getIdentifier()));
 		}
 		if (evt.getPropertyName().equalsIgnoreCase(Cytoscape.NETWORK_LOADED)) {
 			//As there can be edges with intermediate curving points, make those points curved instead of angled (they look nicer)
@@ -682,18 +690,19 @@ public class INATPropertyChangeListener implements PropertyChangeListener {
 			Cytoscape.getCurrentNetworkView().applyVizmapper(vizMap.getVisualStyle());
 		}
 		if (evt.getPropertyName().equalsIgnoreCase(Cytoscape.NETWORK_CREATED)) {
+			//System.err.println("Creato una nuova rete: \"" + Cytoscape.getCurrentNetwork().getTitle() + "\"! Ora ho n edgi = " + currentEdgeNumber + " e nodi " + currentNodeNumber);
 			//addVisualMappings();
 		}
 		if (evt.getPropertyName().equalsIgnoreCase(Cytoscape.NETWORK_MODIFIED)) {
 			//System.err.println("Rete modificata!");
-			if (currentEdgeNumber != -1 && currentNodeNumber != -1) {
-				CyNetwork network = Cytoscape.getCurrentNetwork();
+			CyNetwork network = Cytoscape.getCurrentNetwork();
+			if (currentEdgeNumber.get(network.getIdentifier()) != null && currentNodeNumber.get(network.getIdentifier()) != null) {
 				int newEdgeNumber = network.getEdgeCount(),
 					newNodeNumber = network.getNodeCount();
-				//System.err.println("Cambiamento alla rete: n. nodi = " + newNodeNumber + " (precedente: " + currentNodeNumber + "), n. edgi = " + newEdgeNumber + " (precedente: " + currentEdgeNumber + ")");
-				if (newEdgeNumber > currentEdgeNumber) {
+				//System.err.println("Cambiamento alla rete \"" + network.getTitle() + "\": n. nodi = " + newNodeNumber + " (precedente: " + currentNodeNumber.get(network.getIdentifier()) + "), n. edgi = " + newEdgeNumber + " (precedente: " + currentEdgeNumber.get(network.getIdentifier()) + ")");
+				if (newEdgeNumber > currentEdgeNumber.get(network.getIdentifier())) {
 					//JOptionPane.showMessageDialog(null, "Nuovo arco inserito");
-					//System.err.println("\tNuovo arco inserito: ora ne hai " + newEdgeNumber + "!");
+					//System.err.println("\tNuovo arco inserito nella rete \"" + network.getTitle() + "\": ora ne hai " + newEdgeNumber + "!");
 					List<Object> oldEdges = new Vector<Object>(),
 						 newEdges;
 					for (Object o : edgesArray) {
@@ -720,11 +729,11 @@ public class INATPropertyChangeListener implements PropertyChangeListener {
 						}
 					}
 					edgesArray = newEdges.toArray();
-				} else if (newEdgeNumber < currentEdgeNumber) {
+				} else if (newEdgeNumber < currentEdgeNumber.get(network.getIdentifier())) {
 					//JOptionPane.showMessageDialog(null, "Arco rimosso");
 					edgesArray = network.edgesList().toArray();
 				}
-				if (newNodeNumber > currentNodeNumber) {
+				if (newNodeNumber > currentNodeNumber.get(network.getIdentifier())) {
 					network.getSelectedNodes();
 					//JOptionPane.showMessageDialog(Cytoscape.getDesktop(), "Nuovo nodo inserito");
 					//System.err.println("\tNuovo nodo! Ora ne hai " + newNodeNumber);
@@ -739,14 +748,14 @@ public class INATPropertyChangeListener implements PropertyChangeListener {
 						dialog.setVisible(true);
 						newNodeNumber = network.getNodeCount(); //Re-update the current number of nodes, because the new node may have been deleted by hitting "Cancel"
 					}
-				} else if(newNodeNumber < currentNodeNumber) {
+				} else if(newNodeNumber < currentNodeNumber.get(network.getIdentifier())) {
 					//JOptionPane.showMessageDialog(null, "Nodo rimosso");
 					//System.err.println("\tNodo rimosso!");
 				}
-				currentEdgeNumber = newEdgeNumber;
-				currentNodeNumber = newNodeNumber;
-				//System.err.println("Ecco i nodi ora: " + currentNodeNumber);
-				//System.err.println("Ecco i edgi ora: " + currentEdgeNumber);
+				currentEdgeNumber.put(network.getIdentifier(), newEdgeNumber);
+				currentNodeNumber.put(network.getIdentifier(), newNodeNumber);
+				//System.err.println("Ecco i nodi ora nella rete \"" + network.getTitle() + "\": " + currentNodeNumber.get(network.getIdentifier()));
+				//System.err.println("Ecco i edgi ora nella rete \"" + network.getTitle() + "\": " + currentEdgeNumber.get(network.getIdentifier()));
 			}
 		}
 		if (evt.getPropertyName().equalsIgnoreCase(Cytoscape.SAVE_VIZMAP_PROPS)) {

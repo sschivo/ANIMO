@@ -239,14 +239,21 @@ public class InatBackend {
 							}
 						}
 						if (node != null) {
+
 							int [] adjacentEdges = network.getAdjacentEdgeIndicesArray(node.getRootGraphIndex(), true, true, true);
 							for (int edgeIdx : adjacentEdges) {
 								//TODO: questo � giusto per ricordarsi quanto schifo faccia sta roba.
 								//non � possibile che non si possa distinguere il caso in cui si sta caricando la rete (e quindi la visualizzazione non esiste)
 								//dal caso normale
 								EdgeView ziocane = view.getEdgeView(edgeIdx);
-								if (ziocane == null) return;
+								if (ziocane == null) {
+									return;
+								}
 								CyEdge edge = (CyEdge)ziocane.getEdge();
+								if (status && edgeAttr.hasAttribute(edge.getIdentifier(), Model.Properties.ENABLED)
+										   && !edgeAttr.getBooleanAttribute(edge.getIdentifier(), Model.Properties.ENABLED)) { //If we are enabling an edge that was hidden, unhide the edge
+									view.showGraphObject(ziocane);
+								}
 								edgeAttr.setAttribute(edge.getIdentifier(), Model.Properties.ENABLED, status);
 							}
 							for (int i : network.getEdgeIndicesArray()) {
