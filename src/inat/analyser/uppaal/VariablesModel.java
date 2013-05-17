@@ -56,7 +56,12 @@ public class VariablesModel implements ModelTransformer {
 
 		this.appendModel(out, m);
 
-		return out.toString();
+		String result = out.toString();
+		out.setLength(0); //Attempt at saving memory (not enough)
+		out.trimToSize();
+		out = null;
+		
+		return result;
 	}
 
 	protected void appendModel(StringBuilder out, Model m) {

@@ -14,7 +14,7 @@ public class ThreadTask extends Thread {
 			// blocks until job
 			pool.increaseIdle();
 			Runnable job = pool.getNext();
-			if (finished) return;
+			if (finished || job == null) return;
 			try {
 				pool.decreaseIdle();
 				job.run(); //run, non start: lo voglio eseguire in questo thread

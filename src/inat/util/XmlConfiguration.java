@@ -68,7 +68,8 @@ public class XmlConfiguration {
 	public static final String MODEL_TYPE_KEY = "/ANIMO/ModelType";
 	public static final String MODEL_TYPE_REACTION_CENTERED = "ReactionCentered",
 							   MODEL_TYPE_REACTION_CENTERED_TABLES = "ReactionCenteredTables",
-							   MODEL_TYPE_REACTANT_CENTERED = "ReactantCentered";
+							   MODEL_TYPE_REACTANT_CENTERED = "ReactantCentered",
+							   MODEL_TYPE_REACTANT_CENTERED_OPAAL = "ReactantCenteredOpaal";
 	public static final String DEFAULT_MODEL_TYPE = MODEL_TYPE_REACTANT_CENTERED;
 	
 	/**

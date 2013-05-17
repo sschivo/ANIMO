@@ -48,6 +48,7 @@ import javax.swing.BoxLayout;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
+import javax.swing.JComponent;
 import javax.swing.JFormattedTextField;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
@@ -80,7 +81,8 @@ public class ParameterFitter {
 	private int timeTo = 120;
 	private double scale = 1.0;
 	private Model model = null;
-	private String CSV_FILE_NAME = "/local/schivos/Data_0-120_TNF100_semplificato_con_dichiarazione_solo_MK2_e_JNK1.csv";
+	private boolean generateTables = false;
+	private String CSV_FILE_NAME = "test.csv"; ///local/schivos/Data_0-120_TNF100_semplificato_con_dichiarazione_solo_MK2_e_JNK1.csva";
 	private JProgressBar progress = null;
 	private long startTime = 0;
 	private JFormattedTextField numberOfParallelExecutions = null;
@@ -166,7 +168,7 @@ public class ParameterFitter {
 		//System.err.println("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
 		window = new JFrame("Parameter fitter");
 		model = null;
-		boolean generateTables = false;
+		generateTables = false;
 		XmlConfiguration configuration = InatBackend.get().configuration();
 		String modelType = configuration.get(XmlConfiguration.MODEL_TYPE_KEY, null);
 		if (modelType.equals(XmlConfiguration.MODEL_TYPE_REACTION_CENTERED_TABLES)) {
@@ -222,7 +224,7 @@ public class ParameterFitter {
 		}
 		JScrollPane scroll = new JScrollPane(panelReactions);
 		scroll.getVerticalScrollBar().setUnitIncrement(16);
-		JPanel comparisonPanel = createReactionComparisonPanel(model);
+		JComponent comparisonPanel = createReactionComparisonPanel(model);
 		JSplitPane mainSplit = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, scroll, comparisonPanel);
 		mainSplit.setDividerLocation(0.7);
 		mainSplit.setResizeWeight(0.7);
@@ -445,6 +447,7 @@ public class ParameterFitter {
 					filterButtonsBox.add(new LabelledField(r.getName() + " error", comparisonError));
 				}
 				filter.addActionListener(new ActionListener() {
+					@Override
 					public void actionPerformed(ActionEvent e) {
 						for (Pair<JTextField, ReactantComparison> pair : comparisonFieldParameters) {
 							double value = 0;
@@ -474,6 +477,27 @@ public class ParameterFitter {
 				});
 				filterButtonsBox.add(Box.createGlue());
 				filterButtonsBox.add(filter);
+				JButton showAll = new JButton("Show all");
+				showAll.addActionListener(new ActionListener() {
+					@Override
+					public void actionPerformed(ActionEvent e) {
+						acceptableConfigurations.removeAllElements();
+						DecimalFormat decimalFormat = new DecimalFormat("##0.####");
+						for (AcceptableConfiguration tryConfiguration : allConfigurations) {
+							if (tryConfiguration == null) continue;
+							try {
+								Pair<Boolean, Double> comparisonResult = compareResults(tryConfiguration.getResult());
+								acceptableConfigurations.add(tryConfiguration);
+								tryConfiguration.setErrorEstimation("Max abs diff: " + decimalFormat.format(comparisonResult.second));
+							} catch (Exception ex) {
+								ex.printStackTrace();
+							}
+						}
+						showAcceptableGraphsWindow();
+					}
+				});
+				filterButtonsBox.add(Box.createGlue());
+				filterButtonsBox.add(showAll);
 				acceptableGraphsWindow.getContentPane().add(filterButtonsBox, BorderLayout.NORTH);
 				acceptableGraphsWindow.setBounds(window.getBounds());
 				int actuallyAccepted = 0;
@@ -728,7 +752,7 @@ public class ParameterFitter {
 		
 	}
 	
-	public JPanel createReactionComparisonPanel(final Model model) {
+	public JComponent createReactionComparisonPanel(final Model model) {
 		try {
 			final JPanel comparisonPanel = new JPanel();
 			final Box comparisonBox = new Box(BoxLayout.Y_AXIS);
@@ -737,68 +761,71 @@ public class ParameterFitter {
 			final JTextField csvFileName = new JTextField(15);
 			csvFileName.setText(CSV_FILE_NAME);
 			File f = new File(CSV_FILE_NAME);
-			BufferedReader is = new BufferedReader(new FileReader(f));
-			String firstLine = is.readLine();
-			StringTokenizer tritatutto = new StringTokenizer(firstLine, ",");
-			int nColonne = tritatutto.countTokens();
-			final String[] graphNames = new String[nColonne - 1];
-			tritatutto.nextToken(); //il primo � la X (tempo)
-			for (int i=0;i<graphNames.length;i++) {
-				graphNames[i] = tritatutto.nextToken().replace('\"',' ');
-			}
-			for (Reactant reactant : model.getReactantCollection()) {
-				final Box reagentBox = new Box(BoxLayout.X_AXIS);
-				reagentBox.add(Box.createGlue());
-				Vector<String> selectedSeries = new Vector<String>();
-				selectedSeries.add(graphNames[0]);
-				final ReactantComparison comparison = new ReactantComparison(CSV_FILE_NAME, selectedSeries, 0.2);
-				final JCheckBox checkBox = new JCheckBox(reactant.getName());
-				final JComboBox<String> comboBox = new JComboBox<String>(graphNames);
-				final JFormattedTextField error = new JFormattedTextField(new Double(0.2));
-				final Reactant cherottura = reactant;
-				checkBox.addActionListener(new ActionListener() {
-					public void actionPerformed(ActionEvent e) {
-						comboBox.setEnabled(checkBox.isSelected());
-						error.setEnabled(checkBox.isSelected());
-						if (checkBox.isEnabled()) {
-							reactantComparisons.put(cherottura, comparison);
-						} else {
-							reactantComparisons.remove(cherottura);
+			if (f.exists()) {
+				BufferedReader is = new BufferedReader(new FileReader(f));
+				String firstLine = is.readLine();
+				StringTokenizer tritatutto = new StringTokenizer(firstLine, ",");
+				int nColonne = tritatutto.countTokens();
+				final String[] graphNames = new String[nColonne - 1];
+				tritatutto.nextToken(); //il primo � la X (tempo)
+				for (int i=0;i<graphNames.length;i++) {
+					graphNames[i] = tritatutto.nextToken().replace('\"',' ');
+				}
+				for (Reactant reactant : model.getReactantCollection()) {
+					final Box reagentBox = new Box(BoxLayout.X_AXIS);
+					reagentBox.add(Box.createGlue());
+					Vector<String> selectedSeries = new Vector<String>();
+					selectedSeries.add(graphNames[0]);
+					final ReactantComparison comparison = new ReactantComparison(CSV_FILE_NAME, selectedSeries, 0.2);
+					final JCheckBox checkBox = new JCheckBox(reactant.getName());
+					final JComboBox<String> comboBox = new JComboBox<String>(graphNames);
+					final JFormattedTextField error = new JFormattedTextField(new Double(0.2));
+					final Reactant cherottura = reactant;
+					checkBox.addActionListener(new ActionListener() {
+						public void actionPerformed(ActionEvent e) {
+							comboBox.setEnabled(checkBox.isSelected());
+							error.setEnabled(checkBox.isSelected());
+							if (checkBox.isEnabled()) {
+								reactantComparisons.put(cherottura, comparison);
+							} else {
+								reactantComparisons.remove(cherottura);
+							}
 						}
-					}
-				});
-				comboBox.setEnabled(false);
-				error.setEnabled(false);
-				comboBox.addActionListener(new ActionListener() {
-					public void actionPerformed(ActionEvent e) {
-						Vector<String> seriesNames = new Vector<String>();
-						seriesNames.add(comboBox.getSelectedItem().toString());
-						comparison.setSeriesNames(seriesNames);
-					}
-				});
-				error.getDocument().addDocumentListener(new DocumentListener() {
-					@Override
-					public void changedUpdate(DocumentEvent e) {
-						comparison.setMaxError(Double.parseDouble(error.getValue().toString()));
-					}
-	
-					@Override
-					public void insertUpdate(DocumentEvent e) {
-						changedUpdate(e);
-					}
-	
-					@Override
-					public void removeUpdate(DocumentEvent e) {
-						changedUpdate(e);
-					}
-				});
-				reagentBox.add(checkBox);
-				reagentBox.add(Box.createGlue());
-				reagentBox.add(comboBox);
-				reagentBox.add(Box.createGlue());
-				reagentBox.add(error);
-				reagentBox.add(Box.createGlue());
-				comparisonBox.add(reagentBox);
+					});
+					comboBox.setEnabled(false);
+					error.setEnabled(false);
+					comboBox.addActionListener(new ActionListener() {
+						public void actionPerformed(ActionEvent e) {
+							Vector<String> seriesNames = new Vector<String>();
+							seriesNames.add(comboBox.getSelectedItem().toString());
+							comparison.setSeriesNames(seriesNames);
+						}
+					});
+					error.getDocument().addDocumentListener(new DocumentListener() {
+						@Override
+						public void changedUpdate(DocumentEvent e) {
+							comparison.setMaxError(Double.parseDouble(error.getValue().toString()));
+						}
+		
+						@Override
+						public void insertUpdate(DocumentEvent e) {
+							changedUpdate(e);
+						}
+		
+						@Override
+						public void removeUpdate(DocumentEvent e) {
+							changedUpdate(e);
+						}
+					});
+					reagentBox.add(checkBox);
+					reagentBox.add(Box.createGlue());
+					reagentBox.add(comboBox);
+					reagentBox.add(Box.createGlue());
+					reagentBox.add(error);
+					reagentBox.add(Box.createGlue());
+					comparisonBox.add(reagentBox);
+				}
+				is.close();
 			}
 			
 			csvFileName.getDocument().addDocumentListener(new DocumentListener() {
@@ -909,8 +936,9 @@ public class ParameterFitter {
 			vTextBox.add(new LabelledField("CSV file name", csvBox));
 			vTextBox.add(new LabelledField("Number of parallel executions", numberOfParallelExecutions));
 			comparisonPanel.add(vTextBox, BorderLayout.SOUTH);
-			is.close();
-			return comparisonPanel;
+			JScrollPane scrollComparison = new JScrollPane(comparisonPanel);
+			scrollComparison.getVerticalScrollBar().setUnitIncrement(16);
+			return scrollComparison;
 		} catch (Exception ex) {
 			ex.printStackTrace();
 			return null;
@@ -933,13 +961,13 @@ public class ParameterFitter {
 			nComputations = 0;
 			currentSettingIndex = -1; //Please notice that nSettings counts the computation index as we start it (so that we can keep the results ordered), while nComputations counts the number of computations we have finished
 			visitParameterSettings(parameterList, 0, pool);
-			while (!pool.isEmpty()) {
+			do {
 				try {
 					Thread.sleep(200);
 				} catch (Exception ex) {
 					ex.printStackTrace();
 				}
-			}
+			} while (!pool.isEmpty());
 			pool.terminateAll();
 		} catch (Exception ex) {
 			System.err.println("Error: " + ex);
@@ -1040,8 +1068,17 @@ public class ParameterFitter {
 				scenario.setParameter(parName, cfg.getParameters().get(parName));
 			}
 
-			
-			double uncertainty = 5.0;
+			Integer unc = 5; //Uncertainty value is now ANIMO-wide (TODO: is that a bit excessive? One would expect the uncertainty to be connected to the model...)
+			XmlConfiguration configuration = InatBackend.get().configuration();
+			try {
+				unc = new Integer(configuration.get(XmlConfiguration.UNCERTAINTY_KEY));
+			} catch (NumberFormatException ex) {
+				unc = 0;
+			}
+//			if (r.has(Model.Properties.UNCERTAINTY)) { //We always want to use the uncertainty set in the options, so no specific uncertainty values for single reactions
+//				unc = r.get(Model.Properties.UNCERTAINTY).as(Integer.class);
+//			}
+			double uncertainty = unc;
 			int scenarioIdx = cfg.getIndex();
 			int nLevelsR1, nLevelsR2;
 			double levelsScaleFactor = r.get(Model.Properties.LEVELS_SCALE_FACTOR + "_reaction").as(Double.class);
@@ -1084,28 +1121,30 @@ public class ParameterFitter {
 				activeR1 = activeR2 = true;
 			}
 			
-			//System.err.println("Calcolo i tempi per la reazione " + nodeAttributes.getStringAttribute(edge.getSource().getIdentifier(), CANONICAL_NAME) + " -- " + nodeAttributes.getStringAttribute(edge.getTarget().getIdentifier(), CANONICAL_NAME) + ", con activeR1 = " + activeR1 + ", activeR2 = " + activeR2);
-			List<Double> times = scenario.generateTimes(1 + nLevelsR1, activeR1, reactant1IsDownstream, 1 + nLevelsR2, activeR2, reactant2IsDownstream);
-			Table timesLTable = new Table(nLevelsR2 + 1, nLevelsR1 + 1);
-			Table timesUTable = new Table(nLevelsR2 + 1, nLevelsR1 + 1);
+			if (generateTables) {
+				//System.err.println("Calcolo i tempi per la reazione " + nodeAttributes.getStringAttribute(edge.getSource().getIdentifier(), CANONICAL_NAME) + " -- " + nodeAttributes.getStringAttribute(edge.getTarget().getIdentifier(), CANONICAL_NAME) + ", con activeR1 = " + activeR1 + ", activeR2 = " + activeR2);
+				List<Double> times = scenario.generateTimes(1 + nLevelsR1, activeR1, reactant1IsDownstream, 1 + nLevelsR2, activeR2, reactant2IsDownstream);
+				Table timesLTable = new Table(nLevelsR2 + 1, nLevelsR1 + 1);
+				Table timesUTable = new Table(nLevelsR2 + 1, nLevelsR1 + 1);
 			
-			for (int j = 0; j < nLevelsR2 + 1; j++) {
-				for (int k = 0; k < nLevelsR1 + 1; k++) {
-					Double t = times.get(j * (nLevelsR1 + 1) + k);
-					if (Double.isInfinite(t)) {
-						timesLTable.set(j, k, VariablesModel.INFINITE_TIME);
-						timesUTable.set(j, k, VariablesModel.INFINITE_TIME);
-					} else if (uncertainty == 0) {
-						timesLTable.set(j, k, (int)Math.round(secStepFactor * levelsScaleFactor * t));
-						timesUTable.set(j, k, (int)Math.round(secStepFactor * levelsScaleFactor * t));
-					} else {
-						timesLTable.set(j, k, Math.max(0, (int)Math.round(secStepFactor * levelsScaleFactor * t * (1 - uncertainty / 100.0))));
-						timesUTable.set(j, k, Math.max(0, (int)Math.round(secStepFactor * levelsScaleFactor * t * (1 + uncertainty / 100.0))));
+				for (int j = 0; j < nLevelsR2 + 1; j++) {
+					for (int k = 0; k < nLevelsR1 + 1; k++) {
+						Double t = times.get(j * (nLevelsR1 + 1) + k);
+						if (Double.isInfinite(t)) {
+							timesLTable.set(j, k, VariablesModel.INFINITE_TIME);
+							timesUTable.set(j, k, VariablesModel.INFINITE_TIME);
+						} else if (uncertainty == 0) {
+							timesLTable.set(j, k, (int)Math.round(secStepFactor * levelsScaleFactor * t));
+							timesUTable.set(j, k, (int)Math.round(secStepFactor * levelsScaleFactor * t));
+						} else {
+							timesLTable.set(j, k, Math.max(0, (int)Math.round(secStepFactor * levelsScaleFactor * t * (1 - uncertainty / 100.0))));
+							timesUTable.set(j, k, Math.max(0, (int)Math.round(secStepFactor * levelsScaleFactor * t * (1 + uncertainty / 100.0))));
+						}
 					}
 				}
+				r.let(Model.Properties.TIMES_LOWER).be(timesLTable);
+				r.let(Model.Properties.TIMES_UPPER).be(timesUTable);
 			}
-			r.let(Model.Properties.TIMES_LOWER).be(timesLTable);
-			r.let(Model.Properties.TIMES_UPPER).be(timesUTable);
 			
 			/*System.err.print("Nella configurazione corrente, abbiamo che la reazione " + r.getName() + " ha la configurazione (" + cfg.getIndex());
 			for (String pn : cfg.getParameters().keySet()) {

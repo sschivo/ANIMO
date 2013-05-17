@@ -50,6 +50,7 @@ public class UppaalModelAnalyserSMC implements ModelAnalyser<LevelResult> {
 	private TaskMonitor monitor; //The reference to the Monitor in which to show the progress of the task
 	private InatActionTask actionTask; //We can ask this one whether the user has asked us to cancel the computation
 	private int taskStatus = 0; //Used to define the current status of the analysis task. 0 = still running, 1 = process completed, 2 = user pressed Cancel
+	private String dot = "."; //The separator for struct field access. Opaal models currently have no support for structs, so we use "_" instead
 	
 	public UppaalModelAnalyserSMC(TaskMonitor monitor, InatActionTask actionTask) {
 		XmlConfiguration configuration = InatBackend.get().configuration();
@@ -87,6 +88,9 @@ public class UppaalModelAnalyserSMC implements ModelAnalyser<LevelResult> {
 				variablesModel = new VariablesModelReactionCenteredTables(); //Reaction-centered with tables
 			} else if (modelType.equals(XmlConfiguration.MODEL_TYPE_REACTION_CENTERED)) {
 				variablesModel = new VariablesModelReactionCentered(); //Reaction-centered model
+			} else if (modelType.equals(XmlConfiguration.MODEL_TYPE_REACTANT_CENTERED_OPAAL)) {
+				variablesModel = new VariablesModelOpaal();
+				dot = "_";
 			} else {
 				variablesModel = new VariablesModelReactantCentered(); //Reactant-centered model is the default
 			}
@@ -301,6 +305,9 @@ public class UppaalModelAnalyserSMC implements ModelAnalyser<LevelResult> {
 				variablesModel = new VariablesModelReactionCenteredTables(); //Reaction-centered with tables
 			} else if (modelType.equals(XmlConfiguration.MODEL_TYPE_REACTION_CENTERED)) {
 				variablesModel = new VariablesModelReactionCentered(); //Reaction-centered model
+			} else if (modelType.equals(XmlConfiguration.MODEL_TYPE_REACTANT_CENTERED_OPAAL)) {
+				variablesModel = new VariablesModelOpaal(); //Multi-core reachability analysis
+				dot = "_";
 			} else {
 				variablesModel = new VariablesModelReactantCentered(); //Reactant-centered model is the default
 			}
@@ -314,7 +321,7 @@ public class UppaalModelAnalyserSMC implements ModelAnalyser<LevelResult> {
 				}
 			}
 			for (Reaction r : m.getReactionCollection()) {
-				build.append(r.getId() + ".T, ");
+				build.append(r.getId() + dot + "T, ");
 			}
 			build.setCharAt(build.length() - 2, ' '); //We check when controling the model integrity that at least one reactant is enabled, so we are sure to delete a ", " here
 			build.setCharAt(build.length() - 1, '}');
@@ -745,7 +752,7 @@ public class UppaalModelAnalyserSMC implements ModelAnalyser<LevelResult> {
 				if (m.getReactant(reactantId) != null) {
 					levels.put(reactantId, new TreeMap<Double, Double>());
 				} else {
-					reactionId = reactantId.substring(0, reactantId.lastIndexOf("."));
+					reactionId = reactantId.substring(0, reactantId.lastIndexOf(dot));
 					reaction = m.getReaction(reactionId);
 					if (reaction != null) {
 						levels.put(reaction.get(Model.Properties.CYTOSCAPE_ID).as(String.class), new TreeMap<Double, Double>());
@@ -765,7 +772,7 @@ public class UppaalModelAnalyserSMC implements ModelAnalyser<LevelResult> {
 							level = level / (double)numberOfLevels.get(reactantId) * (double)maxNumberOfLevels;
 						}
 					} else { //It is not a reactant: for the moment, this can only mean that it is a reaction duration
-						reactionId = reactantId.substring(0, reactantId.lastIndexOf(".")); //It is in the form R6_R4.T, so we remove the ".T" and keep the rest, which is used as reaction ID in the Model object
+						reactionId = reactantId.substring(0, reactantId.lastIndexOf(dot)); //It is in the form R6_R4.T, so we remove the ".T" and keep the rest, which is used as reaction ID in the Model object
 						reaction = m.getReaction(reactionId);
 						if (reaction != null) {
 							chosenMap = reaction.get(Model.Properties.CYTOSCAPE_ID).as(String.class);
@@ -830,6 +837,7 @@ public class UppaalModelAnalyserSMC implements ModelAnalyser<LevelResult> {
 			//rand = new Random(randInitializer.nextLong());
 			lastComputed = -1; //Lascialo a -1! Quando chiedo di calcolare il random dentro un intervallo, se lastComputed e' < 0 uso come lastComputed il lowerBound dell'intervallo.
 			
+			
 			Map<String, SortedMap<Double, Double>> levels = new HashMap<String, SortedMap<Double, Double>>();
 			
 			String line = null, lastLine = null;
@@ -865,17 +873,17 @@ public class UppaalModelAnalyserSMC implements ModelAnalyser<LevelResult> {
 					if (reactantId.equals("globalTime") || reactantId.equals("r")
 						|| reactantId.startsWith("reactant") || reactantId.startsWith("output") //private variables are not taken into account
 						|| reactantId.equals("r1") || reactantId.equals("r2")
-						|| reactantId.endsWith(".r")
-						|| reactantId.endsWith(".reactant") || reactantId.endsWith(".output")
-						|| reactantId.endsWith(".r1") || reactantId.endsWith(".r2")
-						|| reactantId.endsWith(".e") || reactantId.endsWith(".b")
-						|| reactantId.endsWith(".c") || reactantId.endsWith(".delta")
-						|| reactantId.endsWith(".tL") || reactantId.endsWith(".tU")
-						|| reactantId.endsWith(".deltaNew") || reactantId.endsWith(".deltaOld")
-						|| reactantId.endsWith(".deltaOldOld") || reactantId.endsWith(".deltaOldOldOld")
-						|| reactantId.endsWith(".deltaAlternating")) continue;
-					if (reactantId.endsWith(".T")) {
-						reactantId = m.getReaction(reactantId.substring(0, reactantId.lastIndexOf(".T"))).get(Model.Properties.CYTOSCAPE_ID).as(String.class);
+						|| reactantId.endsWith(dot + "r")
+						|| reactantId.endsWith(dot + "reactant") || reactantId.endsWith(dot + "output")
+						|| reactantId.endsWith(dot + "r1") || reactantId.endsWith(dot + "r2")
+						|| reactantId.endsWith(dot + "e") || reactantId.endsWith(dot + "b")
+						|| reactantId.endsWith(dot + "c") || reactantId.endsWith(dot + "delta")
+						|| reactantId.endsWith(dot + "tL") || reactantId.endsWith(dot + "tU")
+						|| reactantId.endsWith(dot + "deltaNew") || reactantId.endsWith(dot + "deltaOld")
+						|| reactantId.endsWith(dot + "deltaOldOld") || reactantId.endsWith(dot + "deltaOldOldOld")
+						|| reactantId.endsWith(dot + "deltaAlternating")) continue;
+					if (reactantId.endsWith(dot + "T")) {
+						reactantId = m.getReaction(reactantId.substring(0, reactantId.lastIndexOf(dot + "T"))).get(Model.Properties.CYTOSCAPE_ID).as(String.class);
 					}
 					//System.err.println("Inserisco il reagente " + reactantId);
 					// put the reactant into the result map
@@ -1237,7 +1245,7 @@ public class UppaalModelAnalyserSMC implements ModelAnalyser<LevelResult> {
 				/*if (reactantId.equals("c") || reactantId.equals("globalTime") || reactantId.equals("r")
 					|| reactantId.startsWith("input_reactant_") || reactantId.startsWith("output_reactant_")
 					|| reactantId.equals("r1") || reactantId.equals("r2") || maximumValues.get(reactantId) == null) continue; //we check whether it is a private variable*/
-				if (!reactantId.endsWith(".T") && !levels.containsKey(reactantId)) continue;
+				if (!reactantId.endsWith(dot + "T") && !levels.containsKey(reactantId)) continue;
 				// we can determine the level of activation
 				double level = Integer.valueOf(s.substring(s.indexOf("=") + 1).trim());
 				String chosenMap = reactantId;
@@ -1246,7 +1254,7 @@ public class UppaalModelAnalyserSMC implements ModelAnalyser<LevelResult> {
 						level = level / (double)numberOfLevels.get(reactantId) * (double)maxNumberOfLevels;
 					}
 				} else { //It is not a reactant: for the moment, this can only mean that it is a reaction duration
-					reactionId = reactantId.substring(0, reactantId.lastIndexOf(".T")); //It is in the form R6_R4.T, so we remove the ".T" and keep the rest, which is used as reaction ID in the Model object
+					reactionId = reactantId.substring(0, reactantId.lastIndexOf(dot + "T")); //It is in the form R6_R4.T, so we remove the ".T" and keep the rest, which is used as reaction ID in the Model object
 					reaction = m.getReaction(reactionId);
 					if (reaction != null) {
 						chosenMap = reaction.get(Model.Properties.CYTOSCAPE_ID).as(String.class);

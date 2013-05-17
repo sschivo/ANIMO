@@ -541,17 +541,21 @@ public class InatPlugin extends CytoscapePlugin {
 				
 				final String reactionCenteredTitle = "Reaction-centered model",
 							 reactionCenteredTablesTitle = "Reaction-centered model with tables",
-							 reactantCenteredTitle = "Reactant-centered model";
+							 reactantCenteredTitle = "Reactant-centered model",
+							 reactantCenteredOpaalTitle = "Reactant-centered for multi-core analysis";
 				final JRadioButton useReactionCentered = new JRadioButton(reactionCenteredTitle),
 								   useReactionCenteredTables = new JRadioButton(reactionCenteredTablesTitle),
-								   useReactantCentered = new JRadioButton(reactantCenteredTitle);
+								   useReactantCentered = new JRadioButton(reactantCenteredTitle),
+								   useReactantCenteredOpaal = new JRadioButton(reactantCenteredOpaalTitle);
 				useReactionCentered.setToolTipText("Advised when the network is not reaction-heavy");
 				useReactionCenteredTables.setToolTipText("Advised when the network is not reaction-heavy. Also, tends to use more memory.");
 				useReactantCentered.setToolTipText("Advised when the network is reaction-heavy (experimental)");
+				useReactantCenteredOpaal.setToolTipText("Reactant-centered model for use the generated model with opaal and ltsmin");
 				final ButtonGroup reactionCenteredGroup = new ButtonGroup();
 				reactionCenteredGroup.add(useReactionCentered);
 				reactionCenteredGroup.add(useReactionCenteredTables);
 				reactionCenteredGroup.add(useReactantCentered);
+				reactionCenteredGroup.add(useReactantCenteredOpaal);
 				String modelType = null;
 				try {
 					modelType = configuration.get(XmlConfiguration.MODEL_TYPE_KEY);
@@ -562,23 +566,33 @@ public class InatPlugin extends CytoscapePlugin {
 					useReactionCentered.setSelected(true);
 					useReactionCenteredTables.setSelected(false);
 					useReactantCentered.setSelected(false);
+					useReactantCenteredOpaal.setSelected(false);
 				} else if (modelType.equals(XmlConfiguration.MODEL_TYPE_REACTION_CENTERED_TABLES)) {
 					useReactionCentered.setSelected(false);
 					useReactionCenteredTables.setSelected(true);
 					useReactantCentered.setSelected(false);
+					useReactantCenteredOpaal.setSelected(false);
 				} else if (modelType.equals(XmlConfiguration.MODEL_TYPE_REACTANT_CENTERED)) {
 					useReactionCentered.setSelected(false);
 					useReactionCenteredTables.setSelected(false);
 					useReactantCentered.setSelected(true);
+					useReactantCenteredOpaal.setSelected(false);
+				} else if (modelType.equals(XmlConfiguration.MODEL_TYPE_REACTANT_CENTERED_OPAAL)) {
+					useReactionCentered.setSelected(false);
+					useReactionCenteredTables.setSelected(false);
+					useReactantCentered.setSelected(false);
+					useReactantCenteredOpaal.setSelected(true);
 				} else {
 					useReactionCentered.setSelected(false);
 					useReactionCenteredTables.setSelected(false);
 					useReactantCentered.setSelected(true);
+					useReactantCenteredOpaal.setSelected(false);
 				}
 				JPanel modelTypePanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
 				modelTypePanel.add(useReactionCentered);
 				modelTypePanel.add(useReactionCenteredTables);
 				modelTypePanel.add(useReactantCentered);
+				modelTypePanel.add(useReactantCenteredOpaal);
 				content.add(new LabelledField("Model type", modelTypePanel), new GridBagConstraints(0, 2, 1, 1, 1.0, 0.5, GridBagConstraints.CENTER, GridBagConstraints.BOTH, new Insets(0, 0, 0, 0), 0, 0));
 				
 				
@@ -611,6 +625,8 @@ public class InatPlugin extends CytoscapePlugin {
 							modelTypeValue = XmlConfiguration.MODEL_TYPE_REACTION_CENTERED_TABLES;
 						} else if (useReactantCentered.isSelected()) {
 							modelTypeValue = XmlConfiguration.MODEL_TYPE_REACTANT_CENTERED;
+						} else if (useReactantCenteredOpaal.isSelected()) {
+							modelTypeValue = XmlConfiguration.MODEL_TYPE_REACTANT_CENTERED_OPAAL;
 						} else {
 							modelTypeValue = XmlConfiguration.DEFAULT_MODEL_TYPE;
 						}

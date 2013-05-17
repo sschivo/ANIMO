@@ -3,11 +3,13 @@ import java.util.LinkedList;
 import java.util.Vector;
 
 public class ThreadPool {
+	private int nThreads = 0;
 	private LinkedList<Runnable> tasks = new LinkedList<Runnable>();
 	private Vector<ThreadTask> workers = new Vector<ThreadTask>();
 	int countIdle = 0;
 
 	public ThreadPool(int size) {
+		this.nThreads = size;
 		int idx = 0;
 		for (int i = 0; i < size; i++) {
 			ThreadTask thread = new ThreadTask(this, idx++);
@@ -32,7 +34,7 @@ public class ThreadPool {
 	}
 	
 	public boolean isEmpty() {
-		return countIdle == workers.size();
+		return countIdle == nThreads;
 	}
 
 	public void terminateAll() {
