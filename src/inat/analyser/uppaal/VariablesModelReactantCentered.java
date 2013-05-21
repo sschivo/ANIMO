@@ -1,8 +1,10 @@
 package inat.analyser.uppaal;
 
+import inat.InatBackend;
 import inat.model.Model;
 import inat.model.Reactant;
 import inat.model.Reaction;
+import inat.util.XmlConfiguration;
 
 import java.io.ByteArrayInputStream;
 import java.io.StringWriter;
@@ -26,6 +28,7 @@ public class VariablesModelReactantCentered extends VariablesModel {
 								SCENARIO = Model.Properties.SCENARIO,
 								HAS_INFLUENCING_REACTIONS = "has influencing reactions";
 	private boolean normalModelChecking = false;
+	private int uncertainty = 0;
 	
 	@Override
 	protected void appendModel(StringBuilder out, Model m) {
@@ -100,8 +103,28 @@ public class VariablesModelReactantCentered extends VariablesModel {
 		out.append(newLine);
 		out.append("const double zero = {0, 0};");
 		out.append(newLine);
-		out.append("const double INFINITE_TIME_DOUBLE = {-1000, -3}; //INFINITE_TIME translated into double");
+		out.append("const double INFINITE_TIME_DOUBLE = {-1000, -3}; //INFINITE_TIME (-1) translated into double");
 		out.append(newLine);
+		uncertainty = 0;
+		XmlConfiguration configuration = InatBackend.get().configuration();
+		String uncertaintyStr = configuration.get(XmlConfiguration.UNCERTAINTY_KEY, null);
+		if (uncertaintyStr != null) {
+			try {
+				uncertainty = Integer.parseInt(uncertaintyStr);
+			} catch (Exception ex) {
+				uncertainty = 0;
+			}
+		} else {
+			uncertainty = 0;
+		}
+		if (uncertainty != 0) {
+			double lowerUnc = (100.0 - uncertainty) / 100.0,
+				   upperUnc = (100.0 + uncertainty) / 100.0;
+			out.append("const double LOWER_UNC = " + formatDouble(lowerUnc) + ", //Lower and upper scale factors to apply uncertainty. E.g. for +/- 5% uncertainty, we have lower uncertainty = 0.95, upper uncertainty = 1.05");
+			out.append(newLine);
+			out.append("             UPPER_UNC = " + formatDouble(upperUnc) + ";");
+			out.append(newLine);
+		}
 		out.append(newLine);
 		out.append("typedef int[-1, 1073741822] time_t;"); //The type for time values
 		out.append(newLine);
@@ -665,15 +688,6 @@ public class VariablesModelReactantCentered extends VariablesModel {
 			tra.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "2");
 			tra.setOutputProperty(OutputKeys.OMIT_XML_DECLARATION, "yes");
 			
-//			if (normalModelChecking) { //Actually, it is not necessary to use the coordinator. As we use broadcast channels, we just need to define the priority order, no receiver is needed.
-//				document = documentBuilder.parse(new ByteArrayInputStream("<template><name>Coordinator</name><location id=\"id0\" x=\"-408\" y=\"-40\"></location><init ref=\"id0\"/><transition><source ref=\"id0\"/><target ref=\"id0\"/><label kind=\"select\" x=\"-496\" y=\"-136\">i :int[0,N_REACTANTS-1]</label><label kind=\"synchronisation\" x=\"-448\" y=\"-120\">sequencer[i]?</label><nail x=\"-472\" y=\"-104\"/><nail x=\"-344\" y=\"-104\"/></transition></template>".getBytes()));
-//				outString = new StringWriter();
-//				tra.transform(new DOMSource(document), new StreamResult(outString));
-//				out.append(outString.toString());
-//				out.append(newLine);
-//				out.append(newLine);
-//			}
-			
 			for (Reactant r : m.getReactantCollection()) {
 				if (!r.get(ENABLED).as(Boolean.class)) continue;
 				outString = new StringWriter();
@@ -690,8 +704,7 @@ public class VariablesModelReactantCentered extends VariablesModel {
 				}
 				r.let(HAS_INFLUENCING_REACTIONS).be(true);
 				
-				StringBuilder template = new StringBuilder("<template><name>Reactant_" + r.getId() + "</name><parameter>int&amp; R, const int MAX</parameter><declaration>int[-1, 1] delta, deltaNew, deltaOld, deltaOldOld, deltaOldOldOld;\nbool deltaAlternating;\ntime_t tL, tU;\nclock c;\ndouble rateLower, rateUpper;\n\n\nvoid updateDeltaOld() {\n\tdeltaOldOldOld = deltaOldOld;\n\tdeltaOldOld = deltaOld;\n\tdeltaOld = deltaNew;\n\tdeltaNew = delta;\n\tdeltaAlternating = false;\n\tif (deltaOldOldOld != 0) { //We have updated delta at least 4 times, so we can see whether we have an oscillation\n\t\tif (deltaNew == deltaOldOld &amp;&amp; deltaOld == deltaOldOldOld &amp;&amp; deltaNew != deltaOld) { //Pairwise equal and alternating (e.g. +1, -1, +1, -1): we are oscillating\n\t\t\tdeltaAlternating = true;\n\t\t}\n\t}\n}\n\nvoid update() {\n");
-				template.append("\tdouble\n");
+				StringBuilder template = new StringBuilder("<template><name>Reactant_" + r.getId() + "</name><parameter>int&amp; R, const int MAX</parameter><declaration>int[-1, 1] delta, deltaNew, deltaOld, deltaOldOld, deltaOldOldOld;\nbool deltaAlternating;\ntime_t tL, tU;\nclock c;\ndouble totalRate;\n\n\nvoid updateDeltaOld() {\n\tdeltaOldOldOld = deltaOldOld;\n\tdeltaOldOld = deltaOld;\n\tdeltaOld = deltaNew;\n\tdeltaNew = delta;\n\tdeltaAlternating = false;\n\tif (deltaOldOldOld != 0) { //We have updated delta at least 4 times, so we can see whether we have an oscillation\n\t\tif (deltaNew == deltaOldOld &amp;&amp; deltaOld == deltaOldOldOld &amp;&amp; deltaNew != deltaOld) { //Pairwise equal and alternating (e.g. +1, -1, +1, -1): we are oscillating\n\t\t\tdeltaAlternating = true;\n\t\t}\n\t}\n}\n\nvoid update() {\n");
 				for (Reaction re : influencingReactions) {
 					int scenario = re.get(SCENARIO).as(Integer.class);
 					boolean activeR1, activeR2;
@@ -711,30 +724,31 @@ public class VariablesModelReactantCentered extends VariablesModel {
 					}
 					switch (scenario) {
 						case 0:
-							template.append("\t\t" + re.getId() + "_rLower = scenario1(k_" + re.getId() + ", int_to_double(" + m.getReactant(re.get(Model.Properties.CATALYST).as(String.class)).getId() + "), int_to_double(" + m.getReactant(re.get(Model.Properties.CATALYST).as(String.class)).getId() + "Levels), " + activeR1 + "),\n");
-							template.append("\t\t" + re.getId() + "_rUpper = " + re.getId() + "_rLower,\n");
+							template.append("\tdouble " + re.getId() + "_r = scenario1(k_" + re.getId() + ", int_to_double(" + m.getReactant(re.get(Model.Properties.CATALYST).as(String.class)).getId() + "), int_to_double(" + m.getReactant(re.get(Model.Properties.CATALYST).as(String.class)).getId() + "Levels), " + activeR1 + ");\n");
 							break;
 						case 1: case 2:
-							template.append("\t\t" + re.getId() + "_rLower = scenario2_3(k_" + re.getId() + ", int_to_double(" + m.getReactant(re.get(Model.Properties.REACTANT).as(String.class)).getId() + "), int_to_double(" + m.getReactant(re.get(Model.Properties.REACTANT).as(String.class)).getId() + "Levels), " + activeR2 + ", int_to_double(" + m.getReactant(re.get(Model.Properties.CATALYST).as(String.class)).getId() + "), int_to_double(" + m.getReactant(re.get(Model.Properties.CATALYST).as(String.class)).getId() + "Levels), " + activeR1 + "),\n");
-							template.append("\t\t" + re.getId() + "_rUpper = " + re.getId() + "_rLower,\n");
+							template.append("\tdouble " + re.getId() + "_r = scenario2_3(k_" + re.getId() + ", int_to_double(" + m.getReactant(re.get(Model.Properties.REACTANT).as(String.class)).getId() + "), int_to_double(" + m.getReactant(re.get(Model.Properties.REACTANT).as(String.class)).getId() + "Levels), " + activeR2 + ", int_to_double(" + m.getReactant(re.get(Model.Properties.CATALYST).as(String.class)).getId() + "), int_to_double(" + m.getReactant(re.get(Model.Properties.CATALYST).as(String.class)).getId() + "Levels), " + activeR1 + ");\n");
 							break;
 						default:
 							break;
 					}
 				}
-				template.append("\trateLower = ");
+				template.append("\ttotalRate = ");
 				if (influencingReactions.size() == 1) {
 					Reaction re = influencingReactions.get(0);
 					int increment = re.get(INCREMENT).as(Integer.class);
 					String subtr1 = (increment > 0)?"":"subtract(zero, ",
 						   subtr2 = (increment > 0)?"":")";
-					template.append(subtr1 + re.getId() + "_rLower" + subtr2 + ";\n\trateUpper = rateLower;\n");
-//					template.append(subtr1 + "rateLower" + subtr2 + ";\n");
-					template.append("\t" + re.getId() + ".T = round(inverse(" + re.getId() + "_rLower));\n");
+					template.append(subtr1 + re.getId() + "_r" + subtr2 + ";\n");
+					if (uncertainty != 0) {
+						template.append("\t" + re.getId() + ".T = round(multiply(inverse(" + re.getId() + "_r), LOWER_UNC));\n");
+					} else {
+						template.append("\t" + re.getId() + ".T = round(inverse(" + re.getId() + "_r));\n");
+					}
 				} else {
 					StringBuilder computation = new StringBuilder("zero");
 					for (Reaction re : influencingReactions) {
-						computation.append(", " + re.getId() + "_rLower)");
+						computation.append(", " + re.getId() + "_r)");
 						if (re.get(Model.Properties.INCREMENT).as(Integer.class) > 0) {
 							computation.insert(0, "add(");
 						} else {
@@ -742,34 +756,22 @@ public class VariablesModelReactantCentered extends VariablesModel {
 						}
 					}
 					template.append(computation);
-					template.append(";\n\trateUpper = rateLower;\n");
-//					computation = new StringBuilder("zero");
-//					for (Reaction re : influencingReactions) {
-//						computation.append(", " + re.getId() + "_rUpper)");
-//						if (re.get(Model.Properties.INCREMENT).as(Integer.class) > 0) {
-//							computation.insert(0, "add(");
-//						} else {
-//							computation.insert(0, "subtract(");
-//						}
-//					}
-//					computation.append(";\n");
-//					template.append(computation);
+					template.append(";\n");
 					for (Reaction re : influencingReactions) {
-						int scenario = re.get(SCENARIO).as(Integer.class);
-						switch (scenario) {
-							case 0:
-								template.append("\t" + re.getId() + ".T = " + "round(inverse(" + re.getId() + "_rLower));\n");
-								break;
-							case 1:
-							case 2: //In this case, CATALYST = E1, REACTANT = E2 (the two upstream reactants)
-								template.append("\t" + re.getId() + ".T = " + "round(inverse(" + re.getId() + "_rLower));\n");
-								break;
-							default:
-								break;
+						if (uncertainty != 0) {
+							template.append("\t" + re.getId() + ".T = " + "round(multiply(inverse(" + re.getId() + "_r), LOWER_UNC));\n");
+						} else {
+							template.append("\t" + re.getId() + ".T = " + "round(inverse(" + re.getId() + "_r));\n");
 						}
 					}
 				}
-				template.append("\tif (rateUpper.b &lt; 0) { //Please note: the smaller rate is the \"upper\" one, which corresponds to the largest value for time\n\t\tdelta = -1;\n\t\trateLower.b = -rateLower.b;\n\t\trateUpper.b = -rateUpper.b;\n\t} else {\n\t\tdelta = 1;\n\t}\n\tif (rateLower.b != 0) {\n\t\ttL = round(inverse(rateLower));\n\t} else {\n\t\ttL = INFINITE_TIME;\n\t}\n\tif (rateUpper.b != 0) {\n\t\ttU = round(inverse(rateUpper));\n\t} else {\n\t\ttU = INFINITE_TIME;\n\t}\n\tif (tL != INFINITE_TIME &amp;&amp; tU != INFINITE_TIME &amp;&amp; tL &gt; tU) { //We use rounded things: maybe the difference between tL and tU was not so great, and with some rounding problems we could have this case\n\t\ttL = tU;\n\t}\n\tupdateDeltaOld();\n}\n\nvoid react() {\n\tif (0 &lt;= R + delta &amp;&amp; R + delta &lt;= MAX) {\n\t\tR = R + delta;\n\t}\n\tupdate();\n}\n\nbool can_react() {\n\treturn !deltaAlternating &amp;&amp; (tL != INFINITE_TIME &amp;&amp; tL != 0 &amp;&amp; tU != 0 &amp;&amp; ((delta &gt; 0 &amp;&amp; R &lt; MAX) || (delta &lt; 0 &amp;&amp; R &gt; 0)));\n}\n\nbool cant_react() {\n\treturn deltaAlternating || (tL == INFINITE_TIME || tL == 0 || tU == 0 || (delta &gt; 0 &amp;&amp; R == MAX) || (delta &lt; 0 &amp;&amp; R == 0));\n}</declaration>");
+				template.append("\tif (totalRate.b &lt; 0) {\n\t\tdelta = -1;\n\t\ttotalRate.b = -totalRate.b;\n\t} else {\n\t\tdelta = 1;\n\t}\n\tif (totalRate.b != 0) {\n");
+				if (uncertainty != 0) {
+					template.append("\t\ttL = round(multiply(inverse(totalRate), LOWER_UNC));\n\t\ttU = round(multiply(inverse(totalRate), UPPER_UNC));\n");
+				} else {
+					template.append("\t\ttL = round(inverse(totalRate));\n\t\ttU = tL;\n");
+				}
+				template.append("\t} else {\n\t\ttL = INFINITE_TIME;\n\t\ttU = INFINITE_TIME;\n\t}\n\tif (tL != INFINITE_TIME &amp;&amp; tL &gt; tU) { //We use rounded things: maybe the difference between tL and tU was not so great, and with some rounding problems we could have this case\n\t\ttL = tU;\n\t}\n\tupdateDeltaOld();\n}\n\nvoid react() {\n\tif (0 &lt;= R + delta &amp;&amp; R + delta &lt;= MAX) {\n\t\tR = R + delta;\n\t}\n\tupdate();\n}\n\nbool can_react() {\n\treturn !deltaAlternating &amp;&amp; (tL != INFINITE_TIME &amp;&amp; tL != 0 &amp;&amp; tU != 0 &amp;&amp; ((delta &gt; 0 &amp;&amp; R &lt; MAX) || (delta &lt; 0 &amp;&amp; R &gt; 0)));\n}\n\nbool cant_react() {\n\treturn deltaAlternating || (tL == INFINITE_TIME || tL == 0 || tU == 0 || (delta &gt; 0 &amp;&amp; R == MAX) || (delta &lt; 0 &amp;&amp; R == 0));\n}</declaration>");
 				template.append("<location id=\"id0\" x=\"-1896\" y=\"-728\"><name x=\"-1960\" y=\"-752\">stubborn</name><committed/></location><location id=\"id1\" x=\"-1528\" y=\"-728\"><committed/></location><location id=\"id6\" x=\"-1256\" y=\"-728\"><name x=\"-1248\" y=\"-752\">start</name><committed/></location><location id=\"id7\" x=\"-1552\" y=\"-856\"><name x=\"-1656\" y=\"-872\">not_reacting</name></location><location id=\"id8\" x=\"-1416\" y=\"-728\"><name x=\"-1400\" y=\"-752\">updating</name><committed/></location><location id=\"id9\" x=\"-1664\" y=\"-728\"><name x=\"-1728\" y=\"-744\">waiting</name><label kind=\"invariant\" x=\"-1728\" y=\"-720\">c &lt;= tU\n|| tU ==\nINFINITE_TIME</label></location><init ref=\"id6\"/><transition><source ref=\"id1\"/><target ref=\"id9\"/><label kind=\"guard\" x=\"-1640\" y=\"-760\">tU == INFINITE_TIME\n|| c &lt;= tU</label>" + (normalModelChecking?"<label kind=\"synchronisation\" x=\"-1640\" y=\"-776\">sequencer[" + r.get(REACTANT_INDEX).as(Integer.class) + "]!</label>":"") + "</transition><transition><source ref=\"id1\"/><target ref=\"id9\"/><label kind=\"guard\" x=\"-1608\" y=\"-712\">tU != INFINITE_TIME\n&amp;&amp; c &gt; tU</label>" + (normalModelChecking?"<label kind=\"synchronisation\" x=\"-1608\" y=\"-664\">sequencer[" + r.get(REACTANT_INDEX).as(Integer.class) + "]!</label>":"") + "<label kind=\"assignment\" x=\"-1608\" y=\"-680\">c := tU</label><nail x=\"-1528\" y=\"-680\"/><nail x=\"-1608\" y=\"-680\"/></transition><transition><source ref=\"id0\"/><target ref=\"id8\"/><label kind=\"guard\" x=\"-1816\" y=\"-632\">c &lt; tL</label>" + (normalModelChecking?"<label kind=\"synchronisation\" x=\"-1816\" y=\"-600\">sequencer[" + r.get(REACTANT_INDEX).as(Integer.class) + "]!</label>":"") + "<label kind=\"assignment\" x=\"-1816\" y=\"-616\">update()</label><nail x=\"-1848\" y=\"-616\"/><nail x=\"-1464\" y=\"-616\"/></transition><transition><source ref=\"id0\"/><target ref=\"id9\"/><label kind=\"guard\" x=\"-1816\" y=\"-680\">c &gt;= tL</label>" + (normalModelChecking?"<label kind=\"synchronisation\" x=\"-1816\" y=\"-664\">sequencer[" + r.get(REACTANT_INDEX).as(Integer.class) + "]!</label>":"") + "<nail x=\"-1840\" y=\"-664\"/><nail x=\"-1744\" y=\"-664\"/></transition><transition><source ref=\"id6\"/><target ref=\"id8\"/>" + (normalModelChecking?"<label kind=\"synchronisation\" x=\"-1344\" y=\"-744\">sequencer[" + r.get(REACTANT_INDEX).as(Integer.class) + "]!</label>":"") + "<label kind=\"assignment\" x=\"-1344\" y=\"-728\">update()</label></transition>");
 				int y1 = -904,
 					y2 = -888,

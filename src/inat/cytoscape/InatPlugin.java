@@ -511,6 +511,8 @@ public class InatPlugin extends CytoscapePlugin {
 					unc = new Integer(configuration.get(XmlConfiguration.UNCERTAINTY_KEY));
 				} catch (NumberFormatException ex) {
 					unc = 5;
+				} catch (NullPointerException ex) { //If the property wasn't there, we shouldn't assume that the user knows of its existence: so we make its effects null
+					unc = 0;
 				}
 				final JFormattedTextField uncertainty = new JFormattedTextField(unc);
 				Dimension dim = uncertainty.getPreferredSize();
