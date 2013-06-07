@@ -541,8 +541,8 @@ public class InatPlugin extends CytoscapePlugin {
 				content.add(new LabelledField("Reaction parameters uncertainty", uncertaintyPanel), new GridBagConstraints(0, 1, 1, 1, 1.0, 0.5, GridBagConstraints.CENTER, GridBagConstraints.BOTH, new Insets(0, 0, 0, 0), 0, 0));
 				
 				
-				final String reactionCenteredTitle = "Reaction-centered model",
-							 reactionCenteredTablesTitle = "Reaction-centered model with tables",
+				final String reactionCenteredTitle = "Reaction-centered model without tables",
+							 reactionCenteredTablesTitle = "Reaction-centered model",
 							 reactantCenteredTitle = "Reactant-centered model",
 							 reactantCenteredOpaalTitle = "Reactant-centered for multi-core analysis";
 				final JRadioButton useReactionCentered = new JRadioButton(reactionCenteredTitle),
