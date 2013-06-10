@@ -549,10 +549,10 @@ public class InatPlugin extends CytoscapePlugin {
 								   useReactionCenteredTables = new JRadioButton(reactionCenteredTablesTitle),
 								   useReactantCentered = new JRadioButton(reactantCenteredTitle),
 								   useReactantCenteredOpaal = new JRadioButton(reactantCenteredOpaalTitle);
-				useReactionCentered.setToolTipText("Advised when the network is not reaction-heavy");
-				useReactionCenteredTables.setToolTipText("Advised when the network is not reaction-heavy. Also, tends to use more memory.");
-				useReactantCentered.setToolTipText("Advised when the network is reaction-heavy (experimental)");
-				useReactantCenteredOpaal.setToolTipText("Reactant-centered model for use the generated model with opaal and ltsmin");
+//				useReactionCentered.setToolTipText("Advised when the network is not reaction-heavy");
+//				useReactionCenteredTables.setToolTipText("Advised when the network is not reaction-heavy. Also, tends to use more memory.");
+//				useReactantCentered.setToolTipText("Advised when the network is reaction-heavy (experimental)");
+//				useReactantCenteredOpaal.setToolTipText("Reactant-centered model for use the generated model with opaal and ltsmin");
 				final ButtonGroup reactionCenteredGroup = new ButtonGroup();
 				reactionCenteredGroup.add(useReactionCentered);
 				reactionCenteredGroup.add(useReactionCenteredTables);
@@ -594,7 +594,7 @@ public class InatPlugin extends CytoscapePlugin {
 				modelTypePanel.add(useReactionCentered);
 				modelTypePanel.add(useReactionCenteredTables);
 				modelTypePanel.add(useReactantCentered);
-				modelTypePanel.add(useReactantCenteredOpaal);
+//				modelTypePanel.add(useReactantCenteredOpaal);
 				content.add(new LabelledField("Model type", modelTypePanel), new GridBagConstraints(0, 2, 1, 1, 1.0, 0.5, GridBagConstraints.CENTER, GridBagConstraints.BOTH, new Insets(0, 0, 0, 0), 0, 0));
 				
 				
