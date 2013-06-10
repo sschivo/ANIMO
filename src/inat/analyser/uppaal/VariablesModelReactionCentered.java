@@ -2,10 +2,8 @@ package inat.analyser.uppaal;
 
 import inat.InatBackend;
 import inat.model.Model;
-import inat.model.Property;
 import inat.model.Reactant;
 import inat.model.Reaction;
-import inat.util.Table;
 import inat.util.XmlConfiguration;
 
 import java.io.ByteArrayInputStream;
@@ -409,7 +407,7 @@ public class VariablesModelReactionCentered extends VariablesModel {
 		out.append(newLine);
 		out.append("");
 		out.append(newLine);
-		out.append("time_t pow(int a, int b) { // a ^ b (b &gt;= 0)");
+		out.append("time_t power(int a, int b) { // a ^ b (b &gt;= 0)");
 		out.append(newLine);
 		out.append("\ttime_t r = 1;");
 		out.append(newLine);
@@ -479,7 +477,7 @@ public class VariablesModelReactionCentered extends VariablesModel {
 		out.append(newLine);
 		out.append("\t}");
 		out.append(newLine);
-		out.append("\treturn a.b * pow(10, a.e);");
+		out.append("\treturn a.b * power(10, a.e);");
 		out.append(newLine);
 		out.append("}");
 		out.append(newLine);
@@ -632,28 +630,28 @@ public class VariablesModelReactionCentered extends VariablesModel {
 		out.append("//Reaction " + r1Id + " (" + m.getReactant(r1Id).get(ALIAS).as(String.class) + ") " + (!r2Id.equals(rOutput)?("AND " + r2Id + " (" + m.getReactant(r2Id).get(ALIAS).as(String.class) + ") "):"") + (r.get(INCREMENT).as(Integer.class)>0?"-->":"--|") + " " + (r2Id.equals(rOutput)?(r2Id + " (" + m.getReactant(r2Id).get(ALIAS).as(String.class) + ")"):(rOutput + " (" + m.getReactant(rOutput).get(ALIAS).as(String.class) + ")")));
 		out.append(newLine);
 		
-		Table timesL, timesU;
-		Property property = r.get(TIMES_LOWER);
-		if (property != null) {
-			timesL = property.as(Table.class);
-		} else {
-			timesL = r.get(TIMES).as(Table.class);
-		}
-		property = r.get(TIMES_UPPER);
-		if (property != null) {
-			timesU = property.as(Table.class);
-		} else {
-			timesU = r.get(TIMES).as(Table.class);
-		}
-
-		assert timesL.getRowCount() == m.getReactant(r2Id).get(NUMBER_OF_LEVELS).as(Integer.class) + 1 : "Incorrect number of rows in 'times lower' table of '"
-				+ r + "'.";
-		assert timesU.getRowCount() == m.getReactant(r2Id).get(NUMBER_OF_LEVELS).as(Integer.class) + 1 : "Incorrect number of rows in 'times upper' table of '"
-			+ r + "'.";
-		assert timesL.getColumnCount() == m.getReactant(r1Id).get(NUMBER_OF_LEVELS).as(Integer.class) + 1 : "Incorrect number of columns in 'times lower' table of '"
-				+ r + "'.";
-		assert timesU.getColumnCount() == m.getReactant(r1Id).get(NUMBER_OF_LEVELS).as(Integer.class) + 1 : "Incorrect number of columns in 'times upper' table of '"
-			+ r + "'.";
+//		Table timesL, timesU;
+//		Property property = r.get(TIMES_LOWER);
+//		if (property != null) {
+//			timesL = property.as(Table.class);
+//		} else {
+//			timesL = r.get(TIMES).as(Table.class);
+//		}
+//		property = r.get(TIMES_UPPER);
+//		if (property != null) {
+//			timesU = property.as(Table.class);
+//		} else {
+//			timesU = r.get(TIMES).as(Table.class);
+//		}
+//
+//		assert timesL.getRowCount() == m.getReactant(r2Id).get(NUMBER_OF_LEVELS).as(Integer.class) + 1 : "Incorrect number of rows in 'times lower' table of '"
+//				+ r + "'.";
+//		assert timesU.getRowCount() == m.getReactant(r2Id).get(NUMBER_OF_LEVELS).as(Integer.class) + 1 : "Incorrect number of rows in 'times upper' table of '"
+//			+ r + "'.";
+//		assert timesL.getColumnCount() == m.getReactant(r1Id).get(NUMBER_OF_LEVELS).as(Integer.class) + 1 : "Incorrect number of columns in 'times lower' table of '"
+//				+ r + "'.";
+//		assert timesU.getColumnCount() == m.getReactant(r1Id).get(NUMBER_OF_LEVELS).as(Integer.class) + 1 : "Incorrect number of columns in 'times upper' table of '"
+//			+ r + "'.";
 		
 //		// output times table constant for this reaction
 //		out.append("const int " + r.getId());
