@@ -303,6 +303,12 @@ public class VariablesModelOpaal extends VariablesModelReactantCentered {
 		out.append(newLine);
 		out.append("\t\tretval_e = retval_e - 1;");
 		out.append(newLine);
+		out.append("\t} else if (retval_b &gt; 9999 || retval_b &lt; -9999) {");
+		out.append(newLine);
+		out.append("\t\tretval_b = retval_b / 10;");
+		out.append(newLine);
+		out.append("\t\tretval_e = retval_e + 1;");
+		out.append(newLine);
 		out.append("\t}");
 		out.append(newLine);
 		out.append("\treturn 0;");
@@ -430,6 +436,12 @@ public class VariablesModelOpaal extends VariablesModelReactantCentered {
 		out.append("\t\tretval_b = retval_b * 10;");
 		out.append(newLine);
 		out.append("\t\tretval_e = retval_e - 1;");
+		out.append(newLine);
+		out.append("\t} else if (retval_b &gt; 9999 || retval_b &lt; -9999) {");
+		out.append(newLine);
+		out.append("\t\tretval_b = retval_b / 10;");
+		out.append(newLine);
+		out.append("\t\tretval_e = retval_e + 1;");
 		out.append(newLine);
 		out.append("\t}");
 		out.append(newLine);
