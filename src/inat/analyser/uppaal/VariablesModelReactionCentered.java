@@ -207,6 +207,12 @@ public class VariablesModelReactionCentered extends VariablesModel {
 		out.append(newLine);
 		out.append("\t\tr.e = r.e - 1;");
 		out.append(newLine);
+		out.append("\t} else if (r.b &gt; 9999 || r.b &lt; -9999) {");
+		out.append(newLine);
+		out.append("\t\tr.b = r.b / 10;");
+		out.append(newLine);
+		out.append("\t\tr.e = r.e + 1;");
+		out.append(newLine);
 		out.append("\t}");
 		out.append(newLine);
 		out.append("\treturn r;");
@@ -308,6 +314,12 @@ public class VariablesModelReactionCentered extends VariablesModel {
 		out.append("\tr.b = r.b * 10;");
 		out.append(newLine);
 		out.append("\t\tr.e = r.e - 1;");
+		out.append(newLine);
+		out.append("\t} else if (r.b &gt; 9999 || r.b &lt; -9999) {");
+		out.append(newLine);
+		out.append("\t\tr.b = r.b / 10;");
+		out.append(newLine);
+		out.append("\t\tr.e = r.e + 1;");
 		out.append(newLine);
 		out.append("\t}");
 		out.append(newLine);
