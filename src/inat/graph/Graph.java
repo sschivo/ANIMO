@@ -412,7 +412,7 @@ public class Graph extends JPanel implements MouseListener, MouseMotionListener,
 		FontMetrics fm = g.getFontMetrics();
 		int leftBorder = fm.stringWidth("" + (int)scale.getMaxY());
 		if (yLabel != null) {
-			leftBorder = Math.max(leftBorder, fm.getHeight());
+			leftBorder = leftBorder + fm.getHeight(); //Math.max(leftBorder, fm.getHeight());
 		}
 		
 		Stroke oldStroke = g.getStroke();
