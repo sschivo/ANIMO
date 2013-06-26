@@ -412,7 +412,7 @@ public class Graph extends JPanel implements MouseListener, MouseMotionListener,
 		FontMetrics fm = g.getFontMetrics();
 		int leftBorder = fm.stringWidth("" + (int)scale.getMaxY());
 		if (yLabel != null) {
-			leftBorder = Math.max(leftBorder, fm.getHeight());
+			leftBorder = leftBorder + fm.getHeight();
 		}
 		
 		Stroke oldStroke = g.getStroke();
@@ -517,7 +517,7 @@ public class Graph extends JPanel implements MouseListener, MouseMotionListener,
 				String label = yLabel;
 				AffineTransform at = new AffineTransform(),
 								at2 = new AffineTransform();
-				at.setToTranslation(bounds.x - 7 * SCALA, bounds.y + bounds.height / 2.0 + fm.stringWidth(label) / 2.0);
+				at.setToTranslation(bounds.x, bounds.y + bounds.height / 2.0 + fm.stringWidth(label) / 2.0);
 				at2.setToRotation(-Math.PI / 2.0);
 				at.concatenate(at2);
 				g.setTransform(at);
@@ -679,7 +679,7 @@ public class Graph extends JPanel implements MouseListener, MouseMotionListener,
 			bounds.setBounds(bounds.x + BORDER_X * SCALA, bounds.y + BORDER_Y * SCALA, bounds.width - 2 * BORDER_X * SCALA, bounds.height - 2 * BORDER_Y * SCALA);
 			int leftBorder = fm.stringWidth("" + (int)scale.getMaxY());
 			if (yLabel != null) {
-				leftBorder = Math.max(leftBorder, fm.getHeight());
+				leftBorder = leftBorder + fm.getHeight();
 			}
 			int rightBorder = 0;
 			bounds.setBounds(bounds.x + leftBorder, bounds.y, bounds.width - (leftBorder + rightBorder), bounds.height);
