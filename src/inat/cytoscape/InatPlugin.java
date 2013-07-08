@@ -75,6 +75,9 @@ import cytoscape.plugin.CytoscapePlugin;
 import cytoscape.view.CytoscapeDesktop;
 import cytoscape.view.cytopanels.CytoPanel;
 import cytoscape.visual.VisualMappingManager;
+import cytoscape.visual.VisualPropertyType;
+import cytoscape.visual.calculators.Calculator;
+import cytoscape.visual.mappings.ObjectMapping;
 
 /**
  * The ANIMO Cytoscape plugin main class.
@@ -122,15 +125,30 @@ public class InatPlugin extends CytoscapePlugin {
 			ChangeListener vizMapChangeListener = new ChangeListener() {
 				@Override
 				public void stateChanged(ChangeEvent e) {
-					//String nome = "(boh)";
 					if (Cytoscape.getCurrentNetworkView() != null) {
-						//nome = Cytoscape.getCurrentNetworkView().getIdentifier();
-						vizMap.removeChangeListener(colorsListener);
-						vizMap.addChangeListener(colorsListener);
-						vizMap.removeChangeListener(shapesListener);
-						vizMap.addChangeListener(shapesListener);
+						Calculator ca = vizMap.getVisualStyle().getNodeAppearanceCalculator().getCalculator(VisualPropertyType.NODE_FILL_COLOR);
+						if (ca != null) {
+							for (ObjectMapping m : ca.getMappings()) {
+								try {
+									m.removeChangeListener(colorsListener);
+								} catch (Exception ex) {
+								}
+								m.addChangeListener(colorsListener);
+							}
+						}
+						ca = vizMap.getVisualStyle().getNodeAppearanceCalculator().getCalculator(VisualPropertyType.NODE_SHAPE);
+						if (ca != null) {
+							for (ObjectMapping m : ca.getMappings()) {
+								try {
+									m.removeChangeListener(shapesListener);
+								} catch (Exception ex) {
+								}
+								m.addChangeListener(shapesListener);
+							}
+						}
+						legendColors.updateFromSettings();
+						legendShapes.updateFromSettings();
 					}
-					//System.err.println("La rete " + nome + " ha cambiato stile in " + vizMap.getVisualStyle());
 				}
 			};
 			vizMap.addChangeListener(vizMapChangeListener);

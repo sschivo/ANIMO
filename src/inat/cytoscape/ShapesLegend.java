@@ -10,11 +10,19 @@ import java.awt.Polygon;
 import java.awt.RenderingHints;
 import java.awt.geom.Rectangle2D;
 import java.util.Map;
+import java.util.Vector;
 
 import javax.swing.JPanel;
 
+import cytoscape.Cytoscape;
+import cytoscape.visual.NodeAppearanceCalculator;
 import cytoscape.visual.NodeShape;
+import cytoscape.visual.VisualMappingManager;
+import cytoscape.visual.VisualPropertyType;
+import cytoscape.visual.VisualStyle;
+import cytoscape.visual.calculators.Calculator;
 import cytoscape.visual.mappings.DiscreteMapping;
+import cytoscape.visual.mappings.ObjectMapping;
 
 public class ShapesLegend extends JPanel {
 	private static final long serialVersionUID = 8963894565747542198L;
@@ -22,6 +30,49 @@ public class ShapesLegend extends JPanel {
 
 	public ShapesLegend() {
 				
+	}
+	
+	public void updateFromSettings() {
+		VisualMappingManager vizMap = Cytoscape.getVisualMappingManager();
+		VisualStyle visualStyle = vizMap.getVisualStyle();
+		NodeAppearanceCalculator nac = visualStyle.getNodeAppearanceCalculator();
+		DiscreteMapping shapesMap = null,
+						widthsMap = null,
+						heightsMap = null;
+		Vector<ObjectMapping> mappings;
+		Calculator calc = nac.getCalculator(VisualPropertyType.NODE_SHAPE);
+		if (calc != null) {
+			mappings = calc.getMappings();
+			for (ObjectMapping om : mappings) {
+				if (om instanceof DiscreteMapping) {
+					shapesMap = (DiscreteMapping)om;
+					break;
+				}
+			}
+		}
+		calc = nac.getCalculator(VisualPropertyType.NODE_WIDTH);
+		if (calc != null) {
+			mappings = calc.getMappings();
+			for (ObjectMapping om : mappings) {
+				if (om instanceof DiscreteMapping) {
+					widthsMap = (DiscreteMapping)om;
+					break;
+				}
+			}
+		}
+		calc = nac.getCalculator(VisualPropertyType.NODE_HEIGHT);
+		if (calc != null) {
+			mappings = calc.getMappings();
+			for (ObjectMapping om : mappings) {
+				if (om instanceof DiscreteMapping) {
+					heightsMap = (DiscreteMapping)om;
+					break;
+				}
+			}
+		}
+		if (shapesMap != null && widthsMap != null && heightsMap != null) {
+			this.setParameters(shapesMap, widthsMap, heightsMap);
+		}
 	}
 	
 	public void setParameters(DiscreteMapping shapesMap, DiscreteMapping widthsMap, DiscreteMapping heightsMap) {
