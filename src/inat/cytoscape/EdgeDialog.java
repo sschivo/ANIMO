@@ -36,7 +36,9 @@ import javax.swing.JFormattedTextField;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JRadioButton;
+import javax.swing.JScrollPane;
 import javax.swing.JSlider;
+import javax.swing.JTextPane;
 import javax.swing.KeyStroke;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
@@ -133,7 +135,17 @@ public class EdgeDialog extends JDialog {
 		}
 
 		this.setLayout(new BorderLayout(2, 2));
-
+		
+		final JTextPane description = new JTextPane();
+		JScrollPane descriptionScrollPane = new JScrollPane(description);
+		descriptionScrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
+		descriptionScrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+		description.setPreferredSize(new Dimension(400, 100));
+		description.setMinimumSize(new Dimension(150, 50));
+		if (edgeAttrib.hasAttribute(edge.getIdentifier(), Model.Properties.DESCRIPTION)) {
+			description.setText(edgeAttrib.getStringAttribute(edge.getIdentifier(), Model.Properties.DESCRIPTION));
+		}
+		
 		JPanel values = new JPanel(new GridLayout(1, 2, 2, 2));
 		final Box boxScenario = new Box(BoxLayout.X_AXIS);
 		JPanel controls = new JPanel(new FlowLayout(FlowLayout.RIGHT));
@@ -310,6 +322,7 @@ public class EdgeDialog extends JDialog {
 					edgeAttrib.setAttribute(edge.getIdentifier(), SCENARIO, comboScenario.getSelectedIndex());
 					edgeAttrib.setAttribute(edge.getIdentifier(), INCREMENT, ((positiveIncrement.isSelected())?1:-1));
 					edgeAttrib.setAttribute(edge.getIdentifier(), Model.Properties.OUTPUT_REACTANT, edge.getTarget().getIdentifier());
+					edgeAttrib.setAttribute(edge.getIdentifier(), Model.Properties.DESCRIPTION, description.getText());
 					
 					Cytoscape.firePropertyChange(Cytoscape.ATTRIBUTES_CHANGED, null, null);
 					
@@ -317,8 +330,10 @@ public class EdgeDialog extends JDialog {
 				}
 			}));
 		
-		
-		values.add(boxScenario);
+		Box boxScenarioDescription = new Box(BoxLayout.Y_AXIS);
+		boxScenarioDescription.add(boxScenario);
+		boxScenarioDescription.add(new LabelledField("Description", descriptionScrollPane));
+		values.add(boxScenarioDescription);
 		
 		JButton cancelButton = new JButton(new AbstractAction(CANCEL) {
 			private static final long serialVersionUID = 3103827646050457714L;

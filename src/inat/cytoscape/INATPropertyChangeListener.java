@@ -267,62 +267,80 @@ public class INATPropertyChangeListener implements PropertyChangeListener {
 				//I'm sure that VisualStyle supports cloning, so no exception will be thrown here
 			//}
 			visualStyleCatalog.addVisualStyle(visualStyle);
+		} else {
+			visualStyle = visualStyleCatalog.getVisualStyle(myVisualStyleName);
+		}
 			
-			NodeAppearanceCalculator nac = visualStyle.getNodeAppearanceCalculator();
-			EdgeAppearanceCalculator eac = visualStyle.getEdgeAppearanceCalculator();
-			GlobalAppearanceCalculator gac = visualStyle.getGlobalAppearanceCalculator();
-			visualStyle.getDependency().set(Definition.NODE_SIZE_LOCKED, false);
-			
-			gac.setDefaultBackgroundColor(Color.WHITE);
-			Color selectionColor = new Color(102, 102, 255);
-			gac.setDefaultNodeSelectionColor(selectionColor);
-			gac.setDefaultEdgeSelectionColor(selectionColor);
-	
-			/*DiscreteMapping mapping = new DiscreteMapping(Color.class, Model.Properties.ENABLED);
-			mapping.putMapValue(false, Color.BLACK);
-			mapping.putMapValue(true, Color.WHITE);
-			Calculator calco = new GenericNodeCustomGraphicCalculator("Mapping for enabled and disabled nodes (label color)", mapping, VisualPropertyType.NODE_LABEL_COLOR);
-			nac.setCalculator(calco);*/
-			
-			DiscreteMapping mapping = new DiscreteMapping(Float.class, Model.Properties.ENABLED);
+		NodeAppearanceCalculator nac = visualStyle.getNodeAppearanceCalculator();
+		EdgeAppearanceCalculator eac = visualStyle.getEdgeAppearanceCalculator();
+		GlobalAppearanceCalculator gac = visualStyle.getGlobalAppearanceCalculator();
+		visualStyle.getDependency().set(Definition.NODE_SIZE_LOCKED, false);
+		
+		gac.setDefaultBackgroundColor(Color.WHITE);
+		Color selectionColor = new Color(102, 102, 255);
+		gac.setDefaultNodeSelectionColor(selectionColor);
+		gac.setDefaultEdgeSelectionColor(selectionColor);
+
+		/*DiscreteMapping mapping = new DiscreteMapping(Color.class, Model.Properties.ENABLED);
+		mapping.putMapValue(false, Color.BLACK);
+		mapping.putMapValue(true, Color.WHITE);
+		Calculator calco = new GenericNodeCustomGraphicCalculator("Mapping for enabled and disabled nodes (label color)", mapping, VisualPropertyType.NODE_LABEL_COLOR);
+		nac.setCalculator(calco);*/
+		DiscreteMapping mapping = null;
+		Calculator calco = null;
+		
+		if (nac.getCalculator(VisualPropertyType.NODE_OPACITY) == null) {
+			mapping = new DiscreteMapping(Float.class, Model.Properties.ENABLED);
 			mapping.putMapValue(false, 50.0f);
 			mapping.putMapValue(true, 255.0f);
-			Calculator calco = new GenericNodeCustomGraphicCalculator(myVisualStyleName + "Mapping_for_enabled_and_disabled_nodes_(node_opacity)", mapping, VisualPropertyType.NODE_OPACITY);
+			calco = new GenericNodeCustomGraphicCalculator(myVisualStyleName + "Mapping_for_enabled_and_disabled_nodes_(node_opacity)", mapping, VisualPropertyType.NODE_OPACITY);
 			nac.setCalculator(calco);
-			
+		}
+		
+		if (nac.getCalculator(VisualPropertyType.NODE_BORDER_COLOR) == null) {
 			mapping = new DiscreteMapping(Float.class, Model.Properties.ENABLED);
 			mapping.putMapValue(false, 60.0f);
 			mapping.putMapValue(true, 255.0f);
 			calco = new GenericNodeCustomGraphicCalculator(myVisualStyleName + "Mapping_for_enabled_and_disabled_nodes_(node_border_opacity)", mapping, VisualPropertyType.NODE_BORDER_OPACITY);
 			nac.setCalculator(calco);
-			
+		}
+		
+		if (eac.getCalculator(VisualPropertyType.EDGE_TGTARROW_OPACITY) == null) {
 			mapping = new DiscreteMapping(Float.class, Model.Properties.ENABLED);
 			mapping.putMapValue(false, 50.0f);
 			mapping.putMapValue(true, 255.0f);
 			calco = new BasicCalculator(myVisualStyleName + "Mapping_for_enabled_and_disabled_edges_(edge_opacity)", mapping, VisualPropertyType.EDGE_OPACITY);
 			eac.setCalculator(calco);
-			
+		
 			calco = new BasicCalculator(myVisualStyleName + "Mapping_for_enabled_and_disabled_edges_(edge_target_arrow_opacity)", mapping, VisualPropertyType.EDGE_TGTARROW_OPACITY);
 			eac.setCalculator(calco);
-	
+		}
+
+		if (nac.getCalculator(VisualPropertyType.NODE_LINE_WIDTH) == null) {
 			mapping = new DiscreteMapping(Float.class, Model.Properties.ENABLED);
 			mapping.putMapValue(false, 3.0f);
 			mapping.putMapValue(true, 6.0f);
 			calco = new GenericNodeCustomGraphicCalculator(myVisualStyleName + "Mapping_to_show_thicker_borders_for_enabled_nodes", mapping, VisualPropertyType.NODE_LINE_WIDTH);
 			nac.setCalculator(calco);
-			
+		}
+		
+		if (nac.getCalculator(VisualPropertyType.NODE_BORDER_COLOR) == null) {
 			mapping = new DiscreteMapping(Color.class, Model.Properties.PLOTTED);
 			mapping.putMapValue(false, Color.DARK_GRAY);
 			mapping.putMapValue(true, Color.BLUE);
 			calco = new GenericNodeCustomGraphicCalculator(myVisualStyleName + "Mapping_to_highlighting_plotted_nodes_with_a_blue_border", mapping, VisualPropertyType.NODE_BORDER_COLOR);
 			nac.setCalculator(calco);
-			
+		}
+		
+		if (eac.getCalculator(VisualPropertyType.EDGE_TGTARROW_SHAPE) == null) {
 			mapping = new DiscreteMapping(ArrowShape.class, Model.Properties.INCREMENT);
 			mapping.putMapValue(-1, ArrowShape.T);
 			mapping.putMapValue(1, ArrowShape.ARROW);
 			calco = new BasicCalculator(myVisualStyleName + "Mapping_for_arrow_target_shape", mapping, VisualPropertyType.EDGE_TGTARROW_SHAPE);
 			eac.setCalculator(calco);
-			
+		}
+		
+		if (eac.getCalculator(VisualPropertyType.EDGE_LINE_WIDTH) == null) {
 			ContinuousMapping mapLineWidth = new ContinuousMapping(Float.class, Model.Properties.SHOWN_LEVEL);
 			Float lowerBoundWidth = 2.0f,
 				  upperBoundWidth = 10.0f;
@@ -331,7 +349,11 @@ public class INATPropertyChangeListener implements PropertyChangeListener {
 			mapLineWidth.setInterpolator(new LinearNumberToNumberInterpolator());
 			calco = new BasicCalculator(myVisualStyleName + "Mapping_for_edge_width_from_reaction_activity_(speed)", mapLineWidth, VisualPropertyType.EDGE_LINE_WIDTH);
 			eac.setCalculator(calco);
-			
+		}
+		
+		final DiscreteMapping shapesMap;
+		
+		if (nac.getCalculator(VisualPropertyType.NODE_SHAPE) == null) {
 			mapping = new DiscreteMapping(NodeShape.class, Model.Properties.MOLECULE_TYPE);
 			mapping.putMapValue(Model.Properties.TYPE_CYTOKINE, NodeShape.RECT);
 			mapping.putMapValue(Model.Properties.TYPE_RECEPTOR, NodeShape.ELLIPSE);
@@ -342,17 +364,22 @@ public class INATPropertyChangeListener implements PropertyChangeListener {
 			//I purposedly omit TYPE_OTHER, because I want it to stay on the default setting
 			calco = new BasicCalculator(myVisualStyleName + "Mapping_node_shape_from_molecule_type", mapping, VisualPropertyType.NODE_SHAPE);
 			nac.setCalculator(calco);
-			final DiscreteMapping shapesMap = mapping;
-			
-			/*mapping = new DiscreteMapping(Float.class, Model.Properties.MOLECULE_TYPE);
-			mapping.putMapValue(Model.Properties.TYPE_CYTOKINE, 60.0f);
-			mapping.putMapValue(Model.Properties.TYPE_RECEPTOR, 50.0f);
-			mapping.putMapValue(Model.Properties.TYPE_KINASE, 55.0f);
-			mapping.putMapValue(Model.Properties.TYPE_PHOSPHATASE, 55.0f);
-			mapping.putMapValue(Model.Properties.TYPE_TRANSCRIPTION_FACTOR, 50.0f);
-			calco = new BasicCalculator("Mapping node shape size from molecule type", mapping, VisualPropertyType.NODE_SIZE);
-			nac.setCalculator(calco);*/
-			
+			shapesMap = mapping;
+		} else {
+			shapesMap = null;
+		}
+		
+		/*mapping = new DiscreteMapping(Float.class, Model.Properties.MOLECULE_TYPE);
+		mapping.putMapValue(Model.Properties.TYPE_CYTOKINE, 60.0f);
+		mapping.putMapValue(Model.Properties.TYPE_RECEPTOR, 50.0f);
+		mapping.putMapValue(Model.Properties.TYPE_KINASE, 55.0f);
+		mapping.putMapValue(Model.Properties.TYPE_PHOSPHATASE, 55.0f);
+		mapping.putMapValue(Model.Properties.TYPE_TRANSCRIPTION_FACTOR, 50.0f);
+		calco = new BasicCalculator("Mapping node shape size from molecule type", mapping, VisualPropertyType.NODE_SIZE);
+		nac.setCalculator(calco);*/
+		final DiscreteMapping widthsMap;
+		
+		if (nac.getCalculator(VisualPropertyType.NODE_WIDTH) == null) {
 			mapping = new DiscreteMapping(Float.class, Model.Properties.MOLECULE_TYPE);
 			mapping.putMapValue(Model.Properties.TYPE_CYTOKINE, 50.0f);
 			mapping.putMapValue(Model.Properties.TYPE_RECEPTOR, 45.0f);
@@ -362,8 +389,14 @@ public class INATPropertyChangeListener implements PropertyChangeListener {
 			mapping.putMapValue(Model.Properties.TYPE_OTHER, 60.0f);
 			calco = new BasicCalculator(myVisualStyleName + "Mapping_node_shape_width_from_molecule_type", mapping, VisualPropertyType.NODE_WIDTH);
 			nac.setCalculator(calco);
-			final DiscreteMapping widthsMap = mapping;
-			
+			widthsMap = mapping;
+		} else {
+			widthsMap = null;
+		}
+		
+		final DiscreteMapping heightsMap;
+		
+		if (nac.getCalculator(VisualPropertyType.NODE_HEIGHT) == null) {
 			mapping = new DiscreteMapping(Float.class, Model.Properties.MOLECULE_TYPE);
 			mapping.putMapValue(Model.Properties.TYPE_CYTOKINE, 50.0f);
 			mapping.putMapValue(Model.Properties.TYPE_RECEPTOR, 65.0f);
@@ -373,18 +406,32 @@ public class INATPropertyChangeListener implements PropertyChangeListener {
 			mapping.putMapValue(Model.Properties.TYPE_OTHER, 35.0f);
 			calco = new BasicCalculator(myVisualStyleName + "Mapping_node_shape_height_from_molecule_type", mapping, VisualPropertyType.NODE_HEIGHT);
 			nac.setCalculator(calco);
-			final DiscreteMapping heightsMap = mapping;
-			
-			PassThroughMapping mp = new PassThroughMapping(String.class, Model.Properties.CANONICAL_NAME);
+			heightsMap = mapping;
+		} else {
+			heightsMap = null;
+		}
+		
+		PassThroughMapping mp;
+		
+		//Looks like Cytoscape normally shows the ID of a node as its label, so we force this to be used anyway.
+		//if (nac.getCalculator(VisualPropertyType.NODE_LABEL) == null) {
+			mp = new PassThroughMapping(String.class, Model.Properties.CANONICAL_NAME);
 			calco = new BasicCalculator(myVisualStyleName + "Mapping_for_node_label", mp, VisualPropertyType.NODE_LABEL);
 			nac.setCalculator(calco);
-			
-//			mp = new PassThroughMapping(String.class, Model.Properties.DESCRIPTION);
-//			calco = new BasicCalculator(myVisualStyleName + "Mapping_for_node_tooltip", mp, VisualPropertyType.NODE_TOOLTIP);
-//			nac.setCalculator(calco);
-//			calco = new BasicCalculator(myVisualStyleName + "Mapping_for_edge_tooltip", mp, VisualPropertyType.EDGE_TOOLTIP);
-//			eac.setCalculator(calco);
-			
+		//}
+		
+		if (nac.getCalculator(VisualPropertyType.NODE_TOOLTIP) == null) {
+			mp = new PassThroughMapping(String.class, Model.Properties.DESCRIPTION);
+			calco = new BasicCalculator(myVisualStyleName + "Mapping_for_node_tooltip", mp, VisualPropertyType.NODE_TOOLTIP);
+			nac.setCalculator(calco);
+		}
+		if (eac.getCalculator(VisualPropertyType.EDGE_TOOLTIP) == null) {
+			mp = new PassThroughMapping(String.class, Model.Properties.DESCRIPTION);
+			calco = new BasicCalculator(myVisualStyleName + "Mapping_for_edge_tooltip", mp, VisualPropertyType.EDGE_TOOLTIP);
+			eac.setCalculator(calco);
+		}
+		
+		if (nac.getCalculator(VisualPropertyType.NODE_FILL_COLOR) == null) {
 			final ContinuousMapping mc = new ContinuousMapping(Color.class, Model.Properties.SHOWN_LEVEL);
 			Color lowerBound = new Color(204, 0, 0), //Color.RED.darker(),
 			  middleBound = new Color(255, 204, 0), //Color.YELLOW.darker(),
@@ -407,95 +454,99 @@ public class INATPropertyChangeListener implements PropertyChangeListener {
 			mc.setInterpolator(new LinearNumberToColorInterpolator());
 			calco = new GenericNodeCustomGraphicCalculator(myVisualStyleName + "Mapping_for_the_current_activity_level_of_nodes", mc, VisualPropertyType.NODE_FILL_COLOR);
 			nac.setCalculator(calco);
-			
-			
 			//legendColors.setParameters(new float[]{1 - 1, 1 - 2/3.0f, 1 - 1/3.0f, 1 - 0}, new Color[]{Color.WHITE, new Color(255, 255, 0), new Color(204, 0, 0), Color.BLACK});
 			legendColors.setParameters(new float[]{1 - 1, 1 - 0.5f, 1 - 0/*1 - 1, 1 - 0*/}, new Color[]{new Color(0, 204, 0), new Color(255, 204, 0), new Color(204, 0, 0)/*new Color(255, 204, 0), new Color(204, 0, 0)*/});
-			
+		} else {
+			legendColors.updateFromSettings();
+		}
+		
+		if (shapesMap != null && widthsMap != null && heightsMap != null) {
 			legendShapes.setParameters(shapesMap, widthsMap, heightsMap);
-			
-			VisualPropertyType.NODE_BORDER_COLOR.setDefault(visualStyle, Color.BLUE);//Color.DARK_GRAY);
-			VisualPropertyType.NODE_FILL_COLOR.setDefault(visualStyle, Color.RED);
-			VisualPropertyType.NODE_LABEL_COLOR.setDefault(visualStyle, Color.BLACK); //new Color(102, 102, 255));//Color.WHITE);
-			VisualPropertyType.NODE_FONT_SIZE.setDefault(visualStyle, 14);
-			VisualPropertyType.NODE_LINE_WIDTH.setDefault(visualStyle, 6.0f);
-			VisualPropertyType.NODE_SHAPE.setDefault(visualStyle, NodeShape.RECT);
-			VisualPropertyType.NODE_SIZE.setDefault(visualStyle, 50.0f);
-			VisualPropertyType.NODE_WIDTH.setDefault(visualStyle, 60.0f);
-			VisualPropertyType.NODE_HEIGHT.setDefault(visualStyle, 35.0f);
-			VisualPropertyType.EDGE_LINE_WIDTH.setDefault(visualStyle, 4.0f);
-			VisualPropertyType.EDGE_COLOR.setDefault(visualStyle, Color.BLACK);
-			VisualPropertyType.EDGE_TGTARROW_COLOR.setDefault(visualStyle, Color.BLACK);
-			
-			//Recompute the activityRatio property for all nodes, to make sure that it exists
-			CyNetwork network = Cytoscape.getCurrentNetwork();
-			if (network != null) {
-				CyAttributes nodeAttr = Cytoscape.getNodeAttributes(),
-							 networkAttr = Cytoscape.getNetworkAttributes();
-				for (int i : network.getNodeIndicesArray()) {
-					Node n = network.getNode(i);
-					double level = 0;
-					int nLevels = 0;
-					if (nodeAttr.hasAttribute(n.getIdentifier(), Model.Properties.INITIAL_LEVEL)) {
-						level = nodeAttr.getIntegerAttribute(n.getIdentifier(), Model.Properties.INITIAL_LEVEL);
-					} else {
-						level = 0;
-					}
-					if (nodeAttr.hasAttribute(n.getIdentifier(), Model.Properties.NUMBER_OF_LEVELS)) {
-						nLevels = nodeAttr.getIntegerAttribute(n.getIdentifier(), Model.Properties.NUMBER_OF_LEVELS);
-					} else if (networkAttr.hasAttribute(network.getIdentifier(), Model.Properties.NUMBER_OF_LEVELS)) {
-						nLevels = networkAttr.getIntegerAttribute(network.getIdentifier(), Model.Properties.NUMBER_OF_LEVELS);
-					} else {
-						nLevels = 1;
-					}
-					nodeAttr.setAttribute(n.getIdentifier(), Model.Properties.SHOWN_LEVEL, level / nLevels);
+		} else {
+			legendShapes.updateFromSettings();
+		}
+		
+		VisualPropertyType.NODE_BORDER_COLOR.setDefault(visualStyle, Color.BLUE);//Color.DARK_GRAY);
+		VisualPropertyType.NODE_FILL_COLOR.setDefault(visualStyle, Color.RED);
+		VisualPropertyType.NODE_LABEL_COLOR.setDefault(visualStyle, Color.BLACK); //new Color(102, 102, 255));//Color.WHITE);
+		VisualPropertyType.NODE_FONT_SIZE.setDefault(visualStyle, 14);
+		VisualPropertyType.NODE_LINE_WIDTH.setDefault(visualStyle, 6.0f);
+		VisualPropertyType.NODE_SHAPE.setDefault(visualStyle, NodeShape.RECT);
+		VisualPropertyType.NODE_SIZE.setDefault(visualStyle, 50.0f);
+		VisualPropertyType.NODE_WIDTH.setDefault(visualStyle, 60.0f);
+		VisualPropertyType.NODE_HEIGHT.setDefault(visualStyle, 35.0f);
+		VisualPropertyType.EDGE_LINE_WIDTH.setDefault(visualStyle, 4.0f);
+		VisualPropertyType.EDGE_COLOR.setDefault(visualStyle, Color.BLACK);
+		VisualPropertyType.EDGE_TGTARROW_COLOR.setDefault(visualStyle, Color.BLACK);
+		
+		//Recompute the activityRatio property for all nodes, to make sure that it exists
+		CyNetwork network = Cytoscape.getCurrentNetwork();
+		if (network != null) {
+			CyAttributes nodeAttr = Cytoscape.getNodeAttributes(),
+						 networkAttr = Cytoscape.getNetworkAttributes();
+			for (int i : network.getNodeIndicesArray()) {
+				Node n = network.getNode(i);
+				double level = 0;
+				int nLevels = 0;
+				if (nodeAttr.hasAttribute(n.getIdentifier(), Model.Properties.INITIAL_LEVEL)) {
+					level = nodeAttr.getIntegerAttribute(n.getIdentifier(), Model.Properties.INITIAL_LEVEL);
+				} else {
+					level = 0;
 				}
-				
-				Cytoscape.firePropertyChange(Cytoscape.ATTRIBUTES_CHANGED, null, null);
+				if (nodeAttr.hasAttribute(n.getIdentifier(), Model.Properties.NUMBER_OF_LEVELS)) {
+					nLevels = nodeAttr.getIntegerAttribute(n.getIdentifier(), Model.Properties.NUMBER_OF_LEVELS);
+				} else if (networkAttr.hasAttribute(network.getIdentifier(), Model.Properties.NUMBER_OF_LEVELS)) {
+					nLevels = networkAttr.getIntegerAttribute(network.getIdentifier(), Model.Properties.NUMBER_OF_LEVELS);
+				} else {
+					nLevels = 1;
+				}
+				nodeAttr.setAttribute(n.getIdentifier(), Model.Properties.SHOWN_LEVEL, level / nLevels);
 			}
 			
-			visualStyleCatalog.removeVisualStyle(myVisualStyleName); //Why should I do this to get things working?????????
-			VisualStyle denovo = new VisualStyle(visualStyle, myVisualStyleName);
-			visualStyleCatalog.addVisualStyle(denovo);
-			
-			currentNetworkView.setVisualStyle(visualStyle.getName());
-			vizMap.setVisualStyle(visualStyle);
-			currentNetworkView.redrawGraph(true, true);
-			
-			/*visualStyleCatalog.removeVisualStyle("default"); //So that bastard Cytoscape can try how much he wants: now the default style is MY style!
-			VisualStyle newDefault = null;
-			//try {
-				//newDefault = (VisualStyle)visualStyle.clone();
-				//newDefault.setName("default");
-			newDefault = new VisualStyle(visualStyle, "default");
-			//} catch (CloneNotSupportedException ex) {
-				//as usual
-			//}
-			visualStyleCatalog.addVisualStyle(newDefault);*/
-			
-			VisualStyle differenceVisualStyle = null;
-			//try {
-				//differenceVisualStyle = (VisualStyle)visualStyle.clone();
-			differenceVisualStyle = new VisualStyle(visualStyle, InatPlugin.TAB_NAME + "_" + currentNetworkView.getIdentifier() + "_Diff");
-			//} catch (CloneNotSupportedException ex) {
-				//Again, VisualStyle supports cloning, so no problem here
-			//}
-			//differenceVisualStyle.setName(InatPlugin.TAB_NAME + "_" + currentNetworkView.getIdentifier() + "_Diff");
-			nac = differenceVisualStyle.getNodeAppearanceCalculator();
-			nac.removeCalculator(VisualPropertyType.NODE_FILL_COLOR);
-			Color lowerBound1 = new Color(204, 0, 0),
-				  middleBound1 = new Color(255, 255, 255),
-				  upperBound1 = new Color(0, 204, 0);
-			ContinuousMapping mcDiff = new ContinuousMapping(Color.class, Model.Properties.SHOWN_LEVEL);
-			mcDiff.addPoint(-1.0, new BoundaryRangeValues(lowerBound1, lowerBound1, lowerBound1));
-			mcDiff.addPoint(0.0, new BoundaryRangeValues(middleBound1, middleBound1, middleBound1));
-			mcDiff.addPoint(1.0, new BoundaryRangeValues(upperBound1, upperBound1, upperBound1));
-			mcDiff.setInterpolator(new LinearNumberToColorInterpolator());
-			calco = new GenericNodeCustomGraphicCalculator(differenceVisualStyle.getName() + "Mapping_for_the_current_activity_level_of_nodes_(difference_of_activity)", mcDiff, VisualPropertyType.NODE_FILL_COLOR);
-			nac.setCalculator(calco);
-			if (visualStyleCatalog.getVisualStyle(differenceVisualStyle.getName()) == null) {
-				visualStyleCatalog.addVisualStyle(differenceVisualStyle);
-			}
+			Cytoscape.firePropertyChange(Cytoscape.ATTRIBUTES_CHANGED, null, null);
+		}
+		
+		visualStyleCatalog.removeVisualStyle(myVisualStyleName); //Why should I do this to get things working?????????
+		VisualStyle denovo = new VisualStyle(visualStyle, myVisualStyleName);
+		visualStyleCatalog.addVisualStyle(denovo);
+		
+		currentNetworkView.setVisualStyle(visualStyle.getName());
+		vizMap.setVisualStyle(visualStyle);
+		currentNetworkView.redrawGraph(true, true);
+		
+		/*visualStyleCatalog.removeVisualStyle("default"); //So that bastard Cytoscape can try how much he wants: now the default style is MY style!
+		VisualStyle newDefault = null;
+		//try {
+			//newDefault = (VisualStyle)visualStyle.clone();
+			//newDefault.setName("default");
+		newDefault = new VisualStyle(visualStyle, "default");
+		//} catch (CloneNotSupportedException ex) {
+			//as usual
+		//}
+		visualStyleCatalog.addVisualStyle(newDefault);*/
+		
+		VisualStyle differenceVisualStyle = null;
+		//try {
+			//differenceVisualStyle = (VisualStyle)visualStyle.clone();
+		differenceVisualStyle = new VisualStyle(visualStyle, InatPlugin.TAB_NAME + "_" + currentNetworkView.getIdentifier() + "_Diff");
+		//} catch (CloneNotSupportedException ex) {
+			//Again, VisualStyle supports cloning, so no problem here
+		//}
+		//differenceVisualStyle.setName(InatPlugin.TAB_NAME + "_" + currentNetworkView.getIdentifier() + "_Diff");
+		nac = differenceVisualStyle.getNodeAppearanceCalculator();
+		nac.removeCalculator(VisualPropertyType.NODE_FILL_COLOR);
+		Color lowerBound1 = new Color(204, 0, 0),
+			  middleBound1 = new Color(255, 255, 255),
+			  upperBound1 = new Color(0, 204, 0);
+		ContinuousMapping mcDiff = new ContinuousMapping(Color.class, Model.Properties.SHOWN_LEVEL);
+		mcDiff.addPoint(-1.0, new BoundaryRangeValues(lowerBound1, lowerBound1, lowerBound1));
+		mcDiff.addPoint(0.0, new BoundaryRangeValues(middleBound1, middleBound1, middleBound1));
+		mcDiff.addPoint(1.0, new BoundaryRangeValues(upperBound1, upperBound1, upperBound1));
+		mcDiff.setInterpolator(new LinearNumberToColorInterpolator());
+		calco = new GenericNodeCustomGraphicCalculator(differenceVisualStyle.getName() + "Mapping_for_the_current_activity_level_of_nodes_(difference_of_activity)", mcDiff, VisualPropertyType.NODE_FILL_COLOR);
+		nac.setCalculator(calco);
+		if (visualStyleCatalog.getVisualStyle(differenceVisualStyle.getName()) == null) {
+			visualStyleCatalog.addVisualStyle(differenceVisualStyle);
 		}
 		//System.err.println("Il mapping per " + myVisualStyleName + " esiste di sicuro ora, quindi lo uso");
 		VisualStyle myVisualStyle = visualStyleCatalog.getVisualStyle(myVisualStyleName);

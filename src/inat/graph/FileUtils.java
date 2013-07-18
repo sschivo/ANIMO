@@ -2,9 +2,11 @@ package inat.graph;
 import java.awt.Component;
 import java.awt.Graphics;
 import java.awt.image.BufferedImage;
-import java.io.*;
+import java.io.File;
+
 import javax.imageio.ImageIO;
 import javax.swing.JFileChooser;
+import javax.swing.JOptionPane;
 import javax.swing.filechooser.FileFilter;
 
 import cytoscape.Cytoscape;
@@ -133,5 +135,58 @@ public class FileUtils {
 		if (fileName != null) {
 			saveToPNG(c, fileName);
 		}
+	}
+	
+	/**
+	 * Save what is currently shown on the given Graph to a given .jpg file,
+	 * rendering it with given size
+	 * @param graph The Graph whose "photograph" is to be saved
+	 * @param fileName The name of the file in which to save the image
+	 * @param width Width of the resulting image
+	 * @param heigth Height of the resulting image
+	 */
+	public static void renderToJPG(Graph graph, String fileName, int width, int height) {
+		try {
+			BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+			Graphics imgGraphics = image.createGraphics();
+			graph.ensureRedraw();
+			graph.paint(imgGraphics, width, height);
+			graph.ensureRedraw();
+			File f = new File(fileName);
+			f.delete();
+			ImageIO.write(image, "jpg", f);
+			imgGraphics = null;
+			image = null;
+		} catch (Exception e) {
+			System.err.println("Error: " + e);
+			e.printStackTrace();
+		}
+	}
+	
+	/**
+	 * Save what is currently shown on the given Component to a
+	 * file that the user will choose via the open dialog.
+	 * The resulting image will be in JPEG format, and will have
+	 * a size that is also specified by the user.
+	 * @param graph The component to be saved
+	 */
+	public static void renderToJPG(Graph graph) {
+		String fileName = save(".jpg", "JPEG image", graph);
+		if (fileName == null) return;
+		String widthS = JOptionPane.showInputDialog(Cytoscape.getDesktop(), "Width of the image", graph.getSize().width);
+		if (widthS == null) return;
+		int width = graph.getSize().width;
+		try {
+			width = Integer.parseInt(widthS);
+		} catch (NumberFormatException ex) {
+		}
+		String heightS = JOptionPane.showInputDialog(Cytoscape.getDesktop(), "Height of the image", graph.getSize().height);
+		if (heightS == null) return;
+		int height = graph.getSize().height;
+		try {
+			height = Integer.parseInt(heightS);
+		} catch (NumberFormatException ex) {
+		}
+		renderToJPG(graph, fileName, width, height);
 	}
 }

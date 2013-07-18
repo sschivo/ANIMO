@@ -64,6 +64,7 @@ public class Graph extends JPanel implements MouseListener, MouseMotionListener,
 	public static final String AUTOGRAPH_WINDOW_TITLE = "AutoGraph", //If we are a window, this will be our (lame) title
 								OPEN_LABEL = "Add data from CSV...",
 								SAVE_LABEL = "Save as PNG...",
+								RENDER_TO_JPG_LABEL = "Render to JPG...",
 								EXPORT_VISIBLE_LABEL = "Export visible as CSV...",
 								CLEAR_LABEL = "Clear Data",
 								INTERVAL_LABEL = "Graph interval...",
@@ -71,6 +72,7 @@ public class Graph extends JPanel implements MouseListener, MouseMotionListener,
 								ZOOM_EXTENTS_LABEL = "Zoom extents",
 								CLOSE_LABEL = "Close",
 								SHOW_SIZE_LABEL = "Show picture size",
+								SHOW_ZOOM_LEVEL_LABEL = "Show zoom level",
 								SHOW_THIN_AXES = "Show thin axes",
 								SET_Y_LABEL_LABEL = "Set Y label",
 								STEP_SHAPED_GRAPH_LABEL = "Step-shaped graph",
@@ -97,6 +99,7 @@ public class Graph extends JPanel implements MouseListener, MouseMotionListener,
 	private JPopupMenu popupMenu = null;
 	private boolean showLegend = true;
 	private boolean showSize = false;
+	private boolean showZoomLevel = false;
 	private boolean showThinAxes = false;
 	private double maxLabelLength = 0; //used to compute the width of the legend box
 	private Rectangle legendBounds = null; //Where the legend is, and what are its dimensions
@@ -130,6 +133,7 @@ public class Graph extends JPanel implements MouseListener, MouseMotionListener,
 		popupMenu = new JPopupMenu();
 		JMenuItem open = new JMenuItem(OPEN_LABEL);
 		JMenuItem save = new JMenuItem(SAVE_LABEL);
+		JMenuItem renderJpg = new JMenuItem(RENDER_TO_JPG_LABEL);
 		JMenuItem export = new JMenuItem(EXPORT_VISIBLE_LABEL);
 		JMenuItem clear = new JMenuItem(CLEAR_LABEL);
 		JMenuItem newInterval = new JMenuItem(INTERVAL_LABEL);
@@ -137,12 +141,14 @@ public class Graph extends JPanel implements MouseListener, MouseMotionListener,
 		JMenuItem zoomExtents = new JMenuItem(ZOOM_EXTENTS_LABEL);
 		JMenuItem close = new JMenuItem(CLOSE_LABEL);
 		JCheckBoxMenuItem showSizeM = new JCheckBoxMenuItem(SHOW_SIZE_LABEL);
+		JCheckBoxMenuItem showZoomM = new JCheckBoxMenuItem(SHOW_ZOOM_LEVEL_LABEL);
 		JMenuItem setYLabel = new JMenuItem(SET_Y_LABEL_LABEL);
 		JCheckBoxMenuItem stepShapedGraph = new JCheckBoxMenuItem(STEP_SHAPED_GRAPH_LABEL);
 		heatMapGraph = new JCheckBoxMenuItem(HEATMAP_GRAPH_LABEL);
 		JCheckBoxMenuItem showThinAxes = new JCheckBoxMenuItem(SHOW_THIN_AXES);
 		open.addActionListener(this);
 		save.addActionListener(this);
+		renderJpg.addActionListener(this);
 		export.addActionListener(this);
 		clear.addActionListener(this);
 		newInterval.addActionListener(this);
@@ -150,12 +156,16 @@ public class Graph extends JPanel implements MouseListener, MouseMotionListener,
 		zoomExtents.addActionListener(this);
 		close.addActionListener(this);
 		showSizeM.addActionListener(this);
+		showZoomM.addActionListener(this);
 		setYLabel.addActionListener(this);
 		showThinAxes.addActionListener(this);
 		stepShapedGraph.addActionListener(this);
 		heatMapGraph.addActionListener(this);
 		popupMenu.add(open);
 		popupMenu.add(save);
+		if (areWeTheDeveloper) {
+			popupMenu.add(renderJpg);
+		}
 		popupMenu.add(export);
 		popupMenu.add(clear);
 		popupMenu.add(newInterval);
@@ -164,6 +174,7 @@ public class Graph extends JPanel implements MouseListener, MouseMotionListener,
 		if (areWeTheDeveloper) {
 			popupMenu.add(setYLabel);
 			popupMenu.add(showSizeM);
+			popupMenu.add(showZoomM);
 			popupMenu.add(showThinAxes);
 		}
 		popupMenu.add(stepShapedGraph);
@@ -336,6 +347,13 @@ public class Graph extends JPanel implements MouseListener, MouseMotionListener,
 	}
 	
 	/*
+	 * Make sure that the next time the graph draws, it actually draws everything from scratch
+	 */
+	public void ensureRedraw() {
+		needRedraw = true;
+	}
+	
+	/*
 	 * The available colors for the Series.
 	 * As we see also with the other following functions, we normally cycle through
 	 * colors when drawing a bunch of series. If the user has set a particular color for
@@ -408,7 +426,7 @@ public class Graph extends JPanel implements MouseListener, MouseMotionListener,
 	/*
 	 * Draw axes, arrow points, ticks and label X axis with the label found in the first column of the CSV datafile
 	 */
-	public void drawAxes(Graphics2D g, Rectangle bounds) {
+	public void drawAxes(Graphics2D g, Rectangle bounds, Rectangle pictureBounds) {
 		FontMetrics fm = g.getFontMetrics();
 		int leftBorder = fm.stringWidth("" + (int)scale.getMaxY());
 		if (yLabel != null) {
@@ -421,10 +439,10 @@ public class Graph extends JPanel implements MouseListener, MouseMotionListener,
 		}
 		
 		g.setPaint(BACKGROUND_COLOR);
-		g.fillRect(0, 0, bounds.x + leftBorder, (int)this.getBounds().getHeight());
-		g.fillRect(0, bounds.height + bounds.y, (int)this.getBounds().getWidth(), (int)this.getBounds().getHeight()-bounds.height-bounds.y);
-		g.fillRect(0, 0, (int)this.getBounds().getWidth(), bounds.y - 10 * SCALA);
-		g.fillRect(bounds.x + bounds.width, 0, (int)this.getBounds().getWidth()-bounds.x-bounds.width, (int)this.getBounds().getHeight()); 
+		g.fillRect(0, 0, bounds.x + leftBorder, (int)pictureBounds.getHeight());
+		g.fillRect(0, bounds.height + bounds.y, (int)pictureBounds.getWidth(), (int)pictureBounds.getHeight()-bounds.height-bounds.y);
+		g.fillRect(0, 0, (int)pictureBounds.getWidth(), bounds.y - 10 * SCALA);
+		g.fillRect(bounds.x + bounds.width, 0, (int)pictureBounds.getWidth()-bounds.x-bounds.width, (int)pictureBounds.getHeight());
 		
 		g.setPaint(FOREGROUND_COLOR);
 		
@@ -505,6 +523,7 @@ public class Graph extends JPanel implements MouseListener, MouseMotionListener,
 			}
 			
 			
+	
 			if  (showThinAxes) {
 				g.setStroke(oldStroke);
 			}
@@ -566,10 +585,14 @@ public class Graph extends JPanel implements MouseListener, MouseMotionListener,
 		g.setStroke(oldStroke);
 	}
 	
+	public void paint(Graphics g) {
+		paint(g, this.getWidth(), this.getHeight());
+	}
+	
 	private Image heatMapImg = null;
 	private HeatChart heatMapChart = null;
 	private Rectangle heatMapBounds = null;
-	public void paint(Graphics g1) {
+	public void paint(Graphics g1, int areaWidth, int areaHeight) {
 		try {
 			Graphics2D g = (Graphics2D)g1;
 			if (useHeatMap) { //TODO: will not work when we consider overlay graphs (will show nothing at all).
@@ -629,7 +652,7 @@ public class Graph extends JPanel implements MouseListener, MouseMotionListener,
 						heatMapChart.setXValuesHorizontal(true);
 						heatMapChart.setAxisLabelsFont(new Font("Sans-Serif", Font.PLAIN, 12 * SCALA));
 						heatMapChart.setAxisValuesFont(new Font("Sans-Serif", Font.PLAIN, 10 * SCALA));
-						heatMapChart.setChartSize(new Dimension(this.getWidth(), this.getHeight()));
+						heatMapChart.setChartSize(new Dimension(areaWidth, areaHeight));
 						heatMapImg = heatMapChart.getChartImage();
 						heatMapBounds = heatMapChart.getChartBounds();
 					} catch (Exception ex) {
@@ -651,7 +674,7 @@ public class Graph extends JPanel implements MouseListener, MouseMotionListener,
 			}
 			Graphics2D gBackground;
 			if (needRedraw) {
-				bufferedImage = new BufferedImage(this.getWidth(), this.getHeight(), BufferedImage.TYPE_INT_RGB);
+				bufferedImage = new BufferedImage(areaWidth, areaHeight, BufferedImage.TYPE_INT_RGB);
 				gBackground = bufferedImage.createGraphics();
 			} else {
 				gBackground = (Graphics2D)g1;
@@ -668,7 +691,7 @@ public class Graph extends JPanel implements MouseListener, MouseMotionListener,
 			
 			//g.clearRect(0, 0, this.getWidth(), this.getHeight());
 			gBackground.setPaint(BACKGROUND_COLOR);
-			Rectangle bounds = new Rectangle(this.getBounds());
+			Rectangle bounds = new Rectangle(0, 0, areaWidth, areaHeight);
 			bounds.x = bounds.y = 0; //we don't care where we are inside our containing object: we only need the width and height of the drawing area. The starting x and y are of course 0.
 			if (needRedraw) {
 				gBackground.fill(bounds);
@@ -719,7 +742,7 @@ public class Graph extends JPanel implements MouseListener, MouseMotionListener,
 			
 			if (needRedraw) {
 				bounds.setBounds(bounds.x - leftBorder, bounds.y, bounds.width + (leftBorder + rightBorder), bounds.height);
-				drawAxes(gBackground, bounds);
+				drawAxes(gBackground, bounds, new Rectangle(0, 0, areaWidth, areaHeight));
 				bounds.setBounds(bounds.x + leftBorder, bounds.y, bounds.width - (leftBorder + rightBorder), bounds.height);
 			}
 			
@@ -728,7 +751,7 @@ public class Graph extends JPanel implements MouseListener, MouseMotionListener,
 			}
 			
 			//g.drawImage(bufferedImage, 0, 0, this);
-			g.drawImage(bufferedImage, 0, 0, this.getWidth(), this.getHeight(), null);
+			g.drawImage(bufferedImage, 0, 0, areaWidth, areaHeight, null);
 			
 			if (xRedLine > 0) {
 				g.setPaint(RED_LINE_COLOR);
@@ -738,7 +761,7 @@ public class Graph extends JPanel implements MouseListener, MouseMotionListener,
 				g.setStroke(olStroke);
 			}
 			
-			if (legendBounds == null || !customLegendPosition) {
+			if (legendBounds == null || !customLegendPosition || this.getWidth() != areaWidth || this.getHeight() != areaHeight) {
 				int nGraphs = 0;
 				for (Series s : data) {
 					if (!s.isSlave()) nGraphs++;
@@ -754,7 +777,10 @@ public class Graph extends JPanel implements MouseListener, MouseMotionListener,
 			}
 	
 			if (showSize) {
-				g.drawString("(" + this.getWidth() + ", " + this.getHeight() + ")", 0, fm.getMaxAscent());
+				g.drawString("(" + areaWidth + ", " + areaHeight + ")", 0, fm.getMaxAscent());
+			}
+			if (showZoomLevel) {
+				g.drawString("Zoom: " + SCALA, 0, 2 + 2 * fm.getMaxAscent());
 			}
 			g.setStroke(oldStroke);
 			g.setFont(oldFont);
@@ -1413,6 +1439,9 @@ public class Graph extends JPanel implements MouseListener, MouseMotionListener,
 						this.parseCSV(fileName);
 						needRedraw = true;
 						this.repaint();
+						for (GraphScaleListener gl : scaleListeners) {
+							gl.scaleChanged(scale);
+						}
 					} catch (Exception ex) {
 						System.err.println(GENERIC_ERROR_S + ex);
 						ex.printStackTrace();
@@ -1420,6 +1449,8 @@ public class Graph extends JPanel implements MouseListener, MouseMotionListener,
 				}
 			} else if (menu.getText().equals(SAVE_LABEL)) {
 				FileUtils.saveToPNG(this);
+			} else if (menu.getText().equals(RENDER_TO_JPG_LABEL)) {
+				FileUtils.renderToJPG(this);
 			} else if (menu.getText().equals(EXPORT_VISIBLE_LABEL)) {
 				String fileName = FileUtils.save(CSV_FILE_EXTENSION, CSV_FILE_DESCRIPTION, this);
 				if (fileName != null) {
@@ -1466,6 +1497,9 @@ public class Graph extends JPanel implements MouseListener, MouseMotionListener,
 				}
 			} else if (menu.getText().equals(SHOW_SIZE_LABEL)) {
 				showSize = !showSize;
+				this.repaint();
+			} else if (menu.getText().equals(SHOW_ZOOM_LEVEL_LABEL)) {
+				showZoomLevel = !showZoomLevel;
 				this.repaint();
 			} else if (menu.getText().equals(SET_Y_LABEL_LABEL)) {
 				String newLabel;

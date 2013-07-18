@@ -43,6 +43,7 @@ public class Model implements Serializable {
 								   SCENARIO = "scenario", //Property belonging to an edge. The id of the scenario on which the reaction corresponding to the edge computes its time tables.
 								   ALIAS = "alias", //The property used to indicate the user-chosen name of a node
 								   CANONICAL_NAME = "canonicalName", //The same, but in the Cytoscape model instead of the Model
+								   DESCRIPTION = "description", //The verbose description of a node/edge, possibly provided with references to papers and/or various IDs
 								   ENABLED = "enabled", //Tells us whether a node/edge is enabled
 								   PLOTTED = "plotted", //Tells us whether to plot a node or not
 								   GROUP = "group", //A group of nodes identifies alternative phosphorylation sites (can be useless)

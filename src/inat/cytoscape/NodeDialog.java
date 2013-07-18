@@ -4,6 +4,7 @@ import giny.model.Node;
 import inat.model.Model;
 
 import java.awt.Dialog;
+import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
@@ -25,8 +26,10 @@ import javax.swing.JDialog;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JRadioButton;
+import javax.swing.JScrollPane;
 import javax.swing.JSlider;
 import javax.swing.JTextField;
+import javax.swing.JTextPane;
 import javax.swing.KeyStroke;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
@@ -239,6 +242,17 @@ public class NodeDialog extends JDialog {
 		this.add(plottedBox, new GridBagConstraints(1, 3, 1, 1, 0.5, 0.0, GridBagConstraints.LINE_END, GridBagConstraints.NONE, new Insets(0, 0, 0, 0), 0, 0));
 		//this.add(optionBoxes, BorderLayout.EAST);
 		
+		final JTextPane description = new JTextPane();
+		JScrollPane descriptionScrollPane = new JScrollPane(description);
+		descriptionScrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
+		descriptionScrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+		description.setPreferredSize(new Dimension(400, 100));
+		description.setMinimumSize(new Dimension(150, 50));
+		if (nodeAttributes.hasAttribute(node.getIdentifier(), Model.Properties.DESCRIPTION)) {
+			description.setText(nodeAttributes.getStringAttribute(node.getIdentifier(), Model.Properties.DESCRIPTION));
+		}
+		this.add(new LabelledField("Description", descriptionScrollPane), new GridBagConstraints(0, 4, 2, 1, 1.0, 1.0, GridBagConstraints.CENTER, GridBagConstraints.BOTH, new Insets(0, 0, 0, 0), 0, 0));
+		
 		JPanel controls = new JPanel(new FlowLayout(FlowLayout.RIGHT));
 		controls.add(new JButton(new AbstractAction("Save") {
 			private static final long serialVersionUID = -6179643943409321939L;
@@ -263,6 +277,8 @@ public class NodeDialog extends JDialog {
 				nodeAttributes.setAttribute(node.getIdentifier(), Model.Properties.ENABLED, enabledNode.isSelected());
 				
 				nodeAttributes.setAttribute(node.getIdentifier(), Model.Properties.PLOTTED, plottedNode.isSelected());
+				
+				nodeAttributes.setAttribute(node.getIdentifier(), Model.Properties.DESCRIPTION, description.getText());
 
 				Cytoscape.firePropertyChange(Cytoscape.ATTRIBUTES_CHANGED, null, null);
 
@@ -290,6 +306,6 @@ public class NodeDialog extends JDialog {
 		getRootPane().getInputMap(JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT).put(KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0), "CANCEL");
 		getRootPane().getActionMap().put("CANCEL", cancelButton.getAction());
 
-		this.add(controls, new GridBagConstraints(1, 4, 1, 2, 1.0, 0.0, GridBagConstraints.LINE_END, GridBagConstraints.NONE, new Insets(0, 0, 0, 0), 0, 0)); //BorderLayout.SOUTH);
+		this.add(controls, new GridBagConstraints(1, 5, 1, 2, 1.0, 0.0, GridBagConstraints.LINE_END, GridBagConstraints.NONE, new Insets(0, 0, 0, 0), 0, 0)); //BorderLayout.SOUTH);
 	}
 }
