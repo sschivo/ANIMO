@@ -242,6 +242,11 @@ public class Graph extends JPanel implements MouseListener, MouseMotionListener,
 		for (Series s : data) {
 			s.setEnabled(!s.getEnabled());
 		}
+		for (Series s : data) {
+			if (s.isSlave()) {
+				s.setEnabled(s.getMaster().getEnabled());
+			}
+		}
 	}
 	
 	/*
