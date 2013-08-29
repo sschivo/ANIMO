@@ -66,7 +66,7 @@ public class EdgeDialog extends JDialog {
 	
 	private Scenario[] scenarios = Scenario.sixScenarios;
 	private String reactantAliases[], reactantIdentifiers[]; //The identifiers and aliases of all reactants in the network
-	//private int previouslySelectedScenario = 0;
+	//private int previouslySelectedScenario = -1;
 	
 	private boolean wasNewlyCreated = false;
 	
@@ -168,7 +168,7 @@ public class EdgeDialog extends JDialog {
 				scenarioIdx = 0;
 			}
 			
-		//	previouslySelectedScenario = scenarioIdx;
+//			previouslySelectedScenario = scenarioIdx;
 			comboScenario.setSelectedIndex(scenarioIdx);
 			Box boxComboScenario = new Box(BoxLayout.Y_AXIS);
 			boxComboScenario.add(comboScenario);
@@ -514,13 +514,41 @@ public class EdgeDialog extends JDialog {
 			DecimalFormat format = new DecimalFormat(DECIMAL_FORMAT_STRING);
 			format.setMinimumFractionDigits(8);
 			final JFormattedTextField param = new JFormattedTextField(format);
-			if (edgeAttrib.hasAttribute(edge.getIdentifier(), parameters[i])) {
-				Double value = edgeAttrib.getDoubleAttribute(edge.getIdentifier(), parameters[i]);
-				param.setValue(value);
-				scenarios[currentlySelectedScenario].setParameter(parameters[i], value);
-			} else {
-				param.setValue(selectedScenario.getParameter(parameters[i]));
-			}
+//			if (previouslySelectedScenario == -1 || previouslySelectedScenario == currentlySelectedScenario) {
+				if (edgeAttrib.hasAttribute(edge.getIdentifier(), parameters[i])) {
+					Double value = edgeAttrib.getDoubleAttribute(edge.getIdentifier(), parameters[i]);
+					param.setValue(value);
+					scenarios[currentlySelectedScenario].setParameter(parameters[i], value);
+				} else {
+					param.setValue(selectedScenario.getParameter(parameters[i]));
+				}
+//			} else { //If there was a previously selected scenario, we convert the parameter
+//				if (previouslySelectedScenario == 0) {
+//					if (currentlySelectedScenario == 1) {
+//						// 0 --> 1
+//						
+//					} else if (currentlySelectedScenario == 2) {
+//						// 0 --> 2
+//						
+//					}
+//				} else if (previouslySelectedScenario == 1) {
+//					if (currentlySelectedScenario == 0) {
+//						// 1 --> 0
+//						
+//					} else if (currentlySelectedScenario == 2) {
+//						// 1 --> 2
+//						
+//					}
+//				} else if (previouslySelectedScenario == 2) {
+//					if (currentlySelectedScenario == 0) {
+//						// 2 --> 0
+//						
+//					} else if (currentlySelectedScenario == 1) {
+//						// 2 --> 1
+//						
+//					}
+//				}
+//			}
 			Dimension prefSize = param.getPreferredSize();
 			prefSize.width *= 1.5;
 			param.setPreferredSize(prefSize);
@@ -596,12 +624,12 @@ public class EdgeDialog extends JDialog {
 		parametersBox.validate();
 		
 		//Update the index of the currently selected scenario, so that if the user changes scenario we will be able to know which we were using before, and thus correctly convert the parameters between the two
-	/*	previouslySelectedScenario = 0;
-		for (int i=0;i<scenarios.length;i++) {
-			if (scenarios[i].equals(selectedScenario)) {
-				previouslySelectedScenario = i;
-				break;
-			}
-		}*/
+//		previouslySelectedScenario = -1;
+//		for (int i=0;i<scenarios.length;i++) {
+//			if (scenarios[i].equals(selectedScenario)) {
+//				previouslySelectedScenario = i;
+//				break;
+//			}
+//		}
 	}
 }

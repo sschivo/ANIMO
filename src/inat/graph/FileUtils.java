@@ -3,8 +3,12 @@ import java.awt.Component;
 import java.awt.Graphics;
 import java.awt.image.BufferedImage;
 import java.io.File;
+import java.util.Iterator;
 
 import javax.imageio.ImageIO;
+import javax.imageio.ImageWriteParam;
+import javax.imageio.ImageWriter;
+import javax.imageio.stream.FileImageOutputStream;
 import javax.swing.JFileChooser;
 import javax.swing.JOptionPane;
 import javax.swing.filechooser.FileFilter;
@@ -152,14 +156,35 @@ public class FileUtils {
 			graph.ensureRedraw();
 			graph.paint(imgGraphics, width, height);
 			graph.ensureRedraw();
+			Iterator<ImageWriter> iter = ImageIO.getImageWritersByFormatName("jpeg");
+			if (!iter.hasNext()) {
+				throw new Exception("No writer for JPEG format");
+			}
+			ImageWriter writer = iter.next();
+			ImageWriteParam iwp = writer.getDefaultWriteParam();
+			iwp.setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
+			String qualityS = JOptionPane.showInputDialog(Cytoscape.getDesktop(), "Compression quality in [0, 1] (0 = worst quality, highest compression; 1 = best quality, lowest compression)", 1);
+			if (qualityS == null) return;
+			float quality = 1.0f;
+			try {
+				quality = Float.parseFloat(qualityS);
+			} catch (NumberFormatException ex) {
+			}
+			iwp.setCompressionQuality(quality);
 			File f = new File(fileName);
 			f.delete();
-			ImageIO.write(image, "jpg", f);
+			FileImageOutputStream output = new FileImageOutputStream(f);
+			//ImageIO.write(image, "jpg", f);
+			writer.setOutput(output);
+			writer.write(image);
+			writer.dispose();
 			imgGraphics = null;
 			image = null;
+			JOptionPane.showMessageDialog(Cytoscape.getDesktop(), "Graph exported to " + f.getCanonicalPath() + ".", "Operation successful", JOptionPane.INFORMATION_MESSAGE);
 		} catch (Exception e) {
 			System.err.println("Error: " + e);
 			e.printStackTrace();
+			JOptionPane.showMessageDialog(Cytoscape.getDesktop(), "Error: " + e.getMessage() + ", caused by " + e.getCause() + ".", "Operation failed", JOptionPane.ERROR_MESSAGE);
 		}
 	}
 	
@@ -187,6 +212,19 @@ public class FileUtils {
 			height = Integer.parseInt(heightS);
 		} catch (NumberFormatException ex) {
 		}
+		String zoomS = JOptionPane.showInputDialog(Cytoscape.getDesktop(), "Zoom level", graph.getZoomLevel());
+		if (zoomS == null) return;
+		int zoom = graph.getZoomLevel();
+		try {
+			int zoomTmp = Integer.parseInt(zoomS);
+			if (zoomTmp > 0) {
+				zoom = zoomTmp;
+			}
+		} catch (NumberFormatException ex) {
+		}
+		int oldZoom = graph.getZoomLevel();
+		graph.setZoomLevel(zoom);
 		renderToJPG(graph, fileName, width, height);
+		graph.setZoomLevel(oldZoom);
 	}
 }

@@ -358,6 +358,20 @@ public class Graph extends JPanel implements MouseListener, MouseMotionListener,
 		needRedraw = true;
 	}
 	
+	/**
+	 * Returns the level of zoom (minimum is 1) of the graph.
+	 * Its value determines the thickness of lines and font sizes
+	 * and is normally useful when the image gets large.
+	 * @return
+	 */
+	public int getZoomLevel() {
+		return SCALA;
+	}
+	
+	public void setZoomLevel(int newSCALA) {
+		this.SCALA = newSCALA;
+	}
+	
 	/*
 	 * The available colors for the Series.
 	 * As we see also with the other following functions, we normally cycle through
@@ -730,9 +744,9 @@ public class Graph extends JPanel implements MouseListener, MouseMotionListener,
 					} else {
 						gBackground.setPaint(series.getColor());
 					}
-					series.plot(gBackground, bounds, stepShapedLines);
+					series.plot(gBackground, bounds, stepShapedLines, SCALA);
 					if (series.isMaster()) {
-						series.getSlave().plot(gBackground, bounds, stepShapedLines);
+						series.getSlave().plot(gBackground, bounds, stepShapedLines, SCALA);
 					}
 				}
 				

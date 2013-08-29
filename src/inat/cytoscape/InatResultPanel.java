@@ -141,10 +141,10 @@ public class InatResultPanel extends JPanel implements ChangeListener, GraphScal
 		Heptuple<Model, SimpleLevelResult, Double, String, String, HashMap<String, HashMap<String, Object>>, HashMap<String, HashMap<String, Object>>> simulationData = loadSimulationData(simulationDataFile, false);
 		InatResultPanel panel = new InatResultPanel(simulationData.first, simulationData.second, simulationData.third, simulationData.fourth, null);
 		panel.savedNetwork = Cytoscape.getNetwork(simulationData.fifth);
-		if (panel.savedNetwork != null) {
+		if (panel.savedNetwork != null && !panel.savedNetwork.equals(Cytoscape.getNullNetwork())) {
 			//System.err.println("La rete salvata " + panel.savedNetwork.getIdentifier() + " ha " + panel.savedNetwork.getNodeCount() + " nodi e " + panel.savedNetwork.getEdgeCount() + " edgi");
 			CyNetworkView savedNetworkView = Cytoscape.getNetworkView(simulationData.fifth);
-			if (savedNetworkView != null) { //Keep all saved networks hidden
+			if (savedNetworkView != null && !savedNetworkView.equals(Cytoscape.getNullNetworkView())) { //Keep all saved networks hidden
 				Cytoscape.destroyNetworkView(savedNetworkView);
 				CyNetworkView otherView = null;
 				Collection<CyNetworkView> c = Cytoscape.getNetworkViewMap().values();
@@ -192,7 +192,7 @@ public class InatResultPanel extends JPanel implements ChangeListener, GraphScal
 		this.result = result;
 		this.scale = scale;
 		this.title = title;
-		if (originalNetwork != null) {
+		if (originalNetwork != null && !originalNetwork.equals(Cytoscape.getNullNetwork())) {
 			try {
 				CyNetworkView view = Cytoscape.getNetworkView(originalNetwork.getIdentifier());
 				@SuppressWarnings("rawtypes")
@@ -868,7 +868,7 @@ public class InatResultPanel extends JPanel implements ChangeListener, GraphScal
 	
 	
 	public void closeResultsPanel(CytoPanel cytoPanel) {
-		if (savedNetwork != null) {
+		if (savedNetwork != null && countSessionChanges <= 1) { //We destroy network & vizmap only if we are still in "our" session. Otherwise, we would risk destroying a network from another session
 			try {
 				final VisualMappingManager vizMap = Cytoscape.getVisualMappingManager();
 				CalculatorCatalog visualStyleCatalog = vizMap.getCalculatorCatalog();
@@ -1073,7 +1073,9 @@ public class InatResultPanel extends JPanel implements ChangeListener, GraphScal
 		container.add(buttons, BorderLayout.NORTH);
 		
 		
-		cytoPanel.setState(CytoPanelState.DOCK);
+		if (cytoPanel.getState().equals(CytoPanelState.HIDE)) {
+			cytoPanel.setState(CytoPanelState.DOCK); //We show the Results panel if it was hidden.
+		}
 		fCytoPanel = (CytoPanelImp)cytoPanel;
 		cytoPanel.addCytoPanelListener(this);
 		

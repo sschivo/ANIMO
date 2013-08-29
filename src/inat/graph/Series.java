@@ -250,7 +250,7 @@ public class Series implements Comparable<Series> {
 		}
 	}
 	
-	public void plot(Graphics2D g, Rectangle bounds, boolean stepShaped) {
+	public void plot(Graphics2D g, Rectangle bounds, boolean stepShaped, int SCALA) {
 		scale.computeScale(bounds);
 		double scaleX = scale.getXScale(),
 			   scaleY = scale.getYScale(),
@@ -372,10 +372,10 @@ public class Series implements Comparable<Series> {
 						if (lastBar == null || scaleX * (punto.x - lastBar.x) > 10) {
 							g.drawLine((int)(bounds.x + scaleX * (masterData[i].x - minX)), (int)(bounds.y + bounds.height - scaleY * (masterData[i].y - punto.y - minY)), 
 									(int)(bounds.x + scaleX * (masterData[i].x - minX)), (int)(bounds.y + bounds.height - scaleY * (masterData[i].y  + punto.y - minY)));
-							g.drawLine((int)(bounds.x + scaleX * (masterData[i].x - minX)) - 3, (int)(bounds.y + bounds.height - scaleY * (masterData[i].y - punto.y - minY)), 
-									(int)(bounds.x + scaleX * (masterData[i].x - minX)) + 3, (int)(bounds.y + bounds.height - scaleY * (masterData[i].y  - punto.y - minY)));
-							g.drawLine((int)(bounds.x + scaleX * (masterData[i].x - minX)) - 3, (int)(bounds.y + bounds.height - scaleY * (masterData[i].y + punto.y - minY)), 
-									(int)(bounds.x + scaleX * (masterData[i].x - minX)) + 3, (int)(bounds.y + bounds.height - scaleY * (masterData[i].y  + punto.y - minY)));
+							g.drawLine((int)(bounds.x + scaleX * (masterData[i].x - minX)) - 3 * SCALA, (int)(bounds.y + bounds.height - scaleY * (masterData[i].y - punto.y - minY)), 
+									(int)(bounds.x + scaleX * (masterData[i].x - minX)) + 3 * SCALA, (int)(bounds.y + bounds.height - scaleY * (masterData[i].y  - punto.y - minY)));
+							g.drawLine((int)(bounds.x + scaleX * (masterData[i].x - minX)) - 3 * SCALA, (int)(bounds.y + bounds.height - scaleY * (masterData[i].y + punto.y - minY)), 
+									(int)(bounds.x + scaleX * (masterData[i].x - minX)) + 3 * SCALA, (int)(bounds.y + bounds.height - scaleY * (masterData[i].y  + punto.y - minY)));
 							lastBar = punto;
 						}
 					}
