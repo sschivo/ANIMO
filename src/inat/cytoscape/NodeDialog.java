@@ -213,39 +213,23 @@ public class NodeDialog extends JDialog {
 		
 		final JSwitchBox discretizationChoice = new JSwitchBox("Linear", "Log-scale");
 		
-		initialConcentration.addChangeListener(new ChangeListener() {
-			@Override
-			public void stateChanged(ChangeEvent e) {
-				if (discretizationChoice.isSelected()) { //Linear scale: the value can be read directly
-					initialLevelField.setTitle("Initial activity level: " + initialConcentration.getValue());
-				} else { //Log-scale: the value needs to be calculated, then we snap the cursor to the closest "tick"
-					if (initialConcentration.getValueIsAdjusting()) return;
-					int iActivity = initialConcentration.getValue();
-					if (iActivity == initialConcentration.getMinimum()) {
-						initialLevelField.setTitle("Initial activity: 0%");
-					} else if (iActivity == initialConcentration.getMaximum()) {
-						initialLevelField.setTitle("Initial activity: 100%");
-					} else {
-						double stepSize = 1.5;
-						try {
-							stepSize = Double.parseDouble(logStepPercent.getValue().toString()) + 1.0;
-						} catch (NumberFormatException ex) {
-						}
-						double tickPosition = Math.round(Math.log(iActivity) / Math.log(stepSize));
-						if (tickPosition == 0) {
-							initialLevelField.setTitle("Initial activity: 0%");
-							initialConcentration.setValue(initialConcentration.getMinimum());
-						} else {
-							double activity = Math.pow(stepSize, tickPosition);
-							initialLevelField.setTitle("Initial activity: " + activity + "%");
-							initialConcentration.setValue((int)Math.round(activity));
-						}
-					}
+		
+		class InitialActivityManager {
+			double getInitialActivity() {
+				int iActivity = initialConcentration.getValue();
+				double stepSize = 1.5;
+				try {
+					stepSize = Double.parseDouble(logStepPercent.getValue().toString()) + 1.0;
+				} catch (NumberFormatException ex) {
+				}
+				double tickPosition = Math.round(Math.log(iActivity) / Math.log(stepSize));
+				if (tickPosition == 0) {
+					return initialConcentration.getMinimum();
+				} else {
+					return Math.pow(stepSize, tickPosition);
 				}
 			}
-		});
-		
-		class InitialActivityUpdater {
+			
 			void update() {
 				if (logStepPercent.isEnabled()) {
 					initialConcentration.setMinimum(0);
@@ -280,7 +264,34 @@ public class NodeDialog extends JDialog {
 				}
 			}
 		}
-		final InitialActivityUpdater initialActivityUpdater = new InitialActivityUpdater();
+		final InitialActivityManager initialActivityManager = new InitialActivityManager();
+		
+		initialConcentration.addChangeListener(new ChangeListener() {
+			@Override
+			public void stateChanged(ChangeEvent e) {
+				if (discretizationChoice.isSelected()) { //Linear scale: the value can be read directly
+					initialLevelField.setTitle("Initial activity level: " + initialConcentration.getValue());
+				} else { //Log-scale: the value needs to be calculated, then we snap the cursor to the closest "tick"
+					if (initialConcentration.getValueIsAdjusting()) return;
+					int iActivity = initialConcentration.getValue();
+					if (iActivity == initialConcentration.getMinimum()) {
+						initialLevelField.setTitle("Initial activity: 0%");
+					} else if (iActivity == initialConcentration.getMaximum()) {
+						initialLevelField.setTitle("Initial activity: 100%");
+					} else {
+						double activity = initialActivityManager.getInitialActivity();
+						if (activity == 0) {
+							initialLevelField.setTitle("Initial activity: 0%");
+							initialConcentration.setValue(initialConcentration.getMinimum());
+						} else {
+							initialLevelField.setTitle("Initial activity: " + activity + "%");
+							initialConcentration.setValue((int)Math.round(activity));
+						}
+					}
+				}
+			}
+		});
+		
 		
 		PropertyChangeListener pcl = new PropertyChangeListener() {
 			@Override
@@ -316,7 +327,7 @@ public class NodeDialog extends JDialog {
 						logStepPercent.setValue(percValue);
 						logStepPercent.addPropertyChangeListener("value", this);
 					}
-					initialActivityUpdater.update();
+					initialActivityManager.update();
 				} catch (Exception ex) {
 					ex.printStackTrace();
 				}
@@ -377,7 +388,7 @@ public class NodeDialog extends JDialog {
 				//initialLevelField.setEnabled(linear);
 				logPercentageField.setEnabled(!linear);
 				logTotalStepsField.setEnabled(!linear);
-				initialActivityUpdater.update();
+				initialActivityManager.update();
 				NodeDialog.this.pack();
 			}
 		};
@@ -419,12 +430,20 @@ public class NodeDialog extends JDialog {
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				CyAttributes nodeAttributes = Cytoscape.getNodeAttributes();
-				nodeAttributes.setAttribute(node.getIdentifier(), Model.Properties.INITIAL_LEVEL,
-						initialConcentration.getValue());
+				if (discretizationChoice.isSelected()) { //Linear scale: initial activity can be read directly
+					nodeAttributes.setAttribute(node.getIdentifier(), Model.Properties.INITIAL_LEVEL, initialConcentration.getValue());
+				} else { //Log-scale: initial activity needs to be computed
+					nodeAttributes.setAttribute(node.getIdentifier(), Model.Properties.INITIAL_LEVEL, (int)Math.round(initialActivityManager.getInitialActivity()));
+				}
 				
 				nodeAttributes.setAttribute(node.getIdentifier(), Model.Properties.NUMBER_OF_LEVELS, totalLevels.getValue());
 				
-				double activityRatio = (double)initialConcentration.getValue() / totalLevels.getValue();
+				double activityRatio;
+				if (discretizationChoice.isSelected()) {
+					activityRatio = (double)initialConcentration.getValue() / totalLevels.getValue();
+				} else {
+					activityRatio = initialActivityManager.getInitialActivity() / totalLevels.getValue();
+				}
 				nodeAttributes.setAttribute(node.getIdentifier(), Model.Properties.SHOWN_LEVEL, activityRatio);
 				
 				if (nameField.getText() != null && nameField.getText().length() > 0) {
@@ -441,7 +460,8 @@ public class NodeDialog extends JDialog {
 				
 				nodeAttributes.setAttribute(node.getIdentifier(), Model.Properties.LINEAR_SCALE, discretizationChoice.isSelected());
 				nodeAttributes.setAttribute(node.getIdentifier(), Model.Properties.LOG_STEP_PERCENT, Double.parseDouble(logStepPercent.getValue().toString()));
-
+				
+				
 				Cytoscape.firePropertyChange(Cytoscape.ATTRIBUTES_CHANGED, null, null);
 
 				NodeDialog.this.dispose();

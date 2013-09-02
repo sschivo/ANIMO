@@ -342,6 +342,7 @@ public class Model implements Serializable {
 				monitor.setPercentCompleted((100 * doneWork++) / totalWork);
 			}
 			Node node = nodes.next();
+			if (!nodeAttributes.getBooleanAttribute(node.getIdentifier(), ENABLED)) continue;
 			
 			final String reactantId = "R" + i;
 			Reactant r = new Reactant(reactantId);
