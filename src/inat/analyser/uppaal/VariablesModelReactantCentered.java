@@ -716,7 +716,16 @@ public class VariablesModelReactantCentered extends VariablesModel {
 				}
 				r.let(HAS_INFLUENCING_REACTIONS).be(true);
 				
-				StringBuilder template = new StringBuilder("<template><name>Reactant_" + r.getId() + "</name><parameter>int&amp; R, const int MAX</parameter><declaration>int[-1, 1] delta, deltaNew = 0, deltaOld = 0, deltaOldOld = 0, deltaOldOldOld = 0;\nbool deltaAlternating = false;\ntime_t tL, tU;\nclock c;\ndouble totalRate;\n\n\nvoid updateDeltaOld() {\n\tdeltaOldOldOld = deltaOldOld;\n\tdeltaOldOld = deltaOld;\n\tdeltaOld = deltaNew;\n\tdeltaNew = delta;\n\tdeltaAlternating = false;\n\tif (deltaOldOldOld != 0) { //We have updated delta at least 4 times, so we can see whether we have an oscillation\n\t\tif (deltaNew == deltaOldOld &amp;&amp; deltaOld == deltaOldOldOld &amp;&amp; deltaNew != deltaOld) { //Pairwise equal and alternating (e.g. +1, -1, +1, -1): we are oscillating\n\t\t\tdeltaAlternating = true;\n\t\t\tdeltaNew = deltaOld = deltaOldOld = deltaOldOldOld = 0;\n\t\t}\n\t}\n}\n\nvoid update() {\n");
+				StringBuilder template = new StringBuilder("<template><name>Reactant_" + r.getId() + "</name><parameter>int&amp; R, const int MAX</parameter><declaration>");
+				if (r.get(Model.Properties.LINEAR_SCALE).as(Boolean.class)) {
+					template.append("int[-1, 1] delta;\n");
+				} else {
+					template.append("int[-MAX, MAX] delta;\ndouble stepSize = " + formatDouble(1.0 + r.get(Model.Properties.LOG_STEP_PERCENT).as(Double.class)) + ";\ndouble delta_d;\ndouble R_d = " + formatDouble(1.0 * r.get(Model.Properties.INITIAL_LEVEL).as(Integer.class)) + ";\n");
+				}
+				template.append("int[-1, 1] deltaNew = 0, deltaOld = 0, deltaOldOld = 0, deltaOldOldOld = 0;\nbool deltaAlternating = false;\ntime_t tL, tU;\nclock c;\ndouble totalRate;\n\n\nvoid updateDeltaOld() {\n\tdeltaOldOldOld = deltaOldOld;\n\tdeltaOldOld = deltaOld;\n\tdeltaOld = deltaNew;\n\tdeltaNew = delta;\n\tdeltaAlternating = false;\n\tif (deltaOldOldOld != 0) { //We have updated delta at least 4 times, so we can see whether we have an oscillation\n\t\tif (deltaNew == deltaOldOld &amp;&amp; deltaOld == deltaOldOldOld &amp;&amp; deltaNew != deltaOld) { //Pairwise equal and alternating (e.g. +1, -1, +1, -1): we are oscillating\n\t\t\tdeltaAlternating = true;\n\t\t\tdeltaNew = deltaOld = deltaOldOld = deltaOldOldOld = 0;\n\t\t}\n\t}\n}\n\nvoid update() {\n");
+				if (!r.get(Model.Properties.LINEAR_SCALE).as(Boolean.class)) {
+					template.append("\tdouble tmp;\n");
+				}
 				for (Reaction re : influencingReactions) {
 					int scenario = re.get(SCENARIO).as(Integer.class);
 					boolean activeR1, activeR2;
@@ -777,13 +786,32 @@ public class VariablesModelReactantCentered extends VariablesModel {
 						}
 					}
 				}
-				template.append("\tif (totalRate.b &lt; 0) {\n\t\tdelta = -1;\n\t\ttotalRate.b = -totalRate.b;\n\t} else {\n\t\tdelta = 1;\n\t}\n\tif (totalRate.b != 0) {\n");
-				if (uncertainty != 0) {
-					template.append("\t\ttL = round(multiply(inverse(totalRate), LOWER_UNC));\n\t\ttU = round(multiply(inverse(totalRate), UPPER_UNC));\n");
+				if (r.get(Model.Properties.LINEAR_SCALE).as(Boolean.class)) {
+					template.append("\tif (totalRate.b &lt; 0) {\n\t\tdelta = -1;\n\t\ttotalRate.b = -totalRate.b;\n\t} else {\n\t\tdelta = 1;\n\t}\n");
 				} else {
-					template.append("\t\ttL = round(inverse(totalRate));\n\t\ttU = tL;\n");
+					template.append("\tif (R == 0) {\n\t\tif (totalRate.b &gt;= 0) {\n\t\t\tdelta_d = stepSize;\n\t\t\tdelta = round(delta_d);\n\t\t} else { //We are already at 0 and we are trying to decrease: as we cannot, it matters little what value of delta we choose, as long as it is &lt; 0\n\t\t\tdelta_d = stepSize;\n\t\t\tdelta = -round(delta_d);\n\t\t\tdelta_d.b = -delta_d.b;\n\t\t}\n\t} else {\n\t\tif (totalRate.b &gt;= 0) { //R is increasing\n\t\t\tdelta_d = subtract(multiply(R_d, stepSize), R_d);\n\t\t\tif (round(add(delta_d, int_to_double(R))) &gt; MAX) { //We need to adapt the time in this case, or the steepness of the last part of the graph will be less (because we go only to 100 instead of the actual outcome &gt; 100)\n\t\t\t\tdelta_d = subtract(int_to_double(MAX), int_to_double(R));\n\t\t\t\tdelta = MAX - R;\n\t\t\t} else {\n\t\t\t\tdelta = round(delta_d);\n\t\t\t}\n\t\t} else { //R is decreasing\n\t\t\tdelta_d = subtract(multiply(R_d, inverse(stepSize)), R_d); //so delta_d is already negative\n\t\t\ttmp = add(delta_d, R_d);\n\t\t\tif (tmp.b &lt;= 0 || round(tmp) &lt;= 1) { //Same, but towards 0 (or more precisely, 1) instead of towards MAX\n\t\t\t\tdelta_d = R_d;\n\t\t\t\tdelta_d.b = -delta_d.b;\n\t\t\t\tdelta = -R;\n\t\t\t} else {\n\t\t\t\tdelta_d.b = -delta_d.b; //Hack to overcome the fact that we use \"round\" only to give numbers in [-1, ...], thus negative numbers are not available.\n\t\t\t\tdelta = -round(delta_d);\n\t\t\t\tdelta_d.b = -delta_d.b;\n\t\t\t}\n\t\t}\n\t}\n");
 				}
-				template.append("\t} else {\n\t\ttL = INFINITE_TIME;\n\t\ttU = INFINITE_TIME;\n\t}\n\tif (tL != INFINITE_TIME &amp;&amp; tL &gt; tU) { //We use rounded things: maybe the difference between tL and tU was not so great, and with some rounding problems we could have this case\n\t\ttL = tU;\n\t}\n\tupdateDeltaOld();\n}\n\nvoid react() {\n\tif (0 &lt;= R + delta &amp;&amp; R + delta &lt;= MAX) {\n\t\tR = R + delta;\n\t}\n\tupdate();\n}\n\nbool can_react() {\n\treturn !deltaAlternating &amp;&amp; (tL != INFINITE_TIME &amp;&amp; tL != 0 &amp;&amp; tU != 0 &amp;&amp; ((delta &gt; 0 &amp;&amp; R &lt; MAX) || (delta &lt; 0 &amp;&amp; R &gt; 0)));\n}\n\nbool cant_react() {\n\treturn deltaAlternating || (tL == INFINITE_TIME || tL == 0 || tU == 0 || (delta &gt; 0 &amp;&amp; R == MAX) || (delta &lt; 0 &amp;&amp; R == 0));\n}</declaration>");
+				template.append("\tif (totalRate.b != 0) {\n");
+				if (r.get(Model.Properties.LINEAR_SCALE).as(Boolean.class)) {
+					if (uncertainty != 0) {
+						template.append("\t\ttL = round(multiply(inverse(totalRate), LOWER_UNC));\n\t\ttU = round(multiply(inverse(totalRate), UPPER_UNC));\n");
+					} else {
+						template.append("\t\ttL = round(inverse(totalRate));\n\t\ttU = tL;\n");
+					}
+				} else {
+					if (uncertainty != 0) {
+						template.append("\t\ttL = round(multiply(multiply(inverse(totalRate), delta_d), LOWER_UNC));\n\t\ttU = round(multiply(multiply(inverse(totalRate), delta_d), UPPER_UNC));\n");
+					} else {
+						template.append("\t\ttL = round(multiply(inverse(totalRate), delta_d));\n\t\ttU = tL;\n");
+					}
+				}
+				template.append("\t} else {\n\t\ttL = INFINITE_TIME;\n\t\ttU = INFINITE_TIME;\n\t}\n\tif (tL != INFINITE_TIME &amp;&amp; tL &gt; tU) { //We use rounded things: maybe the difference between tL and tU was not so great, and with some rounding problems we could have this case\n\t\ttL = tU;\n\t}\n\t//updateDeltaOld();\n}\n\nvoid react() {\n\tif (0 &lt;= R + delta &amp;&amp; R + delta &lt;= MAX) {\n");
+				if (r.get(Model.Properties.LINEAR_SCALE).as(Boolean.class)) {
+					template.append("\t\tR = R + delta;\n");
+				} else {
+					template.append("\t\tint [-MAX-1, MAX+1] res;\n\t\tR_d = add(R_d, delta_d);\n\t\tres = round(R_d); //We use \"res\" to allow for rounding errors so that R never exits the allowed interval [0, MAX]\n\t\tif (res &lt; 0) {\n\t\t\tR = 0;\n\t\t} else if (res &gt; MAX) {\n\t\t\tR = MAX;\n\t\t} else {\n\t\t\tR = res;\n\t\t}");
+				}
+				template.append("\t}\n\tupdate();\n}\n\nbool can_react() {\n\treturn !deltaAlternating &amp;&amp; (tL != INFINITE_TIME &amp;&amp; tL != 0 &amp;&amp; tU != 0 &amp;&amp; ((delta &gt; 0 &amp;&amp; R &lt; MAX) || (delta &lt; 0 &amp;&amp; R &gt; 0)));\n}\n\nbool cant_react() {\n\treturn deltaAlternating || (tL == INFINITE_TIME || tL == 0 || tU == 0 || (delta &gt; 0 &amp;&amp; R == MAX) || (delta &lt; 0 &amp;&amp; R == 0));\n}</declaration>");
 				template.append("<location id=\"id0\" x=\"-1896\" y=\"-728\"><name x=\"-1960\" y=\"-752\">stubborn</name><committed/></location><location id=\"id1\" x=\"-1528\" y=\"-728\"><committed/></location><location id=\"id6\" x=\"-1256\" y=\"-728\"><name x=\"-1248\" y=\"-752\">start</name><committed/></location><location id=\"id7\" x=\"-1552\" y=\"-856\"><name x=\"-1656\" y=\"-872\">not_reacting</name></location><location id=\"id8\" x=\"-1416\" y=\"-728\"><name x=\"-1400\" y=\"-752\">updating</name><committed/></location><location id=\"id9\" x=\"-1664\" y=\"-728\"><name x=\"-1728\" y=\"-744\">waiting</name><label kind=\"invariant\" x=\"-1728\" y=\"-720\">c &lt;= tU\n|| tU ==\nINFINITE_TIME</label></location><init ref=\"id6\"/><transition><source ref=\"id1\"/><target ref=\"id9\"/><label kind=\"guard\" x=\"-1640\" y=\"-760\">tU == INFINITE_TIME\n|| c &lt;= tU</label>" + (normalModelChecking?"<label kind=\"synchronisation\" x=\"-1640\" y=\"-776\">sequencer[" + r.get(REACTANT_INDEX).as(Integer.class) + "]!</label>":"") + "</transition><transition><source ref=\"id1\"/><target ref=\"id9\"/><label kind=\"guard\" x=\"-1608\" y=\"-712\">tU != INFINITE_TIME\n&amp;&amp; c &gt; tU</label>" + (normalModelChecking?"<label kind=\"synchronisation\" x=\"-1608\" y=\"-664\">sequencer[" + r.get(REACTANT_INDEX).as(Integer.class) + "]!</label>":"") + "<label kind=\"assignment\" x=\"-1608\" y=\"-680\">c := tU</label><nail x=\"-1528\" y=\"-680\"/><nail x=\"-1608\" y=\"-680\"/></transition><transition><source ref=\"id0\"/><target ref=\"id8\"/><label kind=\"guard\" x=\"-1816\" y=\"-632\">c &lt; tL</label>" + (normalModelChecking?"<label kind=\"synchronisation\" x=\"-1816\" y=\"-600\">sequencer[" + r.get(REACTANT_INDEX).as(Integer.class) + "]!</label>":"") + "<label kind=\"assignment\" x=\"-1816\" y=\"-616\">update()</label><nail x=\"-1848\" y=\"-616\"/><nail x=\"-1464\" y=\"-616\"/></transition><transition><source ref=\"id0\"/><target ref=\"id9\"/><label kind=\"guard\" x=\"-1816\" y=\"-680\">c &gt;= tL</label>" + (normalModelChecking?"<label kind=\"synchronisation\" x=\"-1816\" y=\"-664\">sequencer[" + r.get(REACTANT_INDEX).as(Integer.class) + "]!</label>":"") + "<nail x=\"-1840\" y=\"-664\"/><nail x=\"-1744\" y=\"-664\"/></transition><transition><source ref=\"id6\"/><target ref=\"id8\"/>" + (normalModelChecking?"<label kind=\"synchronisation\" x=\"-1344\" y=\"-744\">sequencer[" + r.get(REACTANT_INDEX).as(Integer.class) + "]!</label>":"") + "<label kind=\"assignment\" x=\"-1344\" y=\"-728\">update()</label></transition>");
 				int y1 = -904,
 					y2 = -888,

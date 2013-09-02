@@ -46,6 +46,8 @@ public class Model implements Serializable {
 								   DESCRIPTION = "description", //The verbose description of a node/edge, possibly provided with references to papers and/or various IDs
 								   ENABLED = "enabled", //Tells us whether a node/edge is enabled
 								   PLOTTED = "plotted", //Tells us whether to plot a node or not
+								   LINEAR_SCALE = "linearScale", //Whether the discretization is on a linear scale (otherwise it is logarithmic)
+								   LOG_STEP_PERCENT = "logStepPercent", //The size (in %) of a step in the logarithmic scale
 								   GROUP = "group", //A group of nodes identifies alternative phosphorylation sites (can be useless)
 								   TIMES_UPPER = "timesU", //Upper time bound
 								   TIMES = "times", //Time bound (no upper nor lower: it is possible that it is never be used in practice)
@@ -294,6 +296,8 @@ public class Model implements Serializable {
 		UNCERTAINTY = Model.Properties.UNCERTAINTY, //The uncertainty about the parameters setting for an edge(=reaction)
 		ENABLED = Model.Properties.ENABLED, //Whether the node/edge is enabled. Influences the display of that node/edge thanks to the discrete Visual Mapping defined by AugmentAction
 		PLOTTED = Model.Properties.PLOTTED, //Whether the node is plotted in the graph. Default: yes
+		LINEAR_SCALE = Model.Properties.LINEAR_SCALE,
+		LOG_STEP_PERCENT = Model.Properties.LOG_STEP_PERCENT,
 		GROUP = Model.Properties.GROUP, //Could possibly be never used. All nodes(=reactants) belonging to the same group represent alternative (in the sense of exclusive or) phosphorylation sites of the same protein.
 		TIMES_U = Model.Properties.TIMES_UPPER,
 		TIMES_L = Model.Properties.TIMES_LOWER,
@@ -352,6 +356,10 @@ public class Model implements Serializable {
 			r.let(ENABLED).be(nodeAttributes.getAttribute(node.getIdentifier(), ENABLED));
 			r.let(PLOTTED).be(nodeAttributes.getAttribute(node.getIdentifier(), PLOTTED));
 			r.let(INITIAL_LEVEL).be(nodeAttributes.getIntegerAttribute(node.getIdentifier(), INITIAL_LEVEL));
+			r.let(LINEAR_SCALE).be(nodeAttributes.getBooleanAttribute(node.getIdentifier(), LINEAR_SCALE));
+			if (!r.get(LINEAR_SCALE).as(Boolean.class)) {
+				r.let(LOG_STEP_PERCENT).be(nodeAttributes.getDoubleAttribute(node.getIdentifier(), LOG_STEP_PERCENT));
+			}
 			
 			model.add(r);
 		}
@@ -841,6 +849,14 @@ public class Model implements Serializable {
 			if (!nodeAttributes.hasAttribute(node.getIdentifier(), INITIAL_LEVEL)) {
 				//throw new InatException("Node attribute 'initialConcentration' is missing on '" + node.getIdentifier() + "'");
 				nodeAttributes.setAttribute(node.getIdentifier(), INITIAL_LEVEL, 0);
+			}
+			
+			if (!nodeAttributes.hasAttribute(node.getIdentifier(), Model.Properties.LINEAR_SCALE)) {
+				nodeAttributes.setAttribute(node.getIdentifier(), Model.Properties.LINEAR_SCALE, true);
+			}
+			
+			if (!nodeAttributes.getBooleanAttribute(node.getIdentifier(), Model.Properties.LINEAR_SCALE) && !nodeAttributes.hasAttribute(node.getIdentifier(), Model.Properties.LOG_STEP_PERCENT)) {
+				nodeAttributes.setAttribute(node.getIdentifier(), Model.Properties.LOG_STEP_PERCENT, 0.1);
 			}
 			
 //			if (!nodeAttributes.hasAttribute(node.getIdentifier(), LEVELS_SCALE_FACTOR)) {

@@ -2,7 +2,9 @@ package inat.cytoscape;
 
 import giny.model.Node;
 import inat.model.Model;
+import inat.util.JSwitchBox;
 
+import java.awt.Component;
 import java.awt.Dialog;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
@@ -12,20 +14,23 @@ import java.awt.Insets;
 import java.awt.Window;
 import java.awt.event.ActionEvent;
 import java.awt.event.KeyEvent;
+import java.beans.PropertyChangeEvent;
+import java.beans.PropertyChangeListener;
+import java.text.NumberFormat;
+import java.text.ParseException;
 import java.util.Dictionary;
 import java.util.Hashtable;
 
 import javax.swing.AbstractAction;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
-import javax.swing.ButtonGroup;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
 import javax.swing.JComponent;
 import javax.swing.JDialog;
+import javax.swing.JFormattedTextField;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
-import javax.swing.JRadioButton;
 import javax.swing.JScrollPane;
 import javax.swing.JSlider;
 import javax.swing.JTextField;
@@ -33,6 +38,8 @@ import javax.swing.JTextPane;
 import javax.swing.KeyStroke;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
+import javax.swing.text.DefaultFormatterFactory;
+import javax.swing.text.NumberFormatter;
 
 import cytoscape.Cytoscape;
 import cytoscape.data.CyAttributes;
@@ -70,7 +77,6 @@ public class NodeDialog extends JDialog {
 		Object res = nodeAttributes.getAttribute(node.getIdentifier(), Model.Properties.CANONICAL_NAME);
 		String name;
 		if (res != null) {
-			//this.setTitle("Reactant " + res.toString());
 			name = res.toString();
 		} else {
 			name = null;
@@ -79,11 +85,7 @@ public class NodeDialog extends JDialog {
 			nodeAttributes.setAttribute(node.getIdentifier(), Model.Properties.INITIAL_LEVEL, 0);
 		}
 		
-		this.setLayout(new GridBagLayout()); //BorderLayout(2, 2));
-		
-		//JPanel values = new JPanel(new GridLayout(3, 2, 2, 2));
-		//JPanel values = new JPanel(new GridBagLayout()); //You REALLY don't want to know how GridBagLayout works...
-		//Box values = new Box(BoxLayout.Y_AXIS);
+		this.setLayout(new GridBagLayout());
 		
 		int levels;
 		if (nodeAttributes.hasAttribute(node.getIdentifier(), Model.Properties.NUMBER_OF_LEVELS)) {
@@ -94,15 +96,9 @@ public class NodeDialog extends JDialog {
 			levels = 15;
 		}
 		
-		//JLabel nameLabel = new JLabel("Reactant name:");
 		final JTextField nameField = new JTextField(name);
-		//values.add(nameLabel, new GridBagConstraints(0, 0, 1, 1, 0.3, 0.0, GridBagConstraints.LINE_START, GridBagConstraints.NONE, new Insets(0, 0, 0, 0), 0, 0));
-		//values.add(nameField, new GridBagConstraints(1, 0, 1, 1, 1, 0.0, GridBagConstraints.LINE_END, GridBagConstraints.HORIZONTAL, new Insets(0, 0, 0, 0), 0, 0));
-		//values.add(new LabelledField("Name", nameField));
 		this.add(new LabelledField("Name", nameField), new GridBagConstraints(0, 0, 1, 1, 0.5, 0.0, GridBagConstraints.CENTER, GridBagConstraints.HORIZONTAL, new Insets(0, 0, 0, 0), 0, 0));
 		
-		//final JLabel totalLevelsLabel = new JLabel("Total activity levels: " + levels);
-		//values.add(totalLevelsLabel, new GridBagConstraints(0, 1, 1, 1, 0.3, 0.0, GridBagConstraints.LINE_START, GridBagConstraints.NONE, new Insets(0, 0, 0, 0), 0, 0));
 		final JSlider totalLevels = new JSlider(1, 100);
 		totalLevels.setValue(levels);
 		totalLevels.setMajorTickSpacing(20);
@@ -115,16 +111,11 @@ public class NodeDialog extends JDialog {
 			labelTable.put(totalLevels.getMaximum(), new JLabel("" + totalLevels.getMaximum()));
 			totalLevels.setLabelTable(labelTable);
 		}
-		////values.add(totalLevels, new GridBagConstraints(1, 1, 1, 1, 1, 0.0, GridBagConstraints.LINE_END, GridBagConstraints.HORIZONTAL, new Insets(0, 0, 0, 0), 0, 0));
 		final LabelledField totalLevelsField = new LabelledField("Total activity levels: " + levels, totalLevels);
-		//values.add(totalLevelsField);
-		
 		
 		final JSlider initialConcentration = new JSlider(0, levels);
 		initialConcentration.setValue(nodeAttributes.getIntegerAttribute(node.getIdentifier(), Model.Properties.INITIAL_LEVEL));
 		
-		////final JLabel initialConcentrationLabel = new JLabel("Initial activity level: " + initialConcentration.getValue());
-		////values.add(initialConcentrationLabel, new GridBagConstraints(0, 2, 1, 1, 0.3, 0.0, GridBagConstraints.LINE_START, GridBagConstraints.NONE, new Insets(0, 0, 0, 0), 0, 0));
 		final LabelledField initialLevelField = new LabelledField("Initial activity level: " + initialConcentration.getValue(), initialConcentration);
 
 
@@ -134,14 +125,8 @@ public class NodeDialog extends JDialog {
 		initialConcentration.setPaintLabels(true);
 		initialConcentration.setPaintTicks(true);
 
-		////values.add(initialConcentration, new GridBagConstraints(1, 2, 1, 1, 1, 0.0, GridBagConstraints.LINE_END, GridBagConstraints.HORIZONTAL, new Insets(0, 0, 0, 0), 0, 0));
-		//values.add(initialLevelField);
-
-		//this.add(values, BorderLayout.CENTER);
-
 		//When the user changes the total number of levels, we automatically update the "current activity level" slider, adapting maximum and current values in a sensible way
 		totalLevels.addChangeListener(new ChangeListener() {
-
 			@Override
 			public void stateChanged(ChangeEvent e) {
 				totalLevelsField.setTitle("Total activity levels: " + totalLevels.getValue());
@@ -163,21 +148,189 @@ public class NodeDialog extends JDialog {
 				initialLevelField.setTitle("Initial activity level: " + initialConcentration.getValue());
 				initialConcentration.setValue(currValue);
 			}
-			
 		});
 		
+		
+		NumberFormat percentDisplayFormat = NumberFormat.getPercentInstance(),
+					 percentEditFormat = NumberFormat.getNumberInstance();
+		percentDisplayFormat.setMinimumFractionDigits(2);
+		percentEditFormat.setMinimumFractionDigits(2);
+		NumberFormatter percentEditFormatter = new NumberFormatter(percentEditFormat) {
+			private static final long serialVersionUID = 6939037965613797062L;
+			public String valueToString(Object o)
+		          throws ParseException {
+		        Number number = (Number)o;
+		        if (number != null) {
+		            double d = number.doubleValue() * 100.0;
+		            number = new Double(d);
+		        }
+		        return super.valueToString(number);
+		    }
+		    public Object stringToValue(String s)
+		           throws ParseException {
+		        Number number = (Number)super.stringToValue(s);
+		        if (number != null) {
+		            double d = number.doubleValue() / 100.0;
+		            number = new Double(d);
+		        }
+		        return number;
+		    }
+		};
+		NumberFormat stepsFormat = NumberFormat.getNumberInstance();
+		stepsFormat.setMinimumFractionDigits(0);
+		stepsFormat.setMaximumFractionDigits(0);
+		final JFormattedTextField logStepPercent = new JFormattedTextField(new DefaultFormatterFactory(new NumberFormatter(percentDisplayFormat), new NumberFormatter(percentDisplayFormat), percentEditFormatter));
+		final JFormattedTextField logTotalSteps = new JFormattedTextField(stepsFormat);
+		logStepPercent.setColumns(6);
+		logTotalSteps.setColumns(5);
+		final JPanel logPercentageField = new JPanel() {
+			private static final long serialVersionUID = -2572281488142054778L;
+			@Override
+			public void setEnabled(boolean enabled) {
+				for (Component c : this.getComponents()) {
+					c.setEnabled(enabled);
+				}
+				super.setEnabled(enabled);
+			}
+		},
+				  	 logTotalStepsField = new JPanel() {
+			private static final long serialVersionUID = -9038682316472470140L;
+			@Override
+			public void setEnabled(boolean enabled) {
+				for (Component c : this.getComponents()) {
+					c.setEnabled(enabled);
+				}
+				super.setEnabled(enabled);
+			}
+		};
+		logPercentageField.setLayout(new GridBagLayout());
+		logTotalStepsField.setLayout(new GridBagLayout());
+		logPercentageField.add(new JLabel("One step changes activity by "),  new GridBagConstraints(0, 0, 1, 1, 0.0, 0.0, GridBagConstraints.CENTER, GridBagConstraints.BOTH, new Insets(0, 0, 0, 0), 0, 0));
+		logPercentageField.add(logStepPercent,  new GridBagConstraints(1, 0, 1, 1, 0.5, 0.0, GridBagConstraints.CENTER, GridBagConstraints.BOTH, new Insets(0, 0, 0, 0), 0, 0));
+		logTotalStepsField.add(new JLabel("Total "), new GridBagConstraints(0, 0, 1, 1, 0.0, 0.0, GridBagConstraints.CENTER, GridBagConstraints.BOTH, new Insets(0, 0, 0, 0), 0, 0));
+		logTotalStepsField.add(logTotalSteps, new GridBagConstraints(1, 0, 1, 1, 0.5, 0.0, GridBagConstraints.CENTER, GridBagConstraints.BOTH, new Insets(0, 0, 0, 0), 0, 0));
+		logTotalStepsField.add(new JLabel(" steps"), new GridBagConstraints(2, 0, 1, 1, 0.0, 0.0, GridBagConstraints.CENTER, GridBagConstraints.BOTH, new Insets(0, 0, 0, 0), 0, 0));
+		
+		final JSwitchBox discretizationChoice = new JSwitchBox("Linear", "Log-scale");
 		
 		initialConcentration.addChangeListener(new ChangeListener() {
-
 			@Override
 			public void stateChanged(ChangeEvent e) {
-				initialLevelField.setTitle("Initial activity level: " + initialConcentration.getValue());
+				if (discretizationChoice.isSelected()) { //Linear scale: the value can be read directly
+					initialLevelField.setTitle("Initial activity level: " + initialConcentration.getValue());
+				} else { //Log-scale: the value needs to be calculated, then we snap the cursor to the closest "tick"
+					if (initialConcentration.getValueIsAdjusting()) return;
+					int iActivity = initialConcentration.getValue();
+					if (iActivity == initialConcentration.getMinimum()) {
+						initialLevelField.setTitle("Initial activity: 0%");
+					} else if (iActivity == initialConcentration.getMaximum()) {
+						initialLevelField.setTitle("Initial activity: 100%");
+					} else {
+						double stepSize = 1.5;
+						try {
+							stepSize = Double.parseDouble(logStepPercent.getValue().toString()) + 1.0;
+						} catch (NumberFormatException ex) {
+						}
+						double tickPosition = Math.round(Math.log(iActivity) / Math.log(stepSize));
+						if (tickPosition == 0) {
+							initialLevelField.setTitle("Initial activity: 0%");
+							initialConcentration.setValue(initialConcentration.getMinimum());
+						} else {
+							double activity = Math.pow(stepSize, tickPosition);
+							initialLevelField.setTitle("Initial activity: " + activity + "%");
+							initialConcentration.setValue((int)Math.round(activity));
+						}
+					}
+				}
 			}
-			
 		});
 		
+		class InitialActivityUpdater {
+			void update() {
+				if (logStepPercent.isEnabled()) {
+					initialConcentration.setMinimum(0);
+					initialConcentration.setMaximum(100);
+					initialConcentration.setValue(0);
+					int space = (initialConcentration.getMaximum() - initialConcentration.getMinimum() + 1) / 5;
+					if (space < 1) space = 1;
+					initialConcentration.setMajorTickSpacing(space);
+					initialConcentration.setMinorTickSpacing(space / 2);
+					Hashtable<Integer, JLabel> labelTable = new Hashtable<Integer, JLabel>();
+					double stepSize = 2.5119; //This gives 5 steps from 0 to 100 (just to have a value)
+					try {
+						stepSize = Double.parseDouble(logStepPercent.getValue().toString()) + 1.0;
+					} catch (NumberFormatException ex) {
+					}
+					labelTable.put(0, new JLabel("0"));
+					for (double pos = stepSize;pos < 100;pos *= stepSize) {
+						int iPos = (int)Math.round(pos);
+						labelTable.put(iPos, new JLabel("|")); // + iPos));
+					}
+					labelTable.put(100, new JLabel("100"));
+					initialConcentration.setLabelTable(labelTable);
+					initialLevelField.setTitle("Initial activity: " + initialConcentration.getValue() + "%");
+					initialConcentration.setValue(0);
+					initialConcentration.setPaintTicks(false);
+				} else {
+					ChangeEvent e = new ChangeEvent(totalLevels);
+					for(ChangeListener l : totalLevels.getChangeListeners()){
+						l.stateChanged(e);
+					}
+					initialConcentration.setPaintTicks(true);
+				}
+			}
+		}
+		final InitialActivityUpdater initialActivityUpdater = new InitialActivityUpdater();
 		
-		//Box optionBoxes = new Box(BoxLayout.Y_AXIS);
+		PropertyChangeListener pcl = new PropertyChangeListener() {
+			@Override
+			public void propertyChange(PropertyChangeEvent e) {
+				Object source = e.getSource();
+				try {
+					if (source == logStepPercent) {
+						double percValue = 1.5;
+						try {
+							percValue = Double.parseDouble(logStepPercent.getValue().toString());
+						} catch (NumberFormatException ex) {
+						}
+//						System.err.println("Dimensione di un passo: " + percValue + "%");
+						double totSteps = Math.log(100.0) / Math.log(1.0 + percValue);
+//						System.err.println("N. di passi: :" + totSteps);
+						PropertyChangeListener[] listeneri = logTotalSteps.getPropertyChangeListeners("value");
+						for (PropertyChangeListener l : listeneri) {
+							logTotalSteps.removePropertyChangeListener("value", l);
+						}
+						logTotalSteps.setValue(totSteps);
+						logTotalSteps.addPropertyChangeListener("value", this);
+					} else if (source == logTotalSteps) {
+						double totSteps = 5;
+						try {
+							totSteps = Double.parseDouble(logTotalSteps.getValue().toString());
+						} catch (NumberFormatException ex) {
+						}
+						double percValue = Math.pow(100, 1.0 / totSteps) - 1.0;
+						PropertyChangeListener[] listeneri = logStepPercent.getPropertyChangeListeners("value");
+						for (PropertyChangeListener l : listeneri) {
+							logStepPercent.removePropertyChangeListener("value", l);
+						}
+						logStepPercent.setValue(percValue);
+						logStepPercent.addPropertyChangeListener("value", this);
+					}
+					initialActivityUpdater.update();
+				} catch (Exception ex) {
+					ex.printStackTrace();
+				}
+			}
+		};
+		logStepPercent.addPropertyChangeListener("value", pcl);
+		logTotalSteps.addPropertyChangeListener("value", pcl);
+		if (nodeAttributes.hasAttribute(node.getIdentifier(), Model.Properties.LOG_STEP_PERCENT)) {
+			logStepPercent.setValue(nodeAttributes.getDoubleAttribute(node.getIdentifier(), Model.Properties.LOG_STEP_PERCENT));
+		} else {
+			logStepPercent.setValue(0.1);
+		}
+		
+		
 		String[] moleculeTypes = new String[]{Model.Properties.TYPE_CYTOKINE, Model.Properties.TYPE_RECEPTOR, Model.Properties.TYPE_KINASE, Model.Properties.TYPE_PHOSPHATASE, Model.Properties.TYPE_TRANSCRIPTION_FACTOR, Model.Properties.TYPE_OTHER};
 		final JComboBox<String> moleculeType = new JComboBox<String>(moleculeTypes);
 		if (nodeAttributes.hasAttribute(node.getIdentifier(), Model.Properties.MOLECULE_TYPE)) {
@@ -196,62 +349,68 @@ public class NodeDialog extends JDialog {
 		} else {
 			moleculeType.setSelectedItem(Model.Properties.TYPE_KINASE);
 		}
-		//optionBoxes.add(new LabelledField("Molecule type", moleculeType));
-		//values.add(new LabelledField("Molecule type", moleculeType));
+
 		this.add(new LabelledField("Molecule type", moleculeType), new GridBagConstraints(0, 1, 1, 1, 0.5, 0.0, GridBagConstraints.CENTER, GridBagConstraints.HORIZONTAL, new Insets(0, 0, 0, 0), 0, 0));
-		//optionBoxes.add(totalLevelsField);
-		//optionBoxes.add(initialLevelField);
-		this.add(totalLevelsField, new GridBagConstraints(1, 0, 1, 1, 0.5, 0.0, GridBagConstraints.CENTER, GridBagConstraints.BOTH, new Insets(0, 0, 0, 0), 0, 0));
-		this.add(initialLevelField, new GridBagConstraints(1, 1, 1, 1, 0.5, 0.0, GridBagConstraints.CENTER, GridBagConstraints.BOTH, new Insets(0, 0, 0, 0), 0, 0));
 		
-		
-		final JRadioButton enabledNode = new JRadioButton("Enabled"),
-					 disabledNode = new JRadioButton("Disabled"),
-					 plottedNode = new JRadioButton("Plotted"),
-					 hiddenNode = new JRadioButton("Hidden");
-		ButtonGroup enabledGroup = new ButtonGroup(),
-					plottedGroup = new ButtonGroup();
-		enabledGroup.add(enabledNode);
-		enabledGroup.add(disabledNode);
-		plottedGroup.add(plottedNode);
-		plottedGroup.add(hiddenNode);
+		final JSwitchBox enabledNode = new JSwitchBox("Enabled", "Disabled"),
+						 plottedNode = new JSwitchBox("Plotted", "Hidden");
 		if (nodeAttributes.hasAttribute(node.getIdentifier(), Model.Properties.ENABLED)) {
 			enabledNode.setSelected(nodeAttributes.getBooleanAttribute(node.getIdentifier(), Model.Properties.ENABLED));
 		} else {
 			enabledNode.setSelected(true);
 		}
-		disabledNode.setSelected(!enabledNode.isSelected());
 		if (nodeAttributes.hasAttribute(node.getIdentifier(), Model.Properties.PLOTTED)) {
 			plottedNode.setSelected(nodeAttributes.getBooleanAttribute(node.getIdentifier(), Model.Properties.PLOTTED));
 		} else {
 			plottedNode.setSelected(true);
 		}
-		hiddenNode.setSelected(!plottedNode.isSelected());
-		Box enabledBox = new Box(BoxLayout.X_AXIS);
-		enabledBox.add(enabledNode);
-		enabledBox.add(Box.createGlue());
-		enabledBox.add(disabledNode);
-		//optionBoxes.add(enabledBox);
-		this.add(enabledBox, new GridBagConstraints(1, 2, 1, 1, 0.5, 0.0, GridBagConstraints.LINE_END, GridBagConstraints.NONE, new Insets(0, 0, 0, 0), 0, 0));
-		Box plottedBox = new Box(BoxLayout.X_AXIS);
-		plottedBox.add(plottedNode);
-		plottedBox.add(Box.createGlue());
-		plottedBox.add(hiddenNode);
-		//optionBoxes.add(plottedBox);
-		//optionBoxes.add(Box.createVerticalStrut(150));
-		this.add(plottedBox, new GridBagConstraints(1, 3, 1, 1, 0.5, 0.0, GridBagConstraints.LINE_END, GridBagConstraints.NONE, new Insets(0, 0, 0, 0), 0, 0));
-		//this.add(optionBoxes, BorderLayout.EAST);
+		if (nodeAttributes.hasAttribute(node.getIdentifier(), Model.Properties.LINEAR_SCALE)) {
+			discretizationChoice.setSelected(nodeAttributes.getBooleanAttribute(node.getIdentifier(), Model.Properties.LINEAR_SCALE));
+		} else {
+			discretizationChoice.setSelected(true);
+		}
+		ChangeListener cl = new ChangeListener() {
+			@Override
+			public void stateChanged(ChangeEvent arg0) {
+				boolean linear = discretizationChoice.isSelected();
+				totalLevelsField.setEnabled(linear);
+				//initialLevelField.setEnabled(linear);
+				logPercentageField.setEnabled(!linear);
+				logTotalStepsField.setEnabled(!linear);
+				initialActivityUpdater.update();
+				NodeDialog.this.pack();
+			}
+		};
+		discretizationChoice.addChangeListener(cl);
+		cl.stateChanged(null);
+		
+		Box discretizationChoiceBox = new Box(BoxLayout.X_AXIS);
+		discretizationChoiceBox.add(Box.createGlue());
+		discretizationChoiceBox.add(discretizationChoice);
+		discretizationChoiceBox.add(Box.createGlue());
+		JPanel discretization = new JPanel();
+		discretization.setLayout(new GridBagLayout());
+		discretization.add(discretizationChoiceBox, new GridBagConstraints(0, 0, 2, 1, 1.0, 0.0, GridBagConstraints.CENTER, GridBagConstraints.BOTH, new Insets(0, 0, 0, 0), 0, 0));
+		discretization.add(totalLevelsField, new GridBagConstraints(1, 1, 1, 2, 0.5, 0.0, GridBagConstraints.CENTER, GridBagConstraints.BOTH, new Insets(0, 0, 0, 0), 0, 0));
+		//discretization.add(initialLevelField, new GridBagConstraints(0, 3, 2, 1, 0.5, 0.0, GridBagConstraints.CENTER, GridBagConstraints.BOTH, new Insets(0, 0, 0, 0), 0, 0));
+		discretization.add(logPercentageField, new GridBagConstraints(0, 1, 1, 1, 0.5, 0.0, GridBagConstraints.LINE_START, GridBagConstraints.NONE, new Insets(0, 0, 0, 0), 0, 0));
+		discretization.add(logTotalStepsField, new GridBagConstraints(0, 2, 1, 1, 0.5, 0.0, GridBagConstraints.LINE_START, GridBagConstraints.NONE, new Insets(0, 0, 0, 0), 0, 0));
+		this.add(new LabelledField("Discretization", discretization), new GridBagConstraints(0, 3, 2, 1, 1.0, 0.0, GridBagConstraints.CENTER, GridBagConstraints.BOTH, new Insets(0, 0, 0, 0), 0, 0));
+		this.add(initialLevelField, new GridBagConstraints(0, 4, 2, 1, 1.0, 0.0, GridBagConstraints.CENTER, GridBagConstraints.HORIZONTAL, new Insets(0, 0, 0, 0), 0, 0));
+		
+		this.add(enabledNode, new GridBagConstraints(1, 5, 1, 1, 1.0, 0.0, GridBagConstraints.LINE_END, GridBagConstraints.NONE, new Insets(0, 0, 0, 0), 0, 0));
+		this.add(plottedNode, new GridBagConstraints(1, 6, 1, 1, 1.0, 0.0, GridBagConstraints.LINE_END, GridBagConstraints.NONE, new Insets(0, 0, 0, 0), 0, 0));
 		
 		final JTextPane description = new JTextPane();
 		JScrollPane descriptionScrollPane = new JScrollPane(description);
 		descriptionScrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
 		descriptionScrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
-		description.setPreferredSize(new Dimension(400, 100));
+		description.setPreferredSize(new Dimension(200, 100));
 		description.setMinimumSize(new Dimension(150, 50));
 		if (nodeAttributes.hasAttribute(node.getIdentifier(), Model.Properties.DESCRIPTION)) {
 			description.setText(nodeAttributes.getStringAttribute(node.getIdentifier(), Model.Properties.DESCRIPTION));
 		}
-		this.add(new LabelledField("Description", descriptionScrollPane), new GridBagConstraints(0, 4, 2, 1, 1.0, 1.0, GridBagConstraints.CENTER, GridBagConstraints.BOTH, new Insets(0, 0, 0, 0), 0, 0));
+		this.add(new LabelledField("Description", descriptionScrollPane), new GridBagConstraints(1, 0, 1, 2, 1.0, 1.0, GridBagConstraints.CENTER, GridBagConstraints.BOTH, new Insets(0, 0, 0, 0), 0, 0));
 		
 		JPanel controls = new JPanel(new FlowLayout(FlowLayout.RIGHT));
 		controls.add(new JButton(new AbstractAction("Save") {
@@ -279,6 +438,9 @@ public class NodeDialog extends JDialog {
 				nodeAttributes.setAttribute(node.getIdentifier(), Model.Properties.PLOTTED, plottedNode.isSelected());
 				
 				nodeAttributes.setAttribute(node.getIdentifier(), Model.Properties.DESCRIPTION, description.getText());
+				
+				nodeAttributes.setAttribute(node.getIdentifier(), Model.Properties.LINEAR_SCALE, discretizationChoice.isSelected());
+				nodeAttributes.setAttribute(node.getIdentifier(), Model.Properties.LOG_STEP_PERCENT, Double.parseDouble(logStepPercent.getValue().toString()));
 
 				Cytoscape.firePropertyChange(Cytoscape.ATTRIBUTES_CHANGED, null, null);
 
@@ -294,8 +456,6 @@ public class NodeDialog extends JDialog {
 				// discard changes
 				if (wasNewlyCreated) {
 					Cytoscape.getCurrentNetwork().removeNode(node.getRootGraphIndex(), true);
-//					Cytoscape.getCurrentNetwork().getRootGraph().removeNode(node);
-//					Cytoscape.getRootGraph().removeNode(node);
 				}
 				NodeDialog.this.dispose();
 			}
@@ -306,6 +466,6 @@ public class NodeDialog extends JDialog {
 		getRootPane().getInputMap(JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT).put(KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0), "CANCEL");
 		getRootPane().getActionMap().put("CANCEL", cancelButton.getAction());
 
-		this.add(controls, new GridBagConstraints(1, 5, 1, 2, 1.0, 0.0, GridBagConstraints.LINE_END, GridBagConstraints.NONE, new Insets(0, 0, 0, 0), 0, 0)); //BorderLayout.SOUTH);
+		this.add(controls, new GridBagConstraints(1, 7, 1, 2, 1.0, 0.0, GridBagConstraints.LINE_END, GridBagConstraints.NONE, new Insets(0, 0, 0, 0), 0, 0)); //BorderLayout.SOUTH);
 	}
 }

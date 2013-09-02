@@ -43,6 +43,9 @@ public class LabelledField extends JPanel {
     		t.setTitleColor(Color.GRAY);
     	}
     	this.repaint();
+    	for (Component c : this.getComponents()) {
+    		c.setEnabled(enabled);
+    	}
     }
     
     public String getTitle() {
