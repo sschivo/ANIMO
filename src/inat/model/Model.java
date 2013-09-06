@@ -786,7 +786,7 @@ public class Model implements Serializable {
 		
 		if (!networkAttributes.hasAttribute(network.getIdentifier(), SECONDS_PER_POINT)) {
 			//throw new InatException("Network attribute '" + SECONDS_PER_POINT + "' is missing.");
-			double defaultSecondsPerPoint = 12;
+			double defaultSecondsPerPoint = 1;
 			String inputSecs = JOptionPane.showInputDialog((JTask)monitor, "Missing number of seconds per point for the network.\nPlease insert the number of real-life seconds a simulation point will represent", defaultSecondsPerPoint);
 			Double nSecPerPoint;
 			if (inputSecs != null) {
