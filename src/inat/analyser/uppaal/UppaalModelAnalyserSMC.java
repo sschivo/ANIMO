@@ -12,6 +12,7 @@ import inat.model.Model;
 import inat.model.Property;
 import inat.model.Reactant;
 import inat.model.Reaction;
+import inat.util.Pair;
 import inat.util.XmlConfiguration;
 
 import java.io.BufferedReader;
@@ -317,7 +318,11 @@ public class UppaalModelAnalyserSMC implements ModelAnalyser<LevelResult> {
 			StringBuilder build = new StringBuilder("simulate 1 [<=" + timeTo + "] { ");
 			for (Reactant r : m.getReactantCollection()) {
 				if (r.get(Model.Properties.ENABLED).as(Boolean.class)) {
-					build.append(r.getId() + ", ");
+					if (r.get(Model.Properties.LINEAR_SCALE).as(Boolean.class)) { //The linear scale uses the integer value
+						build.append(r.getId() + ", ");
+					} else {
+						build.append(r.getId() + "_d" + dot + "b, " + r.getId() + "_d" + dot + "e, ");
+					}
 				}
 			}
 			for (Reaction r : m.getReactionCollection()) {
@@ -700,7 +705,7 @@ public class UppaalModelAnalyserSMC implements ModelAnalyser<LevelResult> {
 		private SimpleLevelResult analyseFromStream(Model m, BufferedReader br, int timeTo) throws Exception {
 			long startTime, endTime;
 			String line = null;
-			Pattern simPointPattern = Pattern.compile("\\([-+]?[0-9]*\\.?[0-9]+([eE][-+]?[0-9]+)?\\,[0-9]*\\)");
+			Pattern simPointPattern = Pattern.compile("\\([-+]?[0-9]*\\.?[0-9]+([eE][-+]?[0-9]+)?\\,[-]?[0-9]*\\)");
 			int maxNumberOfLevels = m.getProperties().get(NUMBER_OF_LEVELS).as(Integer.class);
 			HashMap<String, Double> numberOfLevels = new HashMap<String, Double>();
 			Map<String, SortedMap<Double, Double>> levels = new HashMap<String, SortedMap<Double, Double>>();
@@ -751,12 +756,21 @@ public class UppaalModelAnalyserSMC implements ModelAnalyser<LevelResult> {
 				
 				if (m.getReactant(reactantId) != null) {
 					levels.put(reactantId, new TreeMap<Double, Double>());
-				} else {
-					reactionId = reactantId.substring(0, reactantId.lastIndexOf(dot));
-					reaction = m.getReaction(reactionId);
-					if (reaction != null) {
-						levels.put(reaction.get(Model.Properties.CYTOSCAPE_ID).as(String.class), new TreeMap<Double, Double>());
+				} else if (reactantId.contains(dot)) {
+					String afterDot = reactantId.substring(reactantId.lastIndexOf(dot) + 1);
+					if (afterDot.equals("T")) {
+						reactionId = reactantId.substring(0, reactantId.lastIndexOf(dot));
+						reaction = m.getReaction(reactionId);
+						if (reaction != null) {
+							levels.put(reaction.get(Model.Properties.CYTOSCAPE_ID).as(String.class), new TreeMap<Double, Double>());
+						}
+					} else if (afterDot.equals("b") || afterDot.equals("e")) { //We create two series for each reactant R that uses the "double" format: R.b and R.e. Then, after having read all the data, we merge each couple of series in the corresponding series R.
+						//System.err.println("Aggiungo la serie per " + reactantId);
+						levels.put(reactantId, new TreeMap<Double, Double>());
 					}
+				}
+				if (reactantId.equals("R9_d.e")) {
+					System.err.println("tutto su una riga? " + line);
 				}
 				
 				while (pointMatcher.find()) {
@@ -771,20 +785,29 @@ public class UppaalModelAnalyserSMC implements ModelAnalyser<LevelResult> {
 						if (numberOfLevels.get(reactantId) != maxNumberOfLevels) {
 							level = level / (double)numberOfLevels.get(reactantId) * (double)maxNumberOfLevels;
 						}
-					} else { //It is not a reactant: for the moment, this can only mean that it is a reaction duration
-						reactionId = reactantId.substring(0, reactantId.lastIndexOf(dot)); //It is in the form R6_R4.T, so we remove the ".T" and keep the rest, which is used as reaction ID in the Model object
-						reaction = m.getReaction(reactionId);
-						if (reaction != null) {
-							chosenMap = reaction.get(Model.Properties.CYTOSCAPE_ID).as(String.class);
-							//int minTime = reaction.get(Model.Properties.MINIMUM_DURATION).as(Integer.class); //We use global instead of local minimum: see definition of minTime
-							if (level == 0 || level == VariablesModelReactionCentered.INFINITE_TIME || minTime == VariablesModelReactionCentered.INFINITE_TIME) { //I put also level == 0 because otherwise we go in the "else" and we divide by 0 =)
-								level = 0;
-							} else if (activityIntervalWidth > -2) { //If there are not orders of magnitude of difference between minimum and maximum, we can simply use a normal linear scale as we did before
-								level = 1.0 * minTime / level;
-							} else {
-								//level = 1.0 * minTime / level;
-								level = (activityIntervalWidth - Math.log10(1.0 * minTime / level)) / activityIntervalWidth;
+					} else if (reactantId.contains(dot)) { //It is not a reactant: this means that it is either a reaction duration or a reactant in the "double" format
+						String afterDot = reactantId.substring(reactantId.lastIndexOf(dot) + 1);
+						if (afterDot.equals("T")) {
+							reactionId = reactantId.substring(0, reactantId.lastIndexOf(dot)); //It is in the form R6_R4.T, so we remove the ".T" and keep the rest, which is used as reaction ID in the Model object
+							reaction = m.getReaction(reactionId);
+							if (reaction != null) {
+								chosenMap = reaction.get(Model.Properties.CYTOSCAPE_ID).as(String.class);
+								//int minTime = reaction.get(Model.Properties.MINIMUM_DURATION).as(Integer.class); //We use global instead of local minimum: see definition of minTime
+								if (level == 0 || level == VariablesModelReactionCentered.INFINITE_TIME || minTime == VariablesModelReactionCentered.INFINITE_TIME) { //I put also level == 0 because otherwise we go in the "else" and we divide by 0 =)
+									level = 0;
+								} else if (activityIntervalWidth > -2) { //If there are not orders of magnitude of difference between minimum and maximum, we can simply use a normal linear scale as we did before
+									level = 1.0 * minTime / level;
+								} else {
+									//level = 1.0 * minTime / level;
+									level = (activityIntervalWidth - Math.log10(1.0 * minTime / level)) / activityIntervalWidth;
+								}
 							}
+						} else if (afterDot.equals("b") || afterDot.equals("e")) {
+							//We don't even need to adapt the reading, as it is already ok. We will simply add it to the map.
+							//System.err.println("Dovrei aggiungere il punto (" + time + ", " + level + ") alla mappa di nome " + chosenMap);
+						}
+						if (reactantId.equals("R9_d.e")) {
+							System.err.println("Trovato il punto (" + time + ", " + level + ")");
 						}
 					}
 					rMap = levels.get(chosenMap);
@@ -801,11 +824,56 @@ public class UppaalModelAnalyserSMC implements ModelAnalyser<LevelResult> {
 			if (timeTo != -1) {
 				for (String reactantName : levels.keySet()) {
 					SortedMap<Double, Double> values = levels.get(reactantName);
+					if (values.isEmpty()) continue;
 					double lastValue = values.get(values.lastKey());
 					values.put((double)timeTo, lastValue);
 				}
 			}
 			//}
+			
+			//When dealing with the "double" values, we must replace the integer-based values with actual double values
+			Vector<String> seriesToBeRemoved = new Vector<String>();
+			Vector<Pair<String, TreeMap<Double, Double>>> seriesToBeAdded = new Vector<Pair<String, TreeMap<Double, Double>>>();
+			double vecchioVal = 0, vecchioVecchioVal = 0;
+			double vecchiob = 0, vecchioe = 0;
+			for (String reactantName : levels.keySet()) {
+				if (reactantName.endsWith(dot + "b") && levels.containsKey(reactantName.substring(0, reactantName.lastIndexOf(dot)) + dot + "e")) { //If the name is like "R_d.b" and there is also the series "R_d.e", we replace the two series with the actual series "R".
+					String actualName = reactantName.substring(0, reactantName.lastIndexOf("_d" + dot + "b"));
+					seriesToBeRemoved.add(reactantName);
+					seriesToBeRemoved.add(actualName + "_d" + dot + "e");
+					TreeMap<Double, Double> realSeries = new TreeMap<Double, Double>();
+					SortedMap<Double, Double> bSeries = levels.get(reactantName),
+											  eSeries = levels.get(actualName + "_d" + dot + "e");
+					//System.err.println("Valori per " + reactantName + ": " + bSeries + ". Valori per " + (actualName + "_d" + dot + "e") + ": " + eSeries);
+					double b = 0, e = 0;
+					for (Double t : bSeries.keySet()) {
+						//System.err.println("t = " + t + ", bSeries = " + bSeries + ", eSeries = " + eSeries);
+						b = bSeries.get(t);
+						if (eSeries != null && eSeries.containsKey(t)) {
+							e = eSeries.get(t); //We update it if we find a value. Otherwise it stays implicitly equal to the last value we got
+						}
+						double value = b * Math.pow(10, e);
+						if (vecchioVecchioVal != 0 && vecchioVal != 0 && vecchioVecchioVal > vecchioVal && value > vecchioVal) {
+							System.err.println("Tempo " + t + " bSeries = " + bSeries + ", eSeries = " + eSeries);
+							System.err.println("\tPer " + actualName + " ho ottenuto il famigerato 1.005, che probabilmente e' 10.05, da b = " + vecchiob + ", e = " + vecchioe);
+							System.err.println("\tSiamo in effetti tra i valori di " + vecchioVecchioVal + " e " + value);
+							System.err.println("\tPer qualche ragione, " + vecchiob + " * 10^" + vecchioe + " = " + vecchioVal);
+							System.err.println("\tb ce l'aveva il tempo t? " + bSeries.containsKey(t) + ". E e? " + eSeries.containsKey(t));
+						}
+						vecchioVecchioVal = vecchioVal;
+						vecchioVal = value;
+						vecchiob = b; vecchioe = e;
+						realSeries.put(t, value);
+					}
+					seriesToBeAdded.add(new Pair<String, TreeMap<Double, Double>>(actualName, realSeries));
+				}
+			}
+			for (String s : seriesToBeRemoved) {
+				levels.remove(s);
+			}
+			for (Pair<String, TreeMap<Double, Double>> p : seriesToBeAdded) {
+				levels.put(p.first, p.second);
+			}
 			
 			endTime = System.currentTimeMillis();
 			System.err.println("\tParsing the result produced by UPPAAL took " + RunAction.timeDifferenceFormat(startTime, endTime));

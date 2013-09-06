@@ -74,6 +74,7 @@ public class Graph extends JPanel implements MouseListener, MouseMotionListener,
 								SHOW_SIZE_LABEL = "Show picture size",
 								SHOW_ZOOM_LEVEL_LABEL = "Show zoom level",
 								SHOW_THIN_AXES = "Show thin axes",
+								SHOW_THICK_AXES = "Show thick axes",
 								SET_Y_LABEL_LABEL = "Set Y label",
 								STEP_SHAPED_GRAPH_LABEL = "Step-shaped graph",
 								HEATMAP_GRAPH_LABEL = "Heat-map graph",
@@ -101,6 +102,7 @@ public class Graph extends JPanel implements MouseListener, MouseMotionListener,
 	private boolean showSize = false;
 	private boolean showZoomLevel = false;
 	private boolean showThinAxes = false;
+	private boolean showThickAxes = false;
 	private double maxLabelLength = 0; //used to compute the width of the legend box
 	private Rectangle legendBounds = null; //Where the legend is, and what are its dimensions
 	private boolean customLegendPosition = false;
@@ -146,6 +148,7 @@ public class Graph extends JPanel implements MouseListener, MouseMotionListener,
 		JCheckBoxMenuItem stepShapedGraph = new JCheckBoxMenuItem(STEP_SHAPED_GRAPH_LABEL);
 		heatMapGraph = new JCheckBoxMenuItem(HEATMAP_GRAPH_LABEL);
 		JCheckBoxMenuItem showThinAxes = new JCheckBoxMenuItem(SHOW_THIN_AXES);
+		JCheckBoxMenuItem showThickAxes = new JCheckBoxMenuItem(SHOW_THICK_AXES);
 		open.addActionListener(this);
 		save.addActionListener(this);
 		renderJpg.addActionListener(this);
@@ -159,6 +162,7 @@ public class Graph extends JPanel implements MouseListener, MouseMotionListener,
 		showZoomM.addActionListener(this);
 		setYLabel.addActionListener(this);
 		showThinAxes.addActionListener(this);
+		showThickAxes.addActionListener(this);
 		stepShapedGraph.addActionListener(this);
 		heatMapGraph.addActionListener(this);
 		popupMenu.add(open);
@@ -176,6 +180,7 @@ public class Graph extends JPanel implements MouseListener, MouseMotionListener,
 			popupMenu.add(showSizeM);
 			popupMenu.add(showZoomM);
 			popupMenu.add(showThinAxes);
+			popupMenu.add(showThickAxes);
 		}
 		popupMenu.add(stepShapedGraph);
 		popupMenu.add(heatMapGraph);
@@ -453,7 +458,9 @@ public class Graph extends JPanel implements MouseListener, MouseMotionListener,
 		}
 		
 		Stroke oldStroke = g.getStroke();
-		if (showThinAxes) {
+		if (showThickAxes) {
+			g.setStroke(new BasicStroke(2.0f * SCALA));
+		} else if (showThinAxes) {
 			g.setStroke(new BasicStroke(0.5f * SCALA));
 		}
 		
@@ -542,8 +549,7 @@ public class Graph extends JPanel implements MouseListener, MouseMotionListener,
 			}
 			
 			
-	
-			if  (showThinAxes) {
+			if (showThickAxes || showThinAxes) {
 				g.setStroke(oldStroke);
 			}
 			
@@ -573,10 +579,13 @@ public class Graph extends JPanel implements MouseListener, MouseMotionListener,
 		//g.clearRect(bounds.x, bounds.y, bounds.width, bounds.height);
 		g.setPaint(BACKGROUND_COLOR);
 		g.fill(bounds);
+		Stroke oldStroke = g.getStroke();
+		if (showThickAxes) {
+			g.setStroke(new BasicStroke(2.0f * SCALA));
+		}
 		g.setPaint(FOREGROUND_COLOR);
 		g.draw(bounds);
 		resetCol();
-		Stroke oldStroke = g.getStroke();
 		g.setStroke(new BasicStroke(3 * SCALA));
 		int nLegend = 0;
 		for (Series series : data) {
@@ -699,7 +708,11 @@ public class Graph extends JPanel implements MouseListener, MouseMotionListener,
 				gBackground = (Graphics2D)g1;
 			}
 			Font oldFont = g.getFont();
-			Font newFont = new Font(oldFont.getName(), oldFont.getStyle(), oldFont.getSize() * SCALA);
+			int fontSize = oldFont.getSize() * SCALA;
+			if (showThickAxes) {
+				fontSize = (oldFont.getSize() + 4) * SCALA;
+			}
+			Font newFont = new Font(oldFont.getName(), oldFont.getStyle(), fontSize);
 			g.setFont(newFont);
 			gBackground.setFont(newFont);
 			
@@ -1535,6 +1548,10 @@ public class Graph extends JPanel implements MouseListener, MouseMotionListener,
 				}
 			} else if (menu.getText().equals(SHOW_THIN_AXES)) {
 				this.showThinAxes = !this.showThinAxes;
+				needRedraw = true;
+				this.repaint();
+			} else if (menu.getText().equals(SHOW_THICK_AXES)) {
+				this.showThickAxes = !this.showThickAxes;
 				needRedraw = true;
 				this.repaint();
 			} else if (menu.getText().equals(STEP_SHAPED_GRAPH_LABEL)) {

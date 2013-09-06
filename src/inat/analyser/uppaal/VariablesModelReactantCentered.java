@@ -79,16 +79,7 @@ public class VariablesModelReactantCentered extends VariablesModel {
 		} else {
 			normalModelChecking = false;
 		}
-		out.append(newLine);
-		
-		int reactantIndex = 0;
-		for (Reactant r : m.getReactantCollection()) {
-			if (!r.get(ENABLED).as(Boolean.class)) continue;
-			r.let(REACTANT_INDEX).be(reactantIndex);
-			reactantIndex++; 
-			this.appendReactantVariables(out, r);
-		}
-		
+
 		
 		//The encoding of double numbers with integer variables (exponential notation with 3 significant figures)
 		out.append(newLine);
@@ -105,6 +96,17 @@ public class VariablesModelReactantCentered extends VariablesModel {
 		out.append(newLine);
 		out.append("const double INFINITE_TIME_DOUBLE = {-1000, -3}; //INFINITE_TIME (-1) translated into double");
 		out.append(newLine);
+		out.append(newLine);
+		
+		int reactantIndex = 0;
+		for (Reactant r : m.getReactantCollection()) {
+			if (!r.get(ENABLED).as(Boolean.class)) continue;
+			r.let(REACTANT_INDEX).be(reactantIndex);
+			reactantIndex++; 
+			this.appendReactantVariables(out, r);
+		}
+		
+
 		uncertainty = 0;
 		XmlConfiguration configuration = InatBackend.get().configuration();
 		String uncertaintyStr = configuration.get(XmlConfiguration.UNCERTAINTY_KEY, null);
@@ -669,7 +671,11 @@ public class VariablesModelReactantCentered extends VariablesModel {
 	}
 	
 	private void appendReactionProcess(StringBuilder out, Model m, Reactant r, int index) {
-		out.append(r.getId() + "_ = Reactant_" + r.getId() + "(" + r.getId() + ", " + r.get(NUMBER_OF_LEVELS).as(Integer.class) + ");");
+		out.append(r.getId() + "_ = Reactant_" + r.getId() + "(" + r.getId() + ", ");
+		if (!r.get(Model.Properties.LINEAR_SCALE).as(Boolean.class)) {
+			out.append(r.getId() + "_d, ");
+		}
+		out.append(r.get(NUMBER_OF_LEVELS).as(Integer.class) + ");");
 		out.append(newLine);
 	}
 	
@@ -716,11 +722,15 @@ public class VariablesModelReactantCentered extends VariablesModel {
 				}
 				r.let(HAS_INFLUENCING_REACTIONS).be(true);
 				
-				StringBuilder template = new StringBuilder("<template><name>Reactant_" + r.getId() + "</name><parameter>int&amp; R, const int MAX</parameter><declaration>");
+				StringBuilder template = new StringBuilder("<template><name>Reactant_" + r.getId() + "</name><parameter>int&amp; R, ");
+				if (!r.get(Model.Properties.LINEAR_SCALE).as(Boolean.class)) {
+					template.append("double&amp; R_d, ");
+				}
+				template.append("const int MAX</parameter><declaration>");
 				if (r.get(Model.Properties.LINEAR_SCALE).as(Boolean.class)) {
 					template.append("int[-1, 1] delta;\n");
 				} else {
-					template.append("int[-MAX, MAX] delta;\ndouble stepSize = " + formatDouble(1.0 + r.get(Model.Properties.LOG_STEP_PERCENT).as(Double.class)) + ";\ndouble delta_d;\ndouble R_d = " + formatDouble(1.0 * r.get(Model.Properties.INITIAL_LEVEL).as(Integer.class)) + ";\n");
+					template.append("int[-MAX, MAX] delta;\ndouble stepSize = " + formatDouble(1.0 + r.get(Model.Properties.LOG_STEP_PERCENT).as(Double.class)) + ";\ndouble delta_d;\n");
 				}
 				template.append("int[-1, 1] deltaNew = 0, deltaOld = 0, deltaOldOld = 0, deltaOldOldOld = 0;\nbool deltaAlternating = false;\ntime_t tL, tU;\nclock c;\ndouble totalRate;\n\n\nvoid updateDeltaOld() {\n\tdeltaOldOldOld = deltaOldOld;\n\tdeltaOldOld = deltaOld;\n\tdeltaOld = deltaNew;\n\tdeltaNew = delta;\n\tdeltaAlternating = false;\n\tif (deltaOldOldOld != 0) { //We have updated delta at least 4 times, so we can see whether we have an oscillation\n\t\tif (deltaNew == deltaOldOld &amp;&amp; deltaOld == deltaOldOldOld &amp;&amp; deltaNew != deltaOld) { //Pairwise equal and alternating (e.g. +1, -1, +1, -1): we are oscillating\n\t\t\tdeltaAlternating = true;\n\t\t\tdeltaNew = deltaOld = deltaOldOld = deltaOldOldOld = 0;\n\t\t}\n\t}\n}\n\nvoid update() {\n");
 				if (!r.get(Model.Properties.LINEAR_SCALE).as(Boolean.class)) {
@@ -911,7 +921,16 @@ public class VariablesModelReactantCentered extends VariablesModel {
 		out.append(newLine);
 		out.append("int " + r.getId() + " := " + r.get(INITIAL_LEVEL).as(Integer.class) + ";");
 		out.append(newLine);
-		out.append("const int " + r.getId() + "Levels := " + r.get(NUMBER_OF_LEVELS).as(Integer.class) + ";");
+		if (!r.get(Model.Properties.LINEAR_SCALE).as(Boolean.class)) { //For log-scale, we use the "double" version of the variable
+			out.append("double " + r.getId() + "_d := " + formatDouble(1.0 * r.get(Model.Properties.INITIAL_LEVEL).as(Integer.class)) + ";");
+			out.append(newLine);
+		}
+		out.append("const int " + r.getId() + "Levels := ");
+		if (r.get(Model.Properties.LINEAR_SCALE).as(Boolean.class)) {
+			out.append(r.get(NUMBER_OF_LEVELS).as(Integer.class) + ";");
+		} else { //With log-scale we talk only about percentage
+			out.append("100;");
+		}
 		out.append(newLine);
 		out.append(newLine);
 	}
