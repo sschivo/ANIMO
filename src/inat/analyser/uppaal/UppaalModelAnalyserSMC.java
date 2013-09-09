@@ -12,7 +12,6 @@ import inat.model.Model;
 import inat.model.Property;
 import inat.model.Reactant;
 import inat.model.Reaction;
-import inat.util.Pair;
 import inat.util.XmlConfiguration;
 
 import java.io.BufferedReader;
@@ -321,7 +320,7 @@ public class UppaalModelAnalyserSMC implements ModelAnalyser<LevelResult> {
 					if (r.get(Model.Properties.LINEAR_SCALE).as(Boolean.class)) { //The linear scale uses the integer value
 						build.append(r.getId() + ", ");
 					} else {
-						build.append(r.getId() + "_d" + dot + "b, " + r.getId() + "_d" + dot + "e, ");
+						build.append(r.getId() + "_c, ");
 					}
 				}
 			}
@@ -764,13 +763,9 @@ public class UppaalModelAnalyserSMC implements ModelAnalyser<LevelResult> {
 						if (reaction != null) {
 							levels.put(reaction.get(Model.Properties.CYTOSCAPE_ID).as(String.class), new TreeMap<Double, Double>());
 						}
-					} else if (afterDot.equals("b") || afterDot.equals("e")) { //We create two series for each reactant R that uses the "double" format: R.b and R.e. Then, after having read all the data, we merge each couple of series in the corresponding series R.
-						//System.err.println("Aggiungo la serie per " + reactantId);
-						levels.put(reactantId, new TreeMap<Double, Double>());
 					}
-				}
-				if (reactantId.equals("R9_d.e")) {
-					System.err.println("tutto su una riga? " + line);
+				} else if (reactantId.endsWith("_c")) { //This is a "collapsed" double, i.e. a double number where the .b and .e are contained in the same variable. We need to do this in order to make sure that both values were taken in the same interval. Otherwise, UPPAAL will output two different time series for .b and .e, possibly using different time instants for the "sampling".
+					levels.put(reactantId.substring(0, reactantId.lastIndexOf("_c")), new TreeMap<Double, Double>());
 				}
 				
 				while (pointMatcher.find()) {
@@ -802,13 +797,13 @@ public class UppaalModelAnalyserSMC implements ModelAnalyser<LevelResult> {
 									level = (activityIntervalWidth - Math.log10(1.0 * minTime / level)) / activityIntervalWidth;
 								}
 							}
-						} else if (afterDot.equals("b") || afterDot.equals("e")) {
-							//We don't even need to adapt the reading, as it is already ok. We will simply add it to the map.
-							//System.err.println("Dovrei aggiungere il punto (" + time + ", " + level + ") alla mappa di nome " + chosenMap);
 						}
-						if (reactantId.equals("R9_d.e")) {
-							System.err.println("Trovato il punto (" + time + ", " + level + ")");
-						}
+					} else if (reactantId.endsWith("_c")) { //If we have a collapsed double, decode it first to "double" and then to actual double
+						chosenMap = reactantId.substring(0, reactantId.lastIndexOf("_c"));
+						int b, e;
+						b = (int)level / 201 * 10;
+						e = (int)level % 201 - 100;
+						level = b * Math.pow(10, e);
 					}
 					rMap = levels.get(chosenMap);
 					if (rMap.isEmpty() || timeTo == -1 || (rMap.get(rMap.lastKey()) != level && time <= timeTo)) { //if we didn't register a variation, we don't plot a point
@@ -830,50 +825,6 @@ public class UppaalModelAnalyserSMC implements ModelAnalyser<LevelResult> {
 				}
 			}
 			//}
-			
-			//When dealing with the "double" values, we must replace the integer-based values with actual double values
-			Vector<String> seriesToBeRemoved = new Vector<String>();
-			Vector<Pair<String, TreeMap<Double, Double>>> seriesToBeAdded = new Vector<Pair<String, TreeMap<Double, Double>>>();
-			double vecchioVal = 0, vecchioVecchioVal = 0;
-			double vecchiob = 0, vecchioe = 0;
-			for (String reactantName : levels.keySet()) {
-				if (reactantName.endsWith(dot + "b") && levels.containsKey(reactantName.substring(0, reactantName.lastIndexOf(dot)) + dot + "e")) { //If the name is like "R_d.b" and there is also the series "R_d.e", we replace the two series with the actual series "R".
-					String actualName = reactantName.substring(0, reactantName.lastIndexOf("_d" + dot + "b"));
-					seriesToBeRemoved.add(reactantName);
-					seriesToBeRemoved.add(actualName + "_d" + dot + "e");
-					TreeMap<Double, Double> realSeries = new TreeMap<Double, Double>();
-					SortedMap<Double, Double> bSeries = levels.get(reactantName),
-											  eSeries = levels.get(actualName + "_d" + dot + "e");
-					//System.err.println("Valori per " + reactantName + ": " + bSeries + ". Valori per " + (actualName + "_d" + dot + "e") + ": " + eSeries);
-					double b = 0, e = 0;
-					for (Double t : bSeries.keySet()) {
-						//System.err.println("t = " + t + ", bSeries = " + bSeries + ", eSeries = " + eSeries);
-						b = bSeries.get(t);
-						if (eSeries != null && eSeries.containsKey(t)) {
-							e = eSeries.get(t); //We update it if we find a value. Otherwise it stays implicitly equal to the last value we got
-						}
-						double value = b * Math.pow(10, e);
-						if (vecchioVecchioVal != 0 && vecchioVal != 0 && vecchioVecchioVal > vecchioVal && value > vecchioVal) {
-							System.err.println("Tempo " + t + " bSeries = " + bSeries + ", eSeries = " + eSeries);
-							System.err.println("\tPer " + actualName + " ho ottenuto il famigerato 1.005, che probabilmente e' 10.05, da b = " + vecchiob + ", e = " + vecchioe);
-							System.err.println("\tSiamo in effetti tra i valori di " + vecchioVecchioVal + " e " + value);
-							System.err.println("\tPer qualche ragione, " + vecchiob + " * 10^" + vecchioe + " = " + vecchioVal);
-							System.err.println("\tb ce l'aveva il tempo t? " + bSeries.containsKey(t) + ". E e? " + eSeries.containsKey(t));
-						}
-						vecchioVecchioVal = vecchioVal;
-						vecchioVal = value;
-						vecchiob = b; vecchioe = e;
-						realSeries.put(t, value);
-					}
-					seriesToBeAdded.add(new Pair<String, TreeMap<Double, Double>>(actualName, realSeries));
-				}
-			}
-			for (String s : seriesToBeRemoved) {
-				levels.remove(s);
-			}
-			for (Pair<String, TreeMap<Double, Double>> p : seriesToBeAdded) {
-				levels.put(p.first, p.second);
-			}
 			
 			endTime = System.currentTimeMillis();
 			System.err.println("\tParsing the result produced by UPPAAL took " + RunAction.timeDifferenceFormat(startTime, endTime));

@@ -114,7 +114,6 @@ public class NodeDialog extends JDialog {
 		final LabelledField totalLevelsField = new LabelledField("Total activity levels: " + levels, totalLevels);
 		
 		final JSlider initialConcentration = new JSlider(0, levels);
-		initialConcentration.setValue(nodeAttributes.getIntegerAttribute(node.getIdentifier(), Model.Properties.INITIAL_LEVEL));
 		
 		final LabelledField initialLevelField = new LabelledField("Initial activity level: " + initialConcentration.getValue(), initialConcentration);
 
@@ -385,7 +384,6 @@ public class NodeDialog extends JDialog {
 			public void stateChanged(ChangeEvent arg0) {
 				boolean linear = discretizationChoice.isSelected();
 				totalLevelsField.setEnabled(linear);
-				//initialLevelField.setEnabled(linear);
 				logPercentageField.setEnabled(!linear);
 				logTotalStepsField.setEnabled(!linear);
 				initialActivityManager.update();
@@ -394,6 +392,9 @@ public class NodeDialog extends JDialog {
 		};
 		discretizationChoice.addChangeListener(cl);
 		cl.stateChanged(null);
+		if (!nodeAttributes.hasAttribute(node.getIdentifier(), Model.Properties.LINEAR_SCALE) || nodeAttributes.getBooleanAttribute(node.getIdentifier(), Model.Properties.LINEAR_SCALE)) {
+			initialConcentration.setValue(nodeAttributes.getIntegerAttribute(node.getIdentifier(), Model.Properties.INITIAL_LEVEL));
+		}
 		
 		Box discretizationChoiceBox = new Box(BoxLayout.X_AXIS);
 		discretizationChoiceBox.add(Box.createGlue());

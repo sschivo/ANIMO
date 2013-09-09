@@ -4,6 +4,7 @@ import inat.InatBackend;
 import inat.model.Model;
 import inat.model.Reactant;
 import inat.model.Reaction;
+import inat.util.Pair;
 import inat.util.XmlConfiguration;
 
 import java.io.ByteArrayInputStream;
@@ -87,7 +88,7 @@ public class VariablesModelReactantCentered extends VariablesModel {
 		out.append(newLine);
 		out.append("\tint[-99980001, 99980001] b;"); //99980001 = 9999 * 9999, i.e. the maximum result of a multiplication between two .b of double numbers
 		out.append(newLine);
-		out.append("\tint e;");
+		out.append("\tint[-100, 100] e;");
 		out.append(newLine);
 		out.append("} double;");
 		out.append(newLine);
@@ -95,6 +96,11 @@ public class VariablesModelReactantCentered extends VariablesModel {
 		out.append("const double zero = {0, 0};");
 		out.append(newLine);
 		out.append("const double INFINITE_TIME_DOUBLE = {-1000, -3}; //INFINITE_TIME (-1) translated into double");
+		out.append(newLine);
+		out.append(newLine);
+		out.append("typedef int[0, 200999] collapsedDouble; //A double number \"collapsed\" into a single integer: to collapse number d, the formula is ((d.b / 10) * 201) + (100 + d.e) where 201 = 2 * 100 + 1 and 100 is the maximum value of the .e in a double. 200799 = 999 * 201 + 200.");
+		out.append(newLine);
+		out.append("\t\t\t//Notice that we must sacrifice one significant figure from the .b in order to save the entire value of .e. This happens because the values &gt; 1e6 are outputted by UPPAAL with the exponential notation, losing at least one digit, and that digit is fundamental to recover the value of .e");
 		out.append(newLine);
 		out.append(newLine);
 		
@@ -148,7 +154,7 @@ public class VariablesModelReactantCentered extends VariablesModel {
 		out.append(newLine);
 		out.append("double subtract(double a, double b) { // a - b"); // Subtraction
 		out.append(newLine);
-		out.append("\tdouble r = {-1000, -1000};");
+		out.append("\tdouble r = {-1000, -100};");
 		out.append(newLine);
 		out.append("\tif (a.b == 0) {");
 		out.append(newLine);
@@ -268,7 +274,7 @@ public class VariablesModelReactantCentered extends VariablesModel {
 		out.append(newLine);
 		out.append("double add(double a, double b) { // a + b"); // Addition
 		out.append(newLine);
-		out.append("\tdouble r = {-1000,-1000};");
+		out.append("\tdouble r = {-1000, -100};");
 		out.append(newLine);
 		out.append("\tif (a.b == 0) {");
 		out.append(newLine);
@@ -597,7 +603,13 @@ public class VariablesModelReactantCentered extends VariablesModel {
 		out.append(newLine);
 		out.append("\tdouble r;");
 		out.append(newLine);
-		out.append("\tif (a &lt; 10) {");
+		out.append("\tif (a == 0) {");
+		out.append(newLine);
+		out.append("\t\tr.b = 0;");
+		out.append(newLine);
+		out.append("\t\tr.e = 0;");
+		out.append(newLine);
+		out.append("\t} else if (a &lt; 10) {");
 		out.append(newLine);
 		out.append("\t\tr.b = a * 1000;");
 		out.append(newLine);
@@ -622,6 +634,17 @@ public class VariablesModelReactantCentered extends VariablesModel {
 		out.append("\t\tr.e = 0;");
 		out.append(newLine);
 		out.append("\t}");
+		out.append(newLine);
+		out.append("\treturn r;");
+		out.append(newLine);
+		out.append("}");
+		out.append(newLine);
+		out.append(newLine);
+		out.append("collapsedDouble collapse(double a) { //\"collapse\" a double number to a single integer. The .b MUST be in the [-9999, 9999] interval (and the .e must be in the [-100, 100] interval)");
+		out.append(newLine);
+		out.append("\tcollapsedDouble r;");
+		out.append(newLine);
+		out.append("\tr = ((a.b / 10) * 201) + (a.e + 100); //We must lose one figure from the .b in order to have a number &lt; 1e6, so that UPPAAL's simulation engine will not output the results with the exponential notation, losing the value of .e"); //Highlight the fact that .e is "shifted" upwards so that it is becomes positive 
 		out.append(newLine);
 		out.append("\treturn r;");
 		out.append(newLine);
@@ -673,7 +696,7 @@ public class VariablesModelReactantCentered extends VariablesModel {
 	private void appendReactionProcess(StringBuilder out, Model m, Reactant r, int index) {
 		out.append(r.getId() + "_ = Reactant_" + r.getId() + "(" + r.getId() + ", ");
 		if (!r.get(Model.Properties.LINEAR_SCALE).as(Boolean.class)) {
-			out.append(r.getId() + "_d, ");
+			out.append(r.getId() + "_d, " + r.getId() + "_c, ");
 		}
 		out.append(r.get(NUMBER_OF_LEVELS).as(Integer.class) + ");");
 		out.append(newLine);
@@ -724,7 +747,7 @@ public class VariablesModelReactantCentered extends VariablesModel {
 				
 				StringBuilder template = new StringBuilder("<template><name>Reactant_" + r.getId() + "</name><parameter>int&amp; R, ");
 				if (!r.get(Model.Properties.LINEAR_SCALE).as(Boolean.class)) {
-					template.append("double&amp; R_d, ");
+					template.append("double&amp; R_d, collapsedDouble&amp; R_c, ");
 				}
 				template.append("const int MAX</parameter><declaration>");
 				if (r.get(Model.Properties.LINEAR_SCALE).as(Boolean.class)) {
@@ -819,7 +842,7 @@ public class VariablesModelReactantCentered extends VariablesModel {
 				if (r.get(Model.Properties.LINEAR_SCALE).as(Boolean.class)) {
 					template.append("\t\tR = R + delta;\n");
 				} else {
-					template.append("\t\tint [-MAX-1, MAX+1] res;\n\t\tR_d = add(R_d, delta_d);\n\t\tres = round(R_d); //We use \"res\" to allow for rounding errors so that R never exits the allowed interval [0, MAX]\n\t\tif (res &lt; 0) {\n\t\t\tR = 0;\n\t\t} else if (res &gt; MAX) {\n\t\t\tR = MAX;\n\t\t} else {\n\t\t\tR = res;\n\t\t}");
+					template.append("\t\tint [-MAX-1, MAX+1] res;\n\t\tR_d = add(R_d, delta_d);\n\t\tres = round(R_d); //We use \"res\" to allow for rounding errors so that R never exits the allowed interval [0, MAX]\n\t\tif (res &lt; 0) {\n\t\t\tR = 0;\n\t\t} else if (res &gt; MAX) {\n\t\t\tR = MAX;\n\t\t} else {\n\t\t\tR = res;\n\t\t}\n\t\tR_c = collapse(R_d);\n");
 				}
 				template.append("\t}\n\tupdate();\n}\n\nbool can_react() {\n\treturn !deltaAlternating &amp;&amp; (tL != INFINITE_TIME &amp;&amp; tL != 0 &amp;&amp; tU != 0 &amp;&amp; ((delta &gt;= 0 &amp;&amp; R &lt; MAX) || (delta &lt; 0 &amp;&amp; R &gt; 0)));\n}\n\nbool cant_react() {\n\treturn deltaAlternating || (tL == INFINITE_TIME || tL == 0 || tU == 0 || (delta &gt;= 0 &amp;&amp; R == MAX) || (delta &lt; 0 &amp;&amp; R == 0));\n}</declaration>");
 				template.append("<location id=\"id0\" x=\"-1896\" y=\"-728\"><name x=\"-1960\" y=\"-752\">stubborn</name><committed/></location><location id=\"id1\" x=\"-1528\" y=\"-728\"><committed/></location><location id=\"id6\" x=\"-1256\" y=\"-728\"><name x=\"-1248\" y=\"-752\">start</name><committed/></location><location id=\"id7\" x=\"-1552\" y=\"-856\"><name x=\"-1656\" y=\"-872\">not_reacting</name></location><location id=\"id8\" x=\"-1416\" y=\"-728\"><name x=\"-1400\" y=\"-752\">updating</name><committed/></location><location id=\"id9\" x=\"-1664\" y=\"-728\"><name x=\"-1728\" y=\"-744\">waiting</name><label kind=\"invariant\" x=\"-1728\" y=\"-720\">c &lt;= tU\n|| tU ==\nINFINITE_TIME</label></location><init ref=\"id6\"/><transition><source ref=\"id1\"/><target ref=\"id9\"/><label kind=\"guard\" x=\"-1640\" y=\"-760\">tU == INFINITE_TIME\n|| c &lt;= tU</label>" + (normalModelChecking?"<label kind=\"synchronisation\" x=\"-1640\" y=\"-776\">sequencer[" + r.get(REACTANT_INDEX).as(Integer.class) + "]!</label>":"") + "</transition><transition><source ref=\"id1\"/><target ref=\"id9\"/><label kind=\"guard\" x=\"-1608\" y=\"-712\">tU != INFINITE_TIME\n&amp;&amp; c &gt; tU</label>" + (normalModelChecking?"<label kind=\"synchronisation\" x=\"-1608\" y=\"-664\">sequencer[" + r.get(REACTANT_INDEX).as(Integer.class) + "]!</label>":"") + "<label kind=\"assignment\" x=\"-1608\" y=\"-680\">c := tU</label><nail x=\"-1528\" y=\"-680\"/><nail x=\"-1608\" y=\"-680\"/></transition><transition><source ref=\"id0\"/><target ref=\"id8\"/><label kind=\"guard\" x=\"-1816\" y=\"-632\">c &lt; tL</label>" + (normalModelChecking?"<label kind=\"synchronisation\" x=\"-1816\" y=\"-600\">sequencer[" + r.get(REACTANT_INDEX).as(Integer.class) + "]!</label>":"") + "<label kind=\"assignment\" x=\"-1816\" y=\"-616\">update()</label><nail x=\"-1848\" y=\"-616\"/><nail x=\"-1464\" y=\"-616\"/></transition><transition><source ref=\"id0\"/><target ref=\"id9\"/><label kind=\"guard\" x=\"-1816\" y=\"-680\">c &gt;= tL</label>" + (normalModelChecking?"<label kind=\"synchronisation\" x=\"-1816\" y=\"-664\">sequencer[" + r.get(REACTANT_INDEX).as(Integer.class) + "]!</label>":"") + "<nail x=\"-1840\" y=\"-664\"/><nail x=\"-1744\" y=\"-664\"/></transition><transition><source ref=\"id6\"/><target ref=\"id8\"/>" + (normalModelChecking?"<label kind=\"synchronisation\" x=\"-1344\" y=\"-744\">sequencer[" + r.get(REACTANT_INDEX).as(Integer.class) + "]!</label>":"") + "<label kind=\"assignment\" x=\"-1344\" y=\"-728\">update()</label></transition>");
@@ -924,6 +947,8 @@ public class VariablesModelReactantCentered extends VariablesModel {
 		if (!r.get(Model.Properties.LINEAR_SCALE).as(Boolean.class)) { //For log-scale, we use the "double" version of the variable
 			out.append("double " + r.getId() + "_d := " + formatDouble(1.0 * r.get(Model.Properties.INITIAL_LEVEL).as(Integer.class)) + ";");
 			out.append(newLine);
+			out.append("collapsedDouble " + r.getId() + "_c := " + collapseDouble(1.0 * r.get(Model.Properties.INITIAL_LEVEL).as(Integer.class)) + ";");
+			out.append(newLine);
 		}
 		out.append("const int " + r.getId() + "Levels := ");
 		if (r.get(Model.Properties.LINEAR_SCALE).as(Boolean.class)) {
@@ -944,21 +969,35 @@ public class VariablesModelReactantCentered extends VariablesModel {
 		}
 	}
 	
-	private String formatDouble(double d) {
+	private Pair<Integer, Integer> createDouble(double d) {
 		int b, e; 
-		e = (int)Math.round(Math.log10(d)) - 3;
-		b = (int)Math.round(d * Math.pow(10, -e));
-		if (b < 10) { //We always want 4 figures
-			b = b * 1000;
-			e = e - 3;
-		} else if (b < 100) {
-			b = b * 100;
-			e = e - 2;
-		} else if (b < 1000) {
-			b = b * 10;
-			e = e - 1;
+		if (d == 0) {
+			b = e = 0;
+		} else {
+			e = (int)Math.round(Math.log10(d)) - 3;
+			b = (int)Math.round(d * Math.pow(10, -e));
+			if (b < 10) { //We always want 4 figures
+				b = b * 1000;
+				e = e - 3;
+			} else if (b < 100) {
+				b = b * 100;
+				e = e - 2;
+			} else if (b < 1000) {
+				b = b * 10;
+				e = e - 1;
+			}
 		}
-		return "{" + b + ", " + e + "}";
+		return new Pair<Integer, Integer>(b, e);
+	}
+	
+	private String formatDouble(double d) { //Return the initialization for a "double" number
+		Pair<Integer, Integer> dD = createDouble(d);
+		return "{" + dD.first + ", " + dD.second + "}";
+	}
+	
+	private String collapseDouble(double d) { //Convert the given number in its double_represented_as_a_single_integer ("collapsedDouble") representation
+		Pair<Integer, Integer> dD = createDouble(d);
+		return "" + (201 * dD.first + (dD.second + 100));
 	}
 
 }
