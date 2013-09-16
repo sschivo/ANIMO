@@ -72,6 +72,9 @@ public class Model implements Serializable {
 								   TYPE_PHOSPHATASE = "Phosphatase",
 								   TYPE_TRANSCRIPTION_FACTOR = "Transcription factor",
 								   TYPE_OTHER = "Other",
+								   TYPE_MRNA = "mRNA",
+								   TYPE_GENE = "Gene",
+								   TYPE_DUMMY = "Dummy",
 								   REACTANT_NAME = "name", //The name of the reactant (possibly outdated property name)
 								   REACTION_TYPE = "type", //Type of reaction (mono, bi)
 								   SCENARIO_CFG = "SCENARIO_CFG", //The current scenario configuration (scenario index + parameter values) of the reaction
