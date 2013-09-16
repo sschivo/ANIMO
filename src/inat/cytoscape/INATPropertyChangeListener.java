@@ -15,6 +15,7 @@ import java.awt.event.MouseEvent;
 import java.awt.geom.Point2D;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -358,10 +359,12 @@ public class INATPropertyChangeListener implements PropertyChangeListener {
 			mapping.putMapValue(Model.Properties.TYPE_CYTOKINE, NodeShape.RECT);
 			mapping.putMapValue(Model.Properties.TYPE_RECEPTOR, NodeShape.ELLIPSE);
 			mapping.putMapValue(Model.Properties.TYPE_KINASE, NodeShape.ELLIPSE);
+			mapping.putMapValue(Model.Properties.TYPE_GENE, NodeShape.TRIANGLE);
+			mapping.putMapValue(Model.Properties.TYPE_MRNA, NodeShape.PARALLELOGRAM);
+			mapping.putMapValue(Model.Properties.TYPE_DUMMY, NodeShape.ROUND_RECT);
 			mapping.putMapValue(Model.Properties.TYPE_PHOSPHATASE, NodeShape.DIAMOND);
 			mapping.putMapValue(Model.Properties.TYPE_TRANSCRIPTION_FACTOR, NodeShape.ELLIPSE);
 			mapping.putMapValue(Model.Properties.TYPE_OTHER, NodeShape.RECT);
-			//I purposedly omit TYPE_OTHER, because I want it to stay on the default setting
 			calco = new BasicCalculator(myVisualStyleName + "Mapping_node_shape_from_molecule_type", mapping, VisualPropertyType.NODE_SHAPE);
 			nac.setCalculator(calco);
 			shapesMap = mapping;
@@ -386,6 +389,9 @@ public class INATPropertyChangeListener implements PropertyChangeListener {
 			mapping.putMapValue(Model.Properties.TYPE_KINASE, 55.0f);
 			mapping.putMapValue(Model.Properties.TYPE_PHOSPHATASE, 55.0f);
 			mapping.putMapValue(Model.Properties.TYPE_TRANSCRIPTION_FACTOR, 60.0f);
+			mapping.putMapValue(Model.Properties.TYPE_GENE, 50.0f);
+			mapping.putMapValue(Model.Properties.TYPE_MRNA, 50.0f);
+			mapping.putMapValue(Model.Properties.TYPE_DUMMY, 60.0f);
 			mapping.putMapValue(Model.Properties.TYPE_OTHER, 60.0f);
 			calco = new BasicCalculator(myVisualStyleName + "Mapping_node_shape_width_from_molecule_type", mapping, VisualPropertyType.NODE_WIDTH);
 			nac.setCalculator(calco);
@@ -403,6 +409,9 @@ public class INATPropertyChangeListener implements PropertyChangeListener {
 			mapping.putMapValue(Model.Properties.TYPE_KINASE, 55.0f);
 			mapping.putMapValue(Model.Properties.TYPE_PHOSPHATASE, 55.0f);
 			mapping.putMapValue(Model.Properties.TYPE_TRANSCRIPTION_FACTOR, 40.0f);
+			mapping.putMapValue(Model.Properties.TYPE_GENE, 50.0f);
+			mapping.putMapValue(Model.Properties.TYPE_MRNA, 50.0f);
+			mapping.putMapValue(Model.Properties.TYPE_DUMMY, 40.0f);
 			mapping.putMapValue(Model.Properties.TYPE_OTHER, 35.0f);
 			calco = new BasicCalculator(myVisualStyleName + "Mapping_node_shape_height_from_molecule_type", mapping, VisualPropertyType.NODE_HEIGHT);
 			nac.setCalculator(calco);
@@ -459,6 +468,11 @@ public class INATPropertyChangeListener implements PropertyChangeListener {
 		} else {
 			legendColors.updateFromSettings();
 		}
+		
+		List<String> orderedNames = Arrays.asList(new String[]{Model.Properties.TYPE_CYTOKINE, Model.Properties.TYPE_RECEPTOR, Model.Properties.TYPE_KINASE,
+															   Model.Properties.TYPE_PHOSPHATASE, Model.Properties.TYPE_TRANSCRIPTION_FACTOR, Model.Properties.TYPE_GENE,
+															   Model.Properties.TYPE_MRNA, Model.Properties.TYPE_DUMMY, Model.Properties.TYPE_OTHER});
+		legendShapes.setNameOrder(orderedNames);
 		
 		if (shapesMap != null && widthsMap != null && heightsMap != null) {
 			legendShapes.setParameters(shapesMap, widthsMap, heightsMap);
