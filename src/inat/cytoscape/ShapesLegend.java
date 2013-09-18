@@ -30,18 +30,10 @@ import cytoscape.visual.mappings.ObjectMapping;
 public class ShapesLegend extends JPanel {
 	private static final long serialVersionUID = 8963894565747542198L;
 	private DiscreteMapping shapesMap, widthsMap, heightsMap;
-	private List<String> nameOrder = null; 
+	private List<String> nameOrder = null;
 
 	public ShapesLegend() {
 				
-	}
-	
-	public void setNameOrder(List<String> nameOrder) {
-		this.nameOrder = nameOrder;
-	}
-	
-	public List<String> getNameOrder() {
-		return this.nameOrder;
 	}
 	
 	public void updateFromSettings() {
@@ -94,6 +86,14 @@ public class ShapesLegend extends JPanel {
 		this.repaint();
 	}
 	
+	public void setNameOrder(List<String> nameOrder) {
+		this.nameOrder = nameOrder;
+	}
+	
+	public List<String> getNameOrder() {
+		return this.nameOrder;
+	}
+	
 	@SuppressWarnings("unchecked")
 	public void paint(Graphics g1) {
 		if (shapesMap == null || widthsMap == null || heightsMap == null) {
@@ -108,7 +108,7 @@ public class ShapesLegend extends JPanel {
 		FontMetrics fm = g.getFontMetrics();
 		rectangle.y += 10 + fm.getHeight();
 		rectangle.height -= 10 + fm.getHeight();
-		rectangle.x += 1; rectangle.width -= 2; rectangle.y += 1; rectangle.height -= 2; //Otherwise we can't properly see the contours because they would be drawn on a limit that isn't actually there
+		//rectangle.x += 1; rectangle.width -= 2; rectangle.y += 1; rectangle.height -= 2; //Otherwise we can't properly see the contours because they would be drawn on a limit that isn't actually there
 		g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 		Font oldFont = g.getFont();
 		g.setFont(oldFont.deriveFont(Font.BOLD));
@@ -122,7 +122,8 @@ public class ShapesLegend extends JPanel {
 		
 		float nodeSpace = rectangle.height / shapes.size();
 		
-		float maxHeight = -1;
+		float maxHeight = -1,
+			  maxWidth = -1;
 		int maxStrLength = -1;
 		for (String moleculeType : heights.keySet()) {
 			Object o = heights.get(moleculeType);
@@ -140,6 +141,19 @@ public class ShapesLegend extends JPanel {
 				maxStrLength = strLen;
 			}
 		}
+		for (String moleculeType : widths.keySet()) {
+			Object o = widths.get(moleculeType);
+			float w = 50.0f; 
+			if (o instanceof Float) {
+				w = (Float)o;
+			} else if (o instanceof Double) {
+				w = new Float((Double)o);
+			}
+			if (w > maxWidth) {
+				maxWidth = w;
+			}
+		}
+		
 		float x = rectangle.x + rectangle.width / 2 - maxStrLength / 2.0f,
 			  y = rectangle.y;
 		
@@ -164,7 +178,7 @@ public class ShapesLegend extends JPanel {
 			} else if (o2 instanceof Double) {
 				height = new Float((Double)o2);
 			}
-			float rate = 0.75f * nodeSpace / maxHeight;
+			float rate = 0.85f * nodeSpace / maxHeight;
 			width *= rate;
 			height *= rate;
 			g.setStroke(new BasicStroke(2.0f));
@@ -236,7 +250,7 @@ public class ShapesLegend extends JPanel {
 					break;
 				default: break;
 			}
-			g.drawString(moleculeType, x + rectangle.width /2, y + nodeSpace / 2 + fm.getAscent() / 2.0f);
+			g.drawString(moleculeType, x + (maxWidth + 5) * rate, y + nodeSpace / 2 + fm.getAscent() / 2.0f);//moleculeType, x + rectangle.width /2, y + nodeSpace / 2 + fm.getAscent() / 2.0f);
 			y += nodeSpace;
 		}
 	}
