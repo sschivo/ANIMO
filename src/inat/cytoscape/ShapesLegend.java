@@ -193,8 +193,8 @@ public class ShapesLegend extends JPanel {
 					g.drawPolygon(polygon);
 					break;
 				case ELLIPSE:
-					int xE = (int)(x - width / 2),
-						yE = (int)(y + nodeSpace / 2 - height / 2);
+					int xE = (int)Math.round(x - width / 2),
+						yE = (int)Math.round(y + nodeSpace / 2 - height / 2);
 					g.setPaint(Color.DARK_GRAY);
 					g.fillOval(xE, yE, (int)width, (int)height);
 					g.setPaint(Color.BLACK);
