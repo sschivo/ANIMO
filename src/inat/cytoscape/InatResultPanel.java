@@ -425,7 +425,7 @@ public class InatResultPanel extends JPanel implements ChangeListener, GraphScal
 					if (model.getReactant(r) == null) continue;
 					final String id = model.getReactant(r).get(Model.Properties.REACTANT_NAME).as(String.class);
 					//System.err.println("R id = " + id);
-					final double level = result.getConcentration(r, t) / nLevels * model.getReactant(r).get(Model.Properties.NUMBER_OF_LEVELS).as(Integer.class); //We also rescale the value to the correct number of levels of each node
+					final double level = result.getConcentration(r, t) / nLevels * nodeAttributes.getIntegerAttribute(id, Model.Properties.NUMBER_OF_LEVELS); //model.getReactant(r).get(Model.Properties.NUMBER_OF_LEVELS).as(Integer.class); //We also rescale the value to the correct number of levels of each node. Attention: we need to use the CURRENT number of levels of the node, or we will get inconsistent results!
 					nodeAttributes.setAttribute(id, Model.Properties.INITIAL_LEVEL, (int)Math.round(level));
 				}
 			}
