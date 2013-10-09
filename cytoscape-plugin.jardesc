@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="WINDOWS-1252" standalone="no"?>
 <jardesc>
-    <jar path="/local/schivos/.cytoscape/2.8/plugins/ANIMO-1.48/ANIMO.jar"/>
+    <jar path="/local/schivos/.cytoscape/2.8/plugins/ANIMO-2.52/ANIMO.jar"/>
     <options buildIfNeeded="true" compress="true" descriptionLocation="/inat_pre_qty_and_formulae_fitter_boolean_rescaled_template/cytoscape-plugin.jardesc" exportErrors="true" exportWarnings="true" includeDirectoryEntries="false" overwrite="true" saveDescription="false" storeRefactorings="false" useSourceFolders="false"/>
     <storedRefactorings deprecationInfo="true" structuralOnly="false"/>
     <selectedProjects/>

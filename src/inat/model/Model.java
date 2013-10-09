@@ -325,6 +325,9 @@ public class Model implements Serializable {
 		if (networkAttributes.hasAttribute(network.getIdentifier(), "deltaAlternating")) {
 			model.getProperties().let("deltaAlternating").be(networkAttributes.getBooleanAttribute(network.getIdentifier(), "deltaAlternating"));
 		}
+		if (networkAttributes.hasAttribute(network.getIdentifier(), "useOldResetting")) {
+			model.getProperties().let("useOldResetting").be(networkAttributes.getBooleanAttribute(network.getIdentifier(), "useOldResetting"));
+		}
 		model.getProperties().let(NUMBER_OF_LEVELS).be(networkAttributes.getAttribute(network.getIdentifier(), NUMBER_OF_LEVELS));
 		model.getProperties().let(SECONDS_PER_POINT).be(networkAttributes.getAttribute(network.getIdentifier(), SECONDS_PER_POINT));
 		double secStepFactor = networkAttributes.getDoubleAttribute(network.getIdentifier(), SECS_POINT_SCALE_FACTOR);
