@@ -163,7 +163,7 @@ private int numberOfLevels;
 	}
 	
 	@Override
-	public LevelResult difference(LevelResult subtractFrom_) {
+	public LevelResult difference(LevelResult subtractFrom_, Map<String, String> myMapModelIDtoCytoscapeID, Map<String, String> hisMapCytoscapeIDtoModel) {
 		Map<String, SortedMap<Double, Double>> lev = new HashMap<String, SortedMap<Double, Double>>();
 		SimpleLevelResult subtractFrom = (SimpleLevelResult)subtractFrom_;
 		//System.err.println("Differenzio tra " + subtractFrom + " (" + subtractFrom.getNumberOfLevels() + " livelli) e " + this + " (" + this.getNumberOfLevels() + " livelli)");
@@ -171,23 +171,28 @@ private int numberOfLevels;
 		List<Double> idxSub = subtractFrom.getTimeIndices(),
 					 idxThis = this.getTimeIndices();
 		double minDuration = Math.min(idxSub.get(idxSub.size() - 1), idxThis.get(idxThis.size() - 1));
-		for (String s : levels.keySet()) {
-			if (!subtractFrom.levels.containsKey(s)) continue;
-			SortedMap<Double, Double> m1 = subtractFrom.levels.get(s),
-									  m2 = this.levels.get(s),
+		for (String myKey : levels.keySet()) {
+			if (!myMapModelIDtoCytoscapeID.containsKey(myKey)) continue; //Skip the edge identifiers
+			String myCytoID = myMapModelIDtoCytoscapeID.get(myKey);
+			//System.err.println(myKey + " --> " + myCytoID + " --> " + hisMapCytoscapeIDtoModel.get(myCytoID));
+			if (!hisMapCytoscapeIDtoModel.containsKey(myCytoID)) continue; //Skip the nodes that the other does not have
+			String hisKey = hisMapCytoscapeIDtoModel.get(myCytoID);
+			if (!subtractFrom.levels.containsKey(hisKey)) continue; //Skip the nodes the other does not have (the check before this one may have been about a disabled node, which is not present in the uppaal model. So subtractFrom.levels may not contain any value for hisKey)
+			SortedMap<Double, Double> m1 = subtractFrom.levels.get(hisKey),
+									  m2 = this.levels.get(myKey),
 									  mRes = new TreeMap<Double, Double>();
 			for (Double k : m1.keySet()) { //Take first one an then the other as a reference for the X values. Please note: this means that the resulting series will have a number of points that is about as big as the sum of the two input series, so it would not be ideal to continue to compute differences of differences of differences...
 				if (k <= minDuration) {
-					mRes.put(k, maxNLevels * (subtractFrom.getInterpolatedConcentration(s, k) / subtractFrom.getNumberOfLevels() - this.getInterpolatedConcentration(s, k) / this.getNumberOfLevels()));
+					mRes.put(k, maxNLevels * (subtractFrom.getInterpolatedConcentration(hisKey, k) / subtractFrom.getNumberOfLevels() - this.getInterpolatedConcentration(myKey, k) / this.getNumberOfLevels()));
 				}
 			}
 			for (Double k : m2.keySet()) {
 				if (k <= minDuration) {
-					mRes.put(k, maxNLevels * (subtractFrom.getInterpolatedConcentration(s, k) / subtractFrom.getNumberOfLevels() - this.getInterpolatedConcentration(s, k) / this.getNumberOfLevels()));
+					mRes.put(k, maxNLevels * (subtractFrom.getInterpolatedConcentration(hisKey, k) / subtractFrom.getNumberOfLevels() - this.getInterpolatedConcentration(myKey, k) / this.getNumberOfLevels()));
 				}
 			}
 			//System.err.println("Ho aggiunto " + mRes.size() + " punti per " + s);
-			lev.put(s, mRes);
+			lev.put(hisKey, mRes);
 		}
 		SimpleLevelResult res = new SimpleLevelResult(maxNLevels, lev);
 		//System.err.println("E finalmente produco il risultato con " + maxNLevels + " livelli");
