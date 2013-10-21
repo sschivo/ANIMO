@@ -21,7 +21,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.Vector;
 
 import javax.swing.AbstractAction;
 import javax.swing.JPopupMenu;
@@ -68,7 +67,8 @@ public class INATPropertyChangeListener implements PropertyChangeListener {
 	//private int currentEdgeNumber = -1, currentNodeNumber = -1;
 	private Map<String, Integer> currentEdgeNumber = new HashMap<String, Integer>(),
 								 currentNodeNumber = new HashMap<String, Integer>(); //We keep count of the current number of nodes and edges for each network
-	private Object[] edgesArray = null;
+	private Map<String, Object[]> currentEdgesArray = new HashMap<String, Object[]>();
+	//private Object[] edgesArray = null;
 	private ColorsLegend legendColors;
 	private ShapesLegend legendShapes;
 
@@ -775,7 +775,7 @@ public class INATPropertyChangeListener implements PropertyChangeListener {
 			CyNetwork network = Cytoscape.getCurrentNetwork();
 			currentEdgeNumber.put(network.getIdentifier(), network.getEdgeCount());
 			currentNodeNumber.put(network.getIdentifier(), network.getNodeCount());
-			edgesArray = network.edgesList().toArray();
+			currentEdgesArray.put(network.getIdentifier(), network.edgesList().toArray());
 			//System.err.println("Network viewa creatata per la rete \"" + network.getTitle() + "\"!! Numero iniziale di nodi: " + currentNodeNumber.get(network.getIdentifier()) + ", edgi " + currentEdgeNumber.get(network.getIdentifier()));
 		}
 		if (evt.getPropertyName().equalsIgnoreCase(Cytoscape.NETWORK_LOADED)) {
@@ -810,19 +810,41 @@ public class INATPropertyChangeListener implements PropertyChangeListener {
 			if (currentEdgeNumber.get(network.getIdentifier()) != null && currentNodeNumber.get(network.getIdentifier()) != null) {
 				int newEdgeNumber = network.getEdgeCount(),
 					newNodeNumber = network.getNodeCount();
+				Object[] edgesArray = network.edgesList().toArray();
 				//System.err.println("Cambiamento alla rete \"" + network.getTitle() + "\": n. nodi = " + newNodeNumber + " (precedente: " + currentNodeNumber.get(network.getIdentifier()) + "), n. edgi = " + newEdgeNumber + " (precedente: " + currentEdgeNumber.get(network.getIdentifier()) + ")");
 				if (newEdgeNumber > currentEdgeNumber.get(network.getIdentifier())) {
 					//JOptionPane.showMessageDialog(null, "Nuovo arco inserito");
 					//System.err.println("\tNuovo arco inserito nella rete \"" + network.getTitle() + "\": ora ne hai " + newEdgeNumber + "!");
-					List<Object> oldEdges = new Vector<Object>(),
+					List<Object> //oldEdges = new Vector<Object>(),
 						 newEdges;
+					edgesArray = currentEdgesArray.get(network.getIdentifier());
+					/*boolean presente = false;
 					for (Object o : edgesArray) {
 						oldEdges.add(o);
+						CyEdge e = (CyEdge)o;
+						if (e.getIdentifier().contains("node24_765 (DefaultEdge) node34")) {
+							presente = true;
+						}
 					}
+					if (presente) {
+						System.err.println("Nella lista di edge gia' presenti esiste gia' l'edge node24_765 (DefaultEdge) node34.");
+					} else {
+						System.err.println("L'edge node24_765 (DefaultEdge) node34 NON c'e' gia' nella lista di quelli presenti!");
+					}*/
 					newEdges = network.edgesList();
 					CyEdge edge = null;
 					for (Object o : newEdges) {
-						if (!oldEdges.contains(o)) {
+						CyEdge e = (CyEdge)o;
+						boolean contained = false;
+						for (Object o2: edgesArray) {
+							CyEdge e2 = (CyEdge)o2;
+							if (e2.getIdentifier().equals(e.getIdentifier())) { //Looks like we can't use equals (so, just use oldEdges.contains(o)). We must check for the edge IDs
+								contained = true;
+								break;
+							}
+						}
+						if (!contained) { //oldEdges.contains(o)) {
+							//System.err.println("Risulta che l'edge " + o + " non fosse prima nella rete e ora ci sia: come mai?");
 							edge = (CyEdge)o;
 							break;
 						}
@@ -865,6 +887,7 @@ public class INATPropertyChangeListener implements PropertyChangeListener {
 				}
 				currentEdgeNumber.put(network.getIdentifier(), newEdgeNumber);
 				currentNodeNumber.put(network.getIdentifier(), newNodeNumber);
+				currentEdgesArray.put(network.getIdentifier(), edgesArray);
 				//System.err.println("Ecco i nodi ora nella rete \"" + network.getTitle() + "\": " + currentNodeNumber.get(network.getIdentifier()));
 				//System.err.println("Ecco i edgi ora nella rete \"" + network.getTitle() + "\": " + currentEdgeNumber.get(network.getIdentifier()));
 			}
