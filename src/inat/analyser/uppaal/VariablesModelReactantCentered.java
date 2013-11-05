@@ -21,6 +21,7 @@ import javax.xml.transform.stream.StreamResult;
 
 import org.w3c.dom.Document;
 
+
 public class VariablesModelReactantCentered extends VariablesModel {
 
 	private static final String REACTANT_INDEX = Model.Properties.REACTANT_INDEX,
@@ -952,10 +953,17 @@ public class VariablesModelReactantCentered extends VariablesModel {
 				if (!r.get(ENABLED).as(Boolean.class)) continue;
 				int myIndex = r.get(REACTANT_INDEX).as(Integer.class);
 				outString = new StringWriter();
+				int upstreamReactants = 0;
 				Vector<Reaction> influencingReactions = new Vector<Reaction>();
 				for (Reaction re : m.getReactionCollection()) {
 					if (re.get(OUTPUT_REACTANT).as(String.class).equals(r.getId()))  { //If the reactant is downstream of a reaction, count that reaction
 						influencingReactions.add(re);
+						if (!re.get(CATALYST).as(String.class).equals(r.getId())) { //Also count all upstream reactants different from itself (an autoarc represents an influencing reaction in which the output reactant is also the catalyst, so we need to distinguish)
+							upstreamReactants++;
+						}
+						if (re.get(SCENARIO).as(Integer.class) == 2 && !re.get(REACTANT).as(String.class).equals(r.getId())) {
+							upstreamReactants++;
+						}
 					}
 				}
 				
@@ -1027,9 +1035,8 @@ public class VariablesModelReactantCentered extends VariablesModel {
 				template.append("<location id=\"id7\" x=\"-1456\" y=\"-608\"><name x=\"-1448\" y=\"-632\">not_reacting</name><label kind=\"invariant\" x=\"-1504\" y=\"-600\">c[" + myIndex + "]'==0</label></location>");
 				template.append("<location id=\"id8\" x=\"-1392\" y=\"-728\"><name x=\"-1400\" y=\"-752\">updating</name><committed/></location>");
 				template.append("<location id=\"id9\" x=\"-1664\" y=\"-728\"><name x=\"-1728\" y=\"-744\">waiting</name><label kind=\"invariant\" x=\"-1728\" y=\"-720\">c[" + myIndex + "] &lt;= T[" + myIndex + "]</label></location>");
-				if (influencingReactions.size() > 1) { //If I depend on more than 1 reactant, when one reacts I may have to wait also for the others (in case anybody else reacts in the same instant)
+				if (upstreamReactants > 1) { //If I depend on more than 1 reactant, when one reacts I may have to wait also for the others (in case anybody else reacts in the same instant)
 					template.append("<location id=\"id2\" x=\"-1720\" y=\"-928\"><name x=\"-1760\" y=\"-960\">wait_for_others</name></location>");
-					
 				}
 				template.append("<init ref=\"id6\"/>");
 				template.append("<transition><source ref=\"id8\"/><target ref=\"id9\"/><label kind=\"guard\" x=\"-1640\" y=\"-744\">c[" + myIndex + "] &lt;= T[" + myIndex + "] &amp;&amp; can_react()</label><label kind=\"assignment\" x=\"-1608\" y=\"-728\">active[" + myIndex + "] = true</label></transition>");
@@ -1037,17 +1044,105 @@ public class VariablesModelReactantCentered extends VariablesModel {
 				template.append("<transition><source ref=\"id0\"/><target ref=\"id9\"/><label kind=\"guard\" x=\"-1816\" y=\"-680\">c[" + myIndex + "] &gt;= T[" + myIndex + "]</label><label kind=\"assignment\" x=\"-1824\" y=\"-664\">active[" + myIndex + "] = true</label><nail x=\"-1840\" y=\"-664\"/><nail x=\"-1744\" y=\"-664\"/></transition>");
 				template.append("<transition><source ref=\"id6\"/><target ref=\"id8\"/><label kind=\"assignment\" x=\"-1344\" y=\"-728\">update()</label></transition>");
 				template.append("<transition><source ref=\"id0\"/><target ref=\"id1\"/><label kind=\"guard\" x=\"-1976\" y=\"-728\">c[" + myIndex + "] &lt; T[" + myIndex + "]</label><nail x=\"-1968\" y=\"-728\"/><nail x=\"-1968\" y=\"-856\"/></transition>");
-				template.append("<transition><source ref=\"id1\"/><target ref=\"id8\"/><label kind=\"guard\" x=\"-1584\" y=\"-888\">");
-				for (Reaction re : influencingReactions) {
-					//(!active[1] || c[1] &lt; tL[1])
-					//&amp;&amp; (!active[0] || c[0] &lt; tL[0])
+				Vector<Reactant> alreadyOutputReactants = new Vector<Reactant>();
+				if (upstreamReactants > 1) {
+					int y1 = -944,
+						y2 = -928,
+						incrY = -40;
+					alreadyOutputReactants.clear();
+					for (Reaction re : influencingReactions) {
+						int scenario = re.get(SCENARIO).as(Integer.class);
+						Reactant catalyst = m.getReactant(re.get(CATALYST).as(String.class)),
+								 reactant = m.getReactant(re.get(REACTANT).as(String.class)); //This is not null only when scenario != 0
+						int cataIdx = catalyst.get(REACTANT_INDEX).as(Integer.class),
+							reacIdx = reactant.get(REACTANT_INDEX).as(Integer.class);
+						switch (scenario) {
+							case 0:
+								if (cataIdx != myIndex && !alreadyOutputReactants.contains(catalyst)) {
+									alreadyOutputReactants.add(catalyst);
+									template.append("<transition><source ref=\"id1\"/><target ref=\"id2\"/><label kind=\"guard\" x=\"-1696\" y=\"" + y1 + "\">active[" + cataIdx + "] &amp;&amp; c[" + cataIdx + "] &gt;= T[" + cataIdx + "]</label><nail x=\"-1560\" y=\"-904\"/><nail x=\"-1496\" y=\"-904\"/><nail x=\"-1496\" y=\"" + y2 + "\"/><nail x=\"-1696\" y=\"" + y2 + "\"/></transition>");
+									template.append("<transition><source ref=\"id2\"/><target ref=\"id1\"/><label kind=\"synchronisation\" x=\"-1840\" y=\"" + y1 + "\">reacting[" + cataIdx + "]?</label><nail x=\"-1744\" y=\"" + y2 + "\"/><nail x=\"-1848\" y=\"" + y2 + "\"/><nail x=\"-1848\" y=\"-904\"/></transition>");
+									y1 += incrY;
+									y2 += incrY;
+								}
+								break;
+							case 1:
+							case 2: //In this case, CATALYST = E1, REACTANT = E2 (the two upstream reactants)
+								if (cataIdx != myIndex && !alreadyOutputReactants.contains(catalyst)) {
+									template.append("<transition><source ref=\"id1\"/><target ref=\"id2\"/><label kind=\"guard\" x=\"-1696\" y=\"" + y1 + "\">active[" + cataIdx + "] &amp;&amp; c[" + cataIdx + "] &gt;= T[" + cataIdx + "]</label><nail x=\"-1560\" y=\"-904\"/><nail x=\"-1496\" y=\"-904\"/><nail x=\"-1496\" y=\"" + y2 + "\"/><nail x=\"-1696\" y=\"" + y2 + "\"/></transition>");
+									template.append("<transition><source ref=\"id2\"/><target ref=\"id1\"/><label kind=\"synchronisation\" x=\"-1840\" y=\"" + y1 + "\">reacting[" + cataIdx + "]?</label><nail x=\"-1744\" y=\"" + y2 + "\"/><nail x=\"-1848\" y=\"" + y2 + "\"/><nail x=\"-1848\" y=\"-904\"/></transition>");
+									y1 += incrY;
+									y2 += incrY;
+								}
+								if (reacIdx != myIndex && !alreadyOutputReactants.contains(reactant)) {
+									alreadyOutputReactants.add(reactant);
+									template.append("<transition><source ref=\"id1\"/><target ref=\"id2\"/><label kind=\"guard\" x=\"-1696\" y=\"" + y1 + "\">active[" + reacIdx + "] &amp;&amp; c[" + reacIdx + "] &gt;= T[" + reacIdx + "]</label><nail x=\"-1560\" y=\"-904\"/><nail x=\"-1496\" y=\"-904\"/><nail x=\"-1496\" y=\"" + y2 + "\"/><nail x=\"-1696\" y=\"" + y2 + "\"/></transition>");
+									template.append("<transition><source ref=\"id2\"/><target ref=\"id1\"/><label kind=\"synchronisation\" x=\"-1840\" y=\"" + y1 + "\">reacting[" + reacIdx + "]?</label><nail x=\"-1744\" y=\"" + y2 + "\"/><nail x=\"-1848\" y=\"" + y2 + "\"/><nail x=\"-1848\" y=\"-904\"/></transition>");
+									y1 += incrY;
+									y2 += incrY;
+								}
+								break;
+							default:
+								break;
+						}
+					}
 				}
-				template.append("</label><label kind=\"assignment\" x=\"-1584\" y=\"-856\">update()</label><nail x=\"-1392\" y=\"-856\"/>");
+				template.append("<transition><source ref=\"id1\"/><target ref=\"id8\"/>");
+				//Now write the guard for the transition id1 (anonymous committed to decide whether this was the last upstream reactant on which we needed to wait) --update()--> id8 (updating)
+				if (upstreamReactants > 1) { //The guard is necessary only if we depend on more than one reactant
+					alreadyOutputReactants.clear(); //Keep track of the reactants we have already added to the guard, to avoid useless repetitions
+					template.append("<label kind=\"guard\" x=\"-1584\" y=\"-872\">");
+					boolean firstOutput = true;
+					for (Reaction upstreamReaction : influencingReactions) {
+						Reactant cata = m.getReactant(upstreamReaction.get(CATALYST).as(String.class)),
+								 reac = m.getReactant(upstreamReaction.get(REACTANT).as(String.class));
+						int cataIdx = cata.get(REACTANT_INDEX).as(Integer.class),
+							reacIdx = reac.get(REACTANT_INDEX).as(Integer.class);
+						switch (upstreamReaction.get(SCENARIO).as(Integer.class)) {
+							case 0:
+								if (cataIdx != myIndex && !alreadyOutputReactants.contains(cata)) {
+									alreadyOutputReactants.add(cata);
+									if (firstOutput) {
+										firstOutput = false;
+									} else {
+										template.append(" &amp;&amp; ");
+									}
+									template.append("(!active[" + cataIdx + "] || c[" + cataIdx + "] &lt; T[" + cataIdx + "])");
+								}
+								break;
+							case 1:
+							case 2:
+								if (cataIdx != myIndex && !alreadyOutputReactants.contains(cata)) {
+									alreadyOutputReactants.add(cata);
+									if (firstOutput) {
+										firstOutput = false;
+									} else {
+										template.append(" &amp;&amp; ");
+									}
+									template.append("(!active[" + cataIdx + "] || c[" + cataIdx + "] &lt; T[" + cataIdx + "])");
+								}
+								if (reacIdx != myIndex && !alreadyOutputReactants.contains(reac)) {
+									alreadyOutputReactants.add(reac);
+									if (firstOutput) {
+										firstOutput = false;
+									} else {
+										template.append(" &amp;&amp; ");
+									}
+									template.append("(!active[" + reacIdx + "] || c[" + reacIdx + "] &lt; T[" + reacIdx + "])");
+								}
+								break;
+							default:
+								break;
+						}
+					}
+					template.append("</label>");
+				}
+				template.append("<label kind=\"assignment\" x=\"-1584\" y=\"-856\">update()</label><nail x=\"-1392\" y=\"-856\"/></transition>");
 				int y1 = -624,
 					y2 = -608,
 					y3 = -856,
 					incrY = 32;
-				Vector<Reactant> alreadyOutputReactants = new Vector<Reactant>(); //Keep track of reactants that already have a transition to avoid input nondeterminism
+				alreadyOutputReactants.clear(); //Keep track of reactants that already have a transition to avoid input nondeterminism
 				for (Reaction re : influencingReactions) { //Transitions from not_reacting to updating
 					int scenario = re.get(SCENARIO).as(Integer.class);
 					Reactant catalyst = m.getReactant(re.get(CATALYST).as(String.class)),
@@ -1081,7 +1176,7 @@ public class VariablesModelReactantCentered extends VariablesModel {
 					}
 				}
 				template.append("<transition><source ref=\"id8\"/><target ref=\"id7\"/><label kind=\"guard\" x=\"-1392\" y=\"-664\">cant_react()</label><nail x=\"-1392\" y=\"-608\"/></transition>");
-				template.append("<transition><source ref=\"id9\"/><target ref=\"id8\"/><label kind=\"guard\" x=\"-1576\" y=\"-816\">c[" + myIndex + "] &gt;= T[" + myIndex + "]</label><label kind=\"synchronisation\" x=\"-1584\" y=\"-800\">reacting[" + myIndex + "]!</label><label kind=\"assignment\" x=\"-1568\" y=\"-784\">react(), c[" + myIndex + "] := 0,\nactive[" + myIndex + "] = false</label><nail x=\"-1632\" y=\"-784\"/><nail x=\"-1464\" y=\"-784\"/></transition>");
+				template.append("<transition><source ref=\"id9\"/><target ref=\"id8\"/><label kind=\"guard\" x=\"-1588\" y=\"-816\">c[" + myIndex + "] &gt;= T[" + myIndex + "]</label><label kind=\"synchronisation\" x=\"-1584\" y=\"-800\">reacting[" + myIndex + "]!</label><label kind=\"assignment\" x=\"-1592\" y=\"-784\">react(), c[" + myIndex + "] := 0,\nactive[" + myIndex + "] = false</label><nail x=\"-1632\" y=\"-784\"/><nail x=\"-1464\" y=\"-784\"/></transition>");
 				y1 = -744;
 				y2 = -728;
 				incrY = -48;
@@ -1119,43 +1214,6 @@ public class VariablesModelReactantCentered extends VariablesModel {
 					}
 				}
 				
-				/*y1 = -680;
-				y2 = -664;
-				y3 = -696;
-				incrY = 48;
-				alreadyOutputReactants = new Vector<Reactant>(); //Keep trace of which reactants already have a transition for them, because otherwise we get input nondeterminism
-				for (Reaction re : influencingReactions) { //Transitions from waiting to stubborn
-					int scenario = re.get(SCENARIO).as(Integer.class);
-					Reactant catalyst = m.getReactant(re.get(CATALYST).as(String.class)),
-							 reactant = m.getReactant(re.get(REACTANT).as(String.class)); //This is not null only when scenario != 0
-					switch (scenario) {
-						case 0:
-							if (catalyst.get(REACTANT_INDEX).as(Integer.class) != myIndex && !alreadyOutputReactants.contains(catalyst)) {
-								alreadyOutputReactants.add(catalyst);
-								template.append("<transition><source ref=\"id8\"/><target ref=\"id8\"/><label kind=\"synchronisation\" x=\"-1408\" y=\"" + y1 + "\">reacting[" + m.getReactant(re.get(CATALYST).as(String.class)).get(REACTANT_INDEX).as(Integer.class) + "]?</label><label kind=\"assignment\" x=\"-1408\" y=\"" + y2 + "\">update()</label><nail x=\"-1416\" y=\"" + y2 + "\"/><nail x=\"-1320\" y=\"" + y2 + "\"/><nail x=\"-1320\" y=\"" + y3 + "\"/></transition>");
-								y1 += incrY;
-								y2 += incrY;
-							}
-							break;
-						case 1:
-						case 2: //In this case, CATALYST = E1, REACTANT = E2 (the two upstream reactants)
-							if (catalyst.get(REACTANT_INDEX).as(Integer.class) != myIndex && !alreadyOutputReactants.contains(catalyst)) {
-								alreadyOutputReactants.add(catalyst);
-								template.append("<transition><source ref=\"id8\"/><target ref=\"id8\"/><label kind=\"synchronisation\" x=\"-1408\" y=\"" + y1 + "\">reacting[" + m.getReactant(re.get(CATALYST).as(String.class)).get(REACTANT_INDEX).as(Integer.class) + "]?</label><label kind=\"assignment\" x=\"-1408\" y=\"" + y2 + "\">update()</label><nail x=\"-1416\" y=\"" + y2 + "\"/><nail x=\"-1320\" y=\"" + y2 + "\"/><nail x=\"-1320\" y=\"" + y3 + "\"/></transition>");
-								y1 += incrY;
-								y2 += incrY;
-							}
-							if (reactant.get(REACTANT_INDEX).as(Integer.class) != myIndex && !alreadyOutputReactants.contains(reactant)) {
-								alreadyOutputReactants.add(reactant);
-								template.append("<transition><source ref=\"id8\"/><target ref=\"id8\"/><label kind=\"synchronisation\" x=\"-1408\" y=\"" + y1 + "\">reacting[" + m.getReactant(re.get(REACTANT).as(String.class)).get(REACTANT_INDEX).as(Integer.class) + "]?</label><label kind=\"assignment\" x=\"-1408\" y=\"" + y2 + "\">update()</label><nail x=\"-1416\" y=\"" + y2 + "\"/><nail x=\"-1320\" y=\"" + y2 + "\"/><nail x=\"-1320\" y=\"" + y3 + "\"/></transition>");
-								y1 += incrY;
-								y2 += incrY;
-							}
-							break;
-						default:
-							break;
-					}
-				}*/
 				template.append("</template>");
 				document = documentBuilder.parse(new ByteArrayInputStream(template.toString().getBytes()));
 				tra.transform(new DOMSource(document), new StreamResult(outString));
