@@ -533,7 +533,7 @@ public class UppaalModelAnalyserSMC implements ModelAnalyser<LevelResult> {
 			}
 			
 			String line = null;
-			String objective = "-- Property is";
+			String objective = "-- Property "; //TODO: we ignore the fact that a property MAY be satisfied! We now just consider it as satisfied.
 			
 			try {
 				while ((line = br.readLine()) != null) {
