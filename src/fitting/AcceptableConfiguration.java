@@ -1,25 +1,24 @@
 package fitting;
 import inat.analyser.LevelResult;
-import inat.model.Reaction;
 
 import java.util.HashMap;
 
 public class AcceptableConfiguration {
-	private HashMap<Reaction, ScenarioCfg> scenarioConfigurations = null;
+	private HashMap<String, ScenarioCfg> scenarioConfigurations = null;
 	private LevelResult result = null;
 	private String errorEstimation = null;
 	
-	public AcceptableConfiguration(HashMap<Reaction, ScenarioCfg> scenarioConfigurations, LevelResult result, String errorEstimation) {
+	public AcceptableConfiguration(HashMap<String, ScenarioCfg> scenarioConfigurations, LevelResult result, String errorEstimation) {
 		this.scenarioConfigurations = scenarioConfigurations;
 		this.result = result;
 		this.errorEstimation = errorEstimation;
 	}
 	
-	public void setScenarioConfigurations(HashMap<Reaction, ScenarioCfg> scenarioConfigurations) {
+	public void setScenarioConfigurations(HashMap<String, ScenarioCfg> scenarioConfigurations) {
 		this.scenarioConfigurations = scenarioConfigurations;
 	}
 	
-	public HashMap<Reaction, ScenarioCfg> getScenarioConfigurations() {
+	public HashMap<String, ScenarioCfg> getScenarioConfigurations() {
 		return this.scenarioConfigurations;
 	}
 	
@@ -41,8 +40,8 @@ public class AcceptableConfiguration {
 	
 	public String toString() {
 		StringBuilder builder = new StringBuilder();
-		for (Reaction r : scenarioConfigurations.keySet()) {
-			builder.append(r.getName() + " uses ");
+		for (String r : scenarioConfigurations.keySet()) {
+			builder.append(r + " uses ");
 			ScenarioCfg cfg = scenarioConfigurations.get(r);
 			for (String parName : cfg.getParameters().keySet()) {
 				builder.append(parName + "=" + cfg.getParameters().get(parName) + ", ");

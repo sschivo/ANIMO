@@ -242,7 +242,7 @@ public class ParameterFitter {
 				final JLabel showPageNumber = new JLabel("Page 1/1");
 				int countItems = 0;
 				int countPages = 0;
-				DecimalFormat decimalFormat = new DecimalFormat("##0.##E0");
+				DecimalFormat decimalFormat = new DecimalFormat("0.##E0");
 				for (final AcceptableConfiguration acceptableConfiguration : acceptableConfigurations) {
 					if (acceptableConfiguration == null) continue;
 					try {
@@ -268,7 +268,7 @@ public class ParameterFitter {
 							shownReactants.add(r.getName());
 						}
 						for (Reactant r : model.getReactantCollection()) {
-							if (shownReactants.contains(r.getName()) || r.get(Model.Properties.PLOTTED).as(Boolean.class)) {
+							if (shownReactants.contains(r.getName())) { // I comment this so I show all and only the reactants selected for comparison. If you remove this comment, you can also get those reactants marked as plotted, and they will be hidden if they are not in a comparison || r.get(Model.Properties.PLOTTED).as(Boolean.class)) {
 								filteredReactants.add(r.getId());
 							}
 						}
@@ -314,7 +314,7 @@ public class ParameterFitter {
 							for (String parName : scnFitting.getParameterSettings().keySet()) {
 								ParameterSetting parSetting = scnFitting.getParameterSettings().get(parName);
 								if (!parSetting.isFixed()) {
-									builder.append(parName + "=" + decimalFormat.format(acceptableConfiguration.getScenarioConfigurations().get(r).getParameters().get(parName)) + ",");
+									builder.append(parName + "=" + decimalFormat.format(acceptableConfiguration.getScenarioConfigurations().get(r.getId()).getParameters().get(parName)) + ",");
 								}
 							}
 							builder.append("]; ");
@@ -334,10 +334,11 @@ public class ParameterFitter {
 										ParameterSetting parSetting = scnFitting.getParameterSettings().get(parName);
 										if (parSetting.isFixed()) {
 											//r.getScenarioCfg().getParameters().put(parName, parSetting.getFixedValue());
-											edgeAttr.setAttribute(r.get(Model.Properties.CYTOSCAPE_ID).as(String.class), parName, parSetting.getFixedValue());
+											edgeAttr.setAttribute(r.get(Model.Properties.CYTOSCAPE_ID).as(String.class).substring(1), parName, parSetting.getFixedValue());
 										} else {
+											System.err.println("Setto il parametro " + parName + " per la reazione " + r.getName() + " (Cyt ID " + r.get(Model.Properties.CYTOSCAPE_ID).as(String.class) + ") a " + acceptableConfiguration.getScenarioConfigurations().get(r).getParameters().get(parName));
 											//r.getScenarioCfg().getParameters().put(parName, acceptableConfiguration.getScenarioConfigurations().get(r).getParameters().get(parName));
-											edgeAttr.setAttribute(r.get(Model.Properties.CYTOSCAPE_ID).as(String.class), parName, acceptableConfiguration.getScenarioConfigurations().get(r).getParameters().get(parName));
+											edgeAttr.setAttribute(r.get(Model.Properties.CYTOSCAPE_ID).as(String.class).substring(1), parName, acceptableConfiguration.getScenarioConfigurations().get(r).getParameters().get(parName));
 										}
 									}
 								}
@@ -1053,7 +1054,7 @@ public class ParameterFitter {
 						 UPPAAL_MODEL_TMP_PREFIX = "iknat_uppaal_model";*/
 	
 	public void doCompute(ThreadPool pool) {
-		final HashMap<Reaction, ScenarioCfg> currentConfiguration = new HashMap<Reaction, ScenarioCfg>();
+		final HashMap<String, ScenarioCfg> currentConfiguration = new HashMap<String, ScenarioCfg>();
 		double secStepFactor = model.getProperties().get(Model.Properties.SECS_POINT_SCALE_FACTOR).as(Double.class);
 		//System.err.println("Ho appena creato un modello nuovo apposta (non so quanto sia saggio), e sto facendo i conti.");
 		//System.err.println("Conto ben " + model.getReactions().size() + " reazioni");
@@ -1067,8 +1068,8 @@ public class ParameterFitter {
 			for (String parName : scenario.getParameters().keySet()) {
 				scenario.setParameter(parName, cfg.getParameters().get(parName));
 			}
-
-			Integer unc = 5; //Uncertainty value is now ANIMO-wide (TODO: is that a bit excessive? One would expect the uncertainty to be connected to the model...)
+			
+			/*Integer unc = 5; //Uncertainty value is now ANIMO-wide (TODO: is that a bit excessive? One would expect the uncertainty to be connected to the model...)
 			XmlConfiguration configuration = InatBackend.get().configuration();
 			try {
 				unc = new Integer(configuration.get(XmlConfiguration.UNCERTAINTY_KEY));
@@ -1077,8 +1078,8 @@ public class ParameterFitter {
 			}
 //			if (r.has(Model.Properties.UNCERTAINTY)) { //We always want to use the uncertainty set in the options, so no specific uncertainty values for single reactions
 //				unc = r.get(Model.Properties.UNCERTAINTY).as(Integer.class);
-//			}
-			double uncertainty = unc;
+//			}*/
+			double uncertainty = 0; // We don't want to use uncertainty in the parameter sweeping!! Otherwise you would need many simulations for each configuration! unc;
 			int scenarioIdx = cfg.getIndex();
 			int nLevelsR1, nLevelsR2;
 			double levelsScaleFactor = r.get(Model.Properties.LEVELS_SCALE_FACTOR + "_reaction").as(Double.class);
@@ -1146,12 +1147,15 @@ public class ParameterFitter {
 				r.let(Model.Properties.TIMES_UPPER).be(timesUTable);
 			}
 			
-			/*System.err.print("Nella configurazione corrente, abbiamo che la reazione " + r.getName() + " ha la configurazione (" + cfg.getIndex());
-			for (String pn : cfg.getParameters().keySet()) {
-				System.err.print(", " + pn + " = " + cfg.getParameters().get(pn));
-			}
-			System.err.println(")");*/
-			currentConfiguration.put(r, new ScenarioCfg(cfg));
+			/*if (!scenarioFittingParameters.get(r).getParameterSetting("k").isFixed()) {
+				//System.err.print("Nella configurazione corrente, abbiamo che la reazione " + r.getName() + " ha la configurazione (" + cfg.getIndex());
+				System.err.print(r.getName() + " ha la configurazione (" + cfg.getIndex());
+				for (String pn : cfg.getParameters().keySet()) {
+					System.err.print(", " + pn + " = " + cfg.getParameters().get(pn));
+				}
+				System.err.println(")");
+			}*/
+			currentConfiguration.put(r.getId(), new ScenarioCfg(cfg));
 		}
 		/*final EstraiValori estrattore = new EstraiValori();*/
 		try {
@@ -1174,6 +1178,19 @@ public class ParameterFitter {
 						/*File outputCSV = estrattore.mediaVeloce(uppaalModel.getAbsolutePath(), uppaalQuery.getAbsolutePath(), 1, false, false);*/
 						//int timeTo = (int)(TIME_TO * 60.0 / analyzedModel.getProperties().get(Model.Properties.SECONDS_PER_POINT).as(Double.class));
 						try {
+							for (Reaction r : analyzedModel.getReactionCollection()) {
+								ScenarioCfg cfg = currentConfiguration.get(r.getId());
+								for (String pn : cfg.getParameters().keySet()) {
+									r.let(pn).be(cfg.getParameters().get(pn));
+								}
+								/*if (!scenarioFittingParameters.get(r.getId()).getParameterSetting("k").isFixed()) {
+									System.err.print(r.getName() + " ha la configurazione (" + cfg.getIndex());
+									for (String pn : cfg.getParameters().keySet()) {
+										System.err.print(", " + pn + " = " + cfg.getParameters().get(pn));
+									}
+									System.err.println(")");
+								}*/
+							}
 							LevelResult result = new UppaalModelAnalyserSMC(null, null).analyze(analyzedModel, timeTo);
 							Pair<Boolean, Double> comparisonResult = compareResults(result);
 							if (comparisonResult.first) {
@@ -1226,7 +1243,7 @@ public class ParameterFitter {
 			if (hisFirstLine == null) {
 				System.err.println("ERROR file " + hisCSV + ": is empty!");
 				hisIS.close();
-				return new Pair<Boolean, Double>(false, 100.0);
+				return new Pair<Boolean, Double>(false, 101.0);
 			}
 			StringTokenizer hisTritatutto = new StringTokenizer(hisFirstLine, ",");
 			boolean foundColumn = false,
@@ -1276,7 +1293,7 @@ public class ParameterFitter {
 					//System.err.println("E la comparazione fallisce! Mio valore = " + myValue + ", suo valore = " + hisValue);
 					//System.err.println("Differenza attuale: " + difference + ", massimo consentito: " + allowedError);
 					hisIS.close();
-					return new Pair<Boolean, Double>(false, 100.0);
+					return new Pair<Boolean, Double>(false, difference);
 				}
 			}
 			//System.err.println("Differenza massima per il mio reagente " + reactant + " = " + maxDifference);
