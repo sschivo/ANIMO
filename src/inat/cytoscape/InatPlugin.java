@@ -432,7 +432,7 @@ public class InatPlugin extends CytoscapePlugin {
 		
 		
 		//The "Parameter Fitter"
-		if (areWeTheDeveloper) {
+		//if (areWeTheDeveloper) {
 			JButton parameterFit = new JButton("Parameter fitter...");
 			parameterFit.addActionListener(new ActionListener() {
 				public void actionPerformed(ActionEvent e) {
@@ -445,7 +445,7 @@ public class InatPlugin extends CytoscapePlugin {
 			parameterFitBox.add(parameterFit);
 			parameterFitBox.add(Box.createGlue());
 			buttonsBox.add(parameterFitBox);
-		}
+		//}
 		
 
 		//The "Analyse network" button: perform the requested analysis on the current network with the given parameters
