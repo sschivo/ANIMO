@@ -45,6 +45,7 @@ import java.util.Vector;
 import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
+import javax.swing.ButtonGroup;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
@@ -55,6 +56,7 @@ import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JProgressBar;
+import javax.swing.JRadioButton;
 import javax.swing.JScrollPane;
 import javax.swing.JSlider;
 import javax.swing.JSplitPane;
@@ -150,10 +152,10 @@ public class ParameterFitter {
 		}
 	}
 	
-	public void setVariableParameter(Reaction reaction, String parName, Double min, Double max, Double increase) {
+	public void setVariableParameter(Reaction reaction, String parName, Double min, Double max, Double increase, boolean logarithmic) {
 		ParameterSetting parSetting = scenarioFittingParameters.get(reaction).getParameterSetting(parName);
 		if (parSetting != null) {
-			parSetting.setVariable(min, max, increase);
+			parSetting.setVariable(min, max, increase, logarithmic);
 		} else {
 			parSetting = new ParameterSetting(parName, min, max, increase);
 			scenarioFittingParameters.get(reaction).setParameterSetting(parName, parSetting);
@@ -341,9 +343,9 @@ public class ParameterFitter {
 											//r.getScenarioCfg().getParameters().put(parName, parSetting.getFixedValue());
 											edgeAttr.setAttribute(r.get(Model.Properties.CYTOSCAPE_ID).as(String.class).substring(1), parName, parSetting.getFixedValue());
 										} else {
-											System.err.println("Setto il parametro " + parName + " per la reazione " + r.getName() + " (Cyt ID " + r.get(Model.Properties.CYTOSCAPE_ID).as(String.class) + ") a " + acceptableConfiguration.getScenarioConfigurations().get(r).getParameters().get(parName));
+											//System.err.println("Setto il parametro " + parName + " per la reazione " + r.getName() + " (Cyt ID " + r.get(Model.Properties.CYTOSCAPE_ID).as(String.class) + ") a " + acceptableConfiguration.getScenarioConfigurations().get(r.getId()).getParameters().get(parName));
 											//r.getScenarioCfg().getParameters().put(parName, acceptableConfiguration.getScenarioConfigurations().get(r).getParameters().get(parName));
-											edgeAttr.setAttribute(r.get(Model.Properties.CYTOSCAPE_ID).as(String.class).substring(1), parName, acceptableConfiguration.getScenarioConfigurations().get(r).getParameters().get(parName));
+											edgeAttr.setAttribute(r.get(Model.Properties.CYTOSCAPE_ID).as(String.class).substring(1), parName, acceptableConfiguration.getScenarioConfigurations().get(r.getId()).getParameters().get(parName));
 										}
 									}
 								}
@@ -367,7 +369,7 @@ public class ParameterFitter {
 							}
 						});
 						Box acceptBox = new Box(BoxLayout.X_AXIS);
-						acceptBox.add(new JLabel(acceptableConfiguration.getErrorEstimation() + "  "));
+//						acceptBox.add(new JLabel(acceptableConfiguration.getErrorEstimation() + "  "));
 						acceptBox.add(accept);
 						graphBox.add(acceptBox);
 						//acceptableGraphsWindow.getContentPane().add(new LabelledField(title, graphBox, title));
@@ -452,7 +454,7 @@ public class ParameterFitter {
 					acceptableGraphsWindow.getContentPane().add(boxButtons, BorderLayout.SOUTH);
 				}
 				final Box filterButtonsBox = new Box(BoxLayout.X_AXIS);
-				filterButtonsBox.add(Box.createGlue());
+//				filterButtonsBox.add(Box.createGlue());
 				JButton filter = new JButton("Filter");
 //				final Vector<Pair<JTextField, ReactantComparison>> comparisonFieldParameters = new Vector<Pair<JTextField, ReactantComparison>>();
 //				for (Reactant r : reactantComparisons.keySet()) {
@@ -461,11 +463,16 @@ public class ParameterFitter {
 //					comparisonFieldParameters.add(new Pair<JTextField, ReactantComparison>(comparisonError, compare));
 //					filterButtonsBox.add(new LabelledField(r.getName() + " error", comparisonError));
 //				}
-				filterButtonsBox.add(Box.createGlue());
+				//filterButtonsBox.add(Box.createGlue());
 				final JFormattedTextField resultsToShow = new JFormattedTextField(10);
+				//resultsToShow.setColumns(20);
+				Dimension prefSize = resultsToShow.getPreferredSize();
+				prefSize.width *= 1.5;
+				resultsToShow.setPreferredSize(prefSize);
+				resultsToShow.setMaximumSize(prefSize);
 				//filterButtonsBox.add(new LabelledField("Show the first results", resultsToShow));
 				JLabel labelShow = new JLabel("Show the best "),
-					   labelResults = new JLabel(" results");
+					   labelResults = new JLabel(" results  ");
 				filterButtonsBox.add(labelShow);
 				filterButtonsBox.add(resultsToShow);
 				filterButtonsBox.add(labelResults);
@@ -508,9 +515,10 @@ public class ParameterFitter {
 						showAcceptableGraphsWindow();
 					}
 				});
-				filterButtonsBox.add(Box.createGlue());
+				//filterButtonsBox.add(Box.createGlue());
 				filterButtonsBox.add(filter);
 				JButton showAll = new JButton("Show all");
+				//filterButtonsBox.add(Box.createGlue());
 				showAll.addActionListener(new ActionListener() {
 					@Override
 					public void actionPerformed(ActionEvent e) {
@@ -530,9 +538,9 @@ public class ParameterFitter {
 						showAcceptableGraphsWindow();
 					}
 				});
-				filterButtonsBox.add(Box.createGlue());
+				//filterButtonsBox.add(Box.createGlue());
 				filterButtonsBox.add(showAll);
-				filterButtonsBox.add(Box.createGlue());
+				//filterButtonsBox.add(Box.createGlue());
 				acceptableGraphsWindow.getContentPane().add(filterButtonsBox, BorderLayout.NORTH);
 				acceptableGraphsWindow.setBounds(window.getBounds());
 				int actuallyAccepted = 0;
@@ -647,7 +655,12 @@ public class ParameterFitter {
 					Double min = setting.getMin(),
 						   max = setting.getMax(),
 						   inc = setting.getIncrease();
-					long nSteps = Math.round((max - min) / inc + 1);
+					long nSteps = 1;
+					if (setting.isLogarithmic()) {
+						nSteps = 1 + Math.round(Math.log(max / min) / Math.log(inc));
+					} else {
+						nSteps = Math.round((max - min) / inc + 1);
+					}
 					totalComputations *= nSteps;
 				}
 			}
@@ -718,6 +731,31 @@ public class ParameterFitter {
 			final JFormattedTextField minValue = new JFormattedTextField(format);
 			final JFormattedTextField maxValue = new JFormattedTextField(format);
 			final JFormattedTextField incrementValue = new JFormattedTextField(format);
+			final JRadioButton linearScale = new JRadioButton("Linear"),
+							   logarithmicScale = new JRadioButton("Logarithmic");
+			Box boxIncrement = new Box(BoxLayout.Y_AXIS);
+			Box boxScale = new Box(BoxLayout.X_AXIS);
+			boxScale.add(linearScale);
+			boxScale.add(logarithmicScale);
+			boxIncrement.add(incrementValue);
+			boxIncrement.add(boxScale);
+			final LabelledField incrementField = new LabelledField("Increment", boxIncrement);
+			ButtonGroup scaleGroup = new ButtonGroup();
+			scaleGroup.add(linearScale);
+			scaleGroup.add(logarithmicScale);
+			ActionListener l = new ActionListener() {
+				@Override
+				public void actionPerformed(ActionEvent e) {
+					if (linearScale.isSelected()) {
+						incrementField.setTitle("Increment");
+					} else {
+						incrementField.setTitle("Log base");
+					}
+				}
+			};
+			linearScale.addActionListener(l);
+			logarithmicScale.addActionListener(l);
+			linearScale.setSelected(true);
 			minValue.setValue(parameters.get(parName)/10.0);
 			Dimension prefSize = minValue.getPreferredSize();
 			prefSize.width *= 1.5;
@@ -725,7 +763,7 @@ public class ParameterFitter {
 			minValue.getDocument().addDocumentListener(new DocumentListener() {
 				@Override
 				public void changedUpdate(DocumentEvent e) {
-					setVariableParameter(reaction, parName, new Double(minValue.getValue().toString()), new Double(maxValue.getValue().toString()), new Double(incrementValue.getValue().toString()));
+					setVariableParameter(reaction, parName, new Double(minValue.getValue().toString()), new Double(maxValue.getValue().toString()), new Double(incrementValue.getValue().toString()), logarithmicScale.isSelected());
 					updateTotalComputations();
 				}
 
@@ -747,7 +785,7 @@ public class ParameterFitter {
 			maxValue.getDocument().addDocumentListener(new DocumentListener() {
 				@Override
 				public void changedUpdate(DocumentEvent e) {
-					setVariableParameter(reaction, parName, new Double(minValue.getValue().toString()), new Double(maxValue.getValue().toString()), new Double(incrementValue.getValue().toString()));
+					setVariableParameter(reaction, parName, new Double(minValue.getValue().toString()), new Double(maxValue.getValue().toString()), new Double(incrementValue.getValue().toString()), logarithmicScale.isSelected());
 					updateTotalComputations();
 				}
 
@@ -769,7 +807,7 @@ public class ParameterFitter {
 			incrementValue.getDocument().addDocumentListener(new DocumentListener() {
 				@Override
 				public void changedUpdate(DocumentEvent e) {
-					setVariableParameter(reaction, parName, new Double(minValue.getValue().toString()), new Double(maxValue.getValue().toString()), new Double(incrementValue.getValue().toString()));
+					setVariableParameter(reaction, parName, new Double(minValue.getValue().toString()), new Double(maxValue.getValue().toString()), new Double(incrementValue.getValue().toString()), logarithmicScale.isSelected());
 					updateTotalComputations();
 				}
 
@@ -783,10 +821,10 @@ public class ParameterFitter {
 					changedUpdate(e);
 				}
 			});
-			parameterBox.add(new LabelledField("Increment", incrementValue));
+			parameterBox.add(incrementField);
 			parameterBox.add(Box.createGlue());
 			parametersBox.add(new LabelledField(parName, parameterBox));
-			setVariableParameter(reaction, parName, new Double(minValue.getValue().toString()), new Double(maxValue.getValue().toString()), new Double(incrementValue.getValue().toString()));
+			setVariableParameter(reaction, parName, new Double(minValue.getValue().toString()), new Double(maxValue.getValue().toString()), new Double(incrementValue.getValue().toString()), logarithmicScale.isSelected());
 			updateTotalComputations();
 		}
 		parametersBox.add(Box.createGlue());
@@ -997,17 +1035,30 @@ public class ParameterFitter {
 			Pair<ScenarioCfg, ParameterSetting> pair = parSettings.elementAt(startIndex);
 			ScenarioCfg cfg = pair.first;
 			ParameterSetting parSetting = pair.second;
-			long computationsAtMyLevel = Math.round((parSetting.getMax() - parSetting.getMin()) / parSetting.getIncrease() + 1);
-			long mySteps = 0;
-			for (Double val = parSetting.getMin(); mySteps < computationsAtMyLevel; val += parSetting.getIncrease()) { //the termination condition on the for is correct: we don't want to stop too early just because of some rounding problems
-				HashMap<String, Double> params = cfg.getParameters();
-				if (params == null) {
-					params = new HashMap<String, Double>();
+			boolean isLogarithmicScale = parSetting.isLogarithmic();
+			if (isLogarithmicScale) {
+				for (Double val = parSetting.getMin(); val <= parSetting.getMax(); val *= parSetting.getIncrease()) { //parSetting.getIncrease() gives us the log base if we are on a logarithmic scale
+					HashMap<String, Double> params = cfg.getParameters();
+					if (params == null) {
+						params = new HashMap<String, Double>();
+					}
+					params.put(parSetting.getName(), val);
+					cfg.setParameters(params);
+					visitParameterSettings(parSettings, startIndex + 1, pool);
 				}
-				params.put(parSetting.getName(), val);
-				cfg.setParameters(params);
-				visitParameterSettings(parSettings, startIndex + 1, pool);
-				mySteps++;
+			} else {
+				long computationsAtMyLevel = Math.round((parSetting.getMax() - parSetting.getMin()) / parSetting.getIncrease() + 1);
+				long mySteps = 0;
+				for (Double val = parSetting.getMin(); mySteps < computationsAtMyLevel; val += parSetting.getIncrease()) { //the termination condition on the for is correct: we don't want to stop too early just because of some rounding problems
+					HashMap<String, Double> params = cfg.getParameters();
+					if (params == null) {
+						params = new HashMap<String, Double>();
+					}
+					params.put(parSetting.getName(), val);
+					cfg.setParameters(params);
+					visitParameterSettings(parSettings, startIndex + 1, pool);
+					mySteps++;
+				}
 			}
 		}
 	}
@@ -1217,12 +1268,14 @@ public class ParameterFitter {
 		DecimalFormat decimalFormat = new DecimalFormat("##0.####");
 		try {
 			for (AcceptableConfiguration tryConfiguration : candidateConfigurations) {
-				Pair<Boolean, Double> comparisonResult = compareResults(tryConfiguration.getResult());
-				//if (comparisonResult.first) {
-					//acceptableConfigurations.add(tryConfiguration);
-					tryConfiguration.setErrorValue(comparisonResult.second);
-					tryConfiguration.setErrorEstimation("Max abs diff: " + decimalFormat.format(comparisonResult.second));
-				//}
+				if (Double.isNaN(tryConfiguration.getErrorValue())) {
+					Pair<Boolean, Double> comparisonResult = compareResults(tryConfiguration.getResult());
+					//if (comparisonResult.first) {
+						//acceptableConfigurations.add(tryConfiguration);
+						tryConfiguration.setErrorValue(comparisonResult.second);
+						tryConfiguration.setErrorEstimation("Max abs diff: " + decimalFormat.format(comparisonResult.second));
+					//}
+				}
 			}
 			Collections.sort(candidateConfigurations);
 		} catch (Exception ex) {
@@ -1265,36 +1318,40 @@ public class ParameterFitter {
 				} else if (colName.equals(hisColumn)) {
 					foundColumn = true;
 				}
-				if (!colName.toLowerCase().equals(hisNLevelsColumn) && !foundNLevels) {
-					hisNLevelsColumnIndex++;
-				} else if (colName.equals(hisNLevelsColumn)) {
+				if (colName.toLowerCase().equals(hisNLevelsColumn)) {
 					foundNLevels = true;
+					//System.err.println("Ho trovato la colonna " + colName);
+				} else {
+					hisNLevelsColumnIndex++;
 				}
 				if (foundColumn && foundNLevels) break;
 			}
 			
 			String hisLine = null;
 			double maxDifference = 0;
-			foundNLevels = false;
+			foundColumn = false;
 			while ((hisLine = hisIS.readLine()) != null) {
 				hisTritatutto = new StringTokenizer(hisLine, ",");
 				double hisTime = Double.parseDouble(hisTritatutto.nextToken());
-				for (int i=1;i<hisColumnIndex;i++) {
-					if (i == hisNLevelsColumnIndex && !foundNLevels) {
-						try {
-							hisNLevels = Double.parseDouble(hisTritatutto.nextToken());
-							foundNLevels = true;
-							//System.err.println("Lui ha " + hisNLevels);
-						} catch (Exception ex) {
-							foundNLevels = false;
-						}
-					} else {
+				//System.err.println("t = " + hisTime);
+				int i=1;
+				for (;i<hisColumnIndex - 1;i++) {
+					hisTritatutto.nextToken();
+				}
+				double hisValue = Double.parseDouble(hisTritatutto.nextToken());
+				//System.err.println("v = " + hisValue);
+				if (foundNLevels && !foundColumn) {
+					//System.err.println("Sono alla colonna " + i + " e invece il numero di livelli sta a " + hisNLevelsColumnIndex);
+					for (;i<hisNLevelsColumnIndex - 1; i++) {
 						hisTritatutto.nextToken();
 					}
+					hisNLevels = Double.parseDouble(hisTritatutto.nextToken());
+					foundColumn = true;
+					//System.err.println("Lui ha " + hisNLevels + " livelli");
 				}
-				double hisValue = Double.parseDouble(hisTritatutto.nextToken()) / hisNLevels * myNLevels;
+				hisValue = hisValue / hisNLevels;
 				double myValue = myResult.getConcentration(reactant.getId(), hisTime / scale);
-				double difference = Math.abs(myValue - hisValue)/myNLevels;
+				double difference = Math.abs(myValue / myNLevels - hisValue);
 				//System.err.println("IO (" + (hisTime / scale) + "): " + myValue + "/" + myNLevels + ", LUI (" + hisTime + "): " + (hisValue / myNLevels * hisNLevels) + "/" + hisNLevels + ". Diff: " + difference);
 				if (difference > maxDifference) {
 					maxDifference = difference;

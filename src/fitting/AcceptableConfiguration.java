@@ -7,7 +7,7 @@ public class AcceptableConfiguration implements Comparable<AcceptableConfigurati
 	private HashMap<String, ScenarioCfg> scenarioConfigurations = null;
 	private LevelResult result = null;
 	private String errorEstimation = null;
-	private double errorValue = 0;
+	private double errorValue = Double.NaN;
 	
 	public AcceptableConfiguration(HashMap<String, ScenarioCfg> scenarioConfigurations, LevelResult result, String errorEstimation) {
 		this.scenarioConfigurations = scenarioConfigurations;
