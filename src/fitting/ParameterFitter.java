@@ -19,9 +19,12 @@ import inat.util.Table;
 import inat.util.XmlConfiguration;
 
 import java.awt.BorderLayout;
+import java.awt.Color;
 import java.awt.Component;
 import java.awt.Container;
 import java.awt.Dimension;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
 import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -238,7 +241,16 @@ public class ParameterFitter {
 		startExecution = new JButton(BUTTON_START);
 		startExecution.addActionListener(new ActionListener() {
 			
+			private int numberOfShownResults = -1;
+			
 			public void showAcceptableGraphsWindow() {
+				if (numberOfShownResults == -1) {
+					numberOfShownResults = 10;
+				}
+				showAcceptableGraphsWindow(numberOfShownResults);
+			}
+			
+			public void showAcceptableGraphsWindow(int numberOfResultsToShow) {
 				//System.err.println("Ecco le configurazioni accettabili (" + acceptableConfigurations.size() + "):");
 				//acceptableGraphsWindow.getContentPane().setLayout(new GridLayout(2,2));
 				acceptableGraphsWindow.getContentPane().setLayout(new BorderLayout());
@@ -250,6 +262,13 @@ public class ParameterFitter {
 				int countPages = 0;
 				DecimalFormat decimalFormat = new DecimalFormat("0.##E0");
 				Component lastAdded = null;
+				
+				acceptableConfigurations.removeAllElements();
+				numberOfResultsToShow = Math.min(numberOfResultsToShow, allConfigurations.size());
+				for (int i = 0; i < numberOfResultsToShow; i++) {
+					acceptableConfigurations.add(allConfigurations.elementAt(i));
+				}
+				
 				for (final AcceptableConfiguration acceptableConfiguration : acceptableConfigurations) {
 					if (acceptableConfiguration == null) continue;
 					try {
@@ -370,6 +389,29 @@ public class ParameterFitter {
 						});
 						Box acceptBox = new Box(BoxLayout.X_AXIS);
 //						acceptBox.add(new JLabel(acceptableConfiguration.getErrorEstimation() + "  "));
+						JLabel errorLabel = new JLabel("" + acceptableConfiguration.getErrorValue()) {
+							private static final long serialVersionUID = -8694494127364601604L;
+
+							public void paint(Graphics g1) {
+								Graphics2D g = (Graphics2D)g1;
+								double v = -1;
+								try {
+									v = Double.parseDouble(this.getText());
+								} catch (NumberFormatException ex) {
+									v = 0.0;
+								}
+								v = 1 - v;
+								g.setPaint(Color.RED);
+								g.fillRect(0, 0, this.getWidth(), this.getHeight());
+								g.setPaint(Color.GREEN);
+								g.fillRect(0, 0, (int)Math.round(v * this.getWidth()), this.getHeight()); 
+							}
+						};
+						errorLabel.setToolTipText(acceptableConfiguration.getErrorEstimation());
+						Dimension labelSize = new Dimension(75, 15);
+						errorLabel.setPreferredSize(labelSize);
+						errorLabel.setMaximumSize(labelSize);
+						acceptBox.add(errorLabel);
 						acceptBox.add(accept);
 						graphBox.add(acceptBox);
 						//acceptableGraphsWindow.getContentPane().add(new LabelledField(title, graphBox, title));
@@ -464,7 +506,7 @@ public class ParameterFitter {
 //					filterButtonsBox.add(new LabelledField(r.getName() + " error", comparisonError));
 //				}
 				//filterButtonsBox.add(Box.createGlue());
-				final JFormattedTextField resultsToShow = new JFormattedTextField(10);
+				final JFormattedTextField resultsToShow = new JFormattedTextField(numberOfResultsToShow);
 				//resultsToShow.setColumns(20);
 				Dimension prefSize = resultsToShow.getPreferredSize();
 				prefSize.width *= 1.5;
@@ -476,7 +518,6 @@ public class ParameterFitter {
 				filterButtonsBox.add(labelShow);
 				filterButtonsBox.add(resultsToShow);
 				filterButtonsBox.add(labelResults);
-				sortConfigurations(allConfigurations);
 				filter.addActionListener(new ActionListener() {
 					@Override
 					public void actionPerformed(ActionEvent e) {
@@ -489,15 +530,12 @@ public class ParameterFitter {
 //							}
 //							pair.second.setMaxError(value);
 //						}
-						acceptableConfigurations.removeAllElements();
+						
 						int nResults = 0;
 						try {
 							nResults = Integer.parseInt(resultsToShow.getValue().toString());
 						} catch (NumberFormatException ex) {
 							nResults = 0;
-						}
-						for (int i = 0; i < nResults; i++) {
-							acceptableConfigurations.add(allConfigurations.elementAt(i));
 						}
 //						DecimalFormat decimalFormat = new DecimalFormat("##0.####");
 //						for (AcceptableConfiguration tryConfiguration : allConfigurations) {
@@ -512,7 +550,7 @@ public class ParameterFitter {
 //								ex.printStackTrace();
 //							}
 //						}
-						showAcceptableGraphsWindow();
+						showAcceptableGraphsWindow(nResults);
 					}
 				});
 				//filterButtonsBox.add(Box.createGlue());
@@ -522,7 +560,7 @@ public class ParameterFitter {
 				showAll.addActionListener(new ActionListener() {
 					@Override
 					public void actionPerformed(ActionEvent e) {
-						acceptableConfigurations.removeAllElements();
+						//acceptableConfigurations.removeAllElements();
 //						DecimalFormat decimalFormat = new DecimalFormat("##0.####");
 //						for (AcceptableConfiguration tryConfiguration : allConfigurations) {
 //							if (tryConfiguration == null) continue;
@@ -534,8 +572,8 @@ public class ParameterFitter {
 //								ex.printStackTrace();
 //							}
 //						}
-						acceptableConfigurations.addAll(allConfigurations);
-						showAcceptableGraphsWindow();
+						//acceptableConfigurations.addAll(allConfigurations);
+						showAcceptableGraphsWindow(allConfigurations.size());
 					}
 				});
 				//filterButtonsBox.add(Box.createGlue());
@@ -582,6 +620,7 @@ public class ParameterFitter {
 							numberOfParallelExecutions.setValue(nParallelExecutions);
 							pool = new ThreadPool(nParallelExecutions);
 							parameterSweep(pool);
+							sortConfigurations(allConfigurations);
 							showAcceptableGraphsWindow();
 							startExecution.setText(BUTTON_START);
 						}
@@ -755,8 +794,9 @@ public class ParameterFitter {
 			};
 			linearScale.addActionListener(l);
 			logarithmicScale.addActionListener(l);
-			linearScale.setSelected(true);
-			minValue.setValue(parameters.get(parName)/10.0);
+			logarithmicScale.setSelected(true);
+			linearScale.setSelected(false);
+			minValue.setValue(0.001); //parameters.get(parName)/10.0);
 			Dimension prefSize = minValue.getPreferredSize();
 			prefSize.width *= 1.5;
 			minValue.setPreferredSize(prefSize);
@@ -778,7 +818,7 @@ public class ParameterFitter {
 				}
 			});
 			parameterBox.add(new LabelledField("Min", minValue));
-			maxValue.setValue(parameters.get(parName));
+			maxValue.setValue(0.016); //parameters.get(parName));
 			prefSize = maxValue.getPreferredSize();
 			prefSize.width *= 1.5;
 			maxValue.setPreferredSize(prefSize);
@@ -800,7 +840,7 @@ public class ParameterFitter {
 				}
 			});
 			parameterBox.add(new LabelledField("Max", maxValue));
-			incrementValue.setValue(parameters.get(parName)/10.0);
+			incrementValue.setValue(2); //parameters.get(parName)/10.0);
 			prefSize = incrementValue.getPreferredSize();
 			prefSize.width *= 1.5;
 			incrementValue.setPreferredSize(prefSize);
