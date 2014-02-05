@@ -349,6 +349,7 @@ public class ParameterFitter {
 						Box graphBox = new Box(BoxLayout.Y_AXIS);
 						graphBox.add(g);
 						JButton accept = new JButton("I want this");
+						accept.setToolTipText("Set the model parameters to obtain this result");
 						accept.addActionListener(new ActionListener() {
 							public void actionPerformed(ActionEvent e) {
 								if (JOptionPane.showConfirmDialog(window, "Are you sure that you want this graph?\n" + title, "Confirm parameter setting choice", JOptionPane.OK_CANCEL_OPTION) != JOptionPane.OK_OPTION) return;
@@ -411,7 +412,9 @@ public class ParameterFitter {
 						Dimension labelSize = new Dimension(75, 15);
 						errorLabel.setPreferredSize(labelSize);
 						errorLabel.setMaximumSize(labelSize);
+						acceptBox.add(new JLabel("Fitness: "));
 						acceptBox.add(errorLabel);
+						acceptBox.add(new JLabel("   "));
 						acceptBox.add(accept);
 						graphBox.add(acceptBox);
 						//acceptableGraphsWindow.getContentPane().add(new LabelledField(title, graphBox, title));
