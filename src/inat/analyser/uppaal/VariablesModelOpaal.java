@@ -36,7 +36,7 @@ public class VariablesModelOpaal extends VariablesModelReactantCentered {
 								OUTPUT_REACTANT = Model.Properties.OUTPUT_REACTANT,
 								SCENARIO = Model.Properties.SCENARIO,
 								HAS_INFLUENCING_REACTIONS = "has influencing reactions";
-	private boolean normalModelChecking = false;
+//	private boolean normalModelChecking = false;
 	private int uncertainty = 0;
 	
 	@Override
@@ -58,7 +58,7 @@ public class VariablesModelOpaal extends VariablesModelReactantCentered {
 		out.append("const int INFINITE_TIME = " + INFINITE_TIME + ";");
 		out.append(newLine);
 		int countReactants = 0;
-		for (Reactant r : m.getReactantCollection()) {
+		for (Reactant r : m.getSortedReactantList()) {
 			if (r.get(ENABLED).as(Boolean.class)) {
 				countReactants++;
 			}
@@ -67,31 +67,31 @@ public class VariablesModelOpaal extends VariablesModelReactantCentered {
 		out.append(newLine);
 		out.append("broadcast chan reacting[N_REACTANTS];");
 		out.append(newLine);
-		if (m.getProperties().get(Model.Properties.MODEL_CHECKING_TYPE) != null && m.getProperties().get(Model.Properties.MODEL_CHECKING_TYPE).as(Integer.class) == Model.Properties.NORMAL_MODEL_CHECKING) {
-			normalModelChecking = true;
-			out.append("broadcast chan sequencer[N_REACTANTS];");
-			out.append(newLine);
-			if (countReactants > 1) {
-				out.append("chan priority ");
-				for (int i=0;i<countReactants-1;i++) {
-					out.append("reacting[" + i + "] &lt; ");
-				}
-				out.append("reacting[" + (countReactants-1) + "];");
-				out.append(newLine);
-				out.append("chan priority ");
-				for (int i=0;i<countReactants-1;i++) {
-					out.append("sequencer[" + i + "] &lt; ");
-				}
-				out.append("sequencer[" + (countReactants-1) + "];");
-				out.append(newLine);
-			}
-		} else {
-			normalModelChecking = false;
-		}
+//		if (m.getProperties().get(Model.Properties.MODEL_CHECKING_TYPE) != null && m.getProperties().get(Model.Properties.MODEL_CHECKING_TYPE).as(Integer.class) == Model.Properties.NORMAL_MODEL_CHECKING) {
+//			normalModelChecking = true;
+//			out.append("broadcast chan sequencer[N_REACTANTS];");
+//			out.append(newLine);
+//			if (countReactants > 1) {
+//				out.append("chan priority ");
+//				for (int i=0;i<countReactants-1;i++) {
+//					out.append("reacting[" + i + "] &lt; ");
+//				}
+//				out.append("reacting[" + (countReactants-1) + "];");
+//				out.append(newLine);
+//				out.append("chan priority ");
+//				for (int i=0;i<countReactants-1;i++) {
+//					out.append("sequencer[" + i + "] &lt; ");
+//				}
+//				out.append("sequencer[" + (countReactants-1) + "];");
+//				out.append(newLine);
+//			}
+//		} else {
+//			normalModelChecking = false;
+//		}
 		out.append(newLine);
 		
 		int reactantIndex = 0;
-		for (Reactant r : m.getReactantCollection()) {
+		for (Reactant r : m.getSortedReactantList()) {
 			if (!r.get(ENABLED).as(Boolean.class)) continue;
 			r.let(REACTANT_INDEX).be(reactantIndex);
 			reactantIndex++; 
@@ -806,7 +806,7 @@ public class VariablesModelOpaal extends VariablesModelReactantCentered {
 		
 		// compose the system
 		out.append("system ");
-		Iterator<Reactant> iter = m.getReactantCollection().iterator();
+		Iterator<Reactant> iter = m.getSortedReactantList().iterator();
 		boolean first = true;
 		while (iter.hasNext()) {
 			Reactant r = iter.next();
@@ -859,7 +859,7 @@ public class VariablesModelOpaal extends VariablesModelReactantCentered {
 			tra.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "2");
 			tra.setOutputProperty(OutputKeys.OMIT_XML_DECLARATION, "yes");
 			
-			for (Reactant r : m.getReactantCollection()) {
+			for (Reactant r : m.getSortedReactantList()) {
 				if (!r.get(ENABLED).as(Boolean.class)) continue;
 				outString = new StringWriter();
 				Vector<Reaction> influencingReactions = new Vector<Reaction>();
@@ -875,7 +875,7 @@ public class VariablesModelOpaal extends VariablesModelReactantCentered {
 				}
 				r.let(HAS_INFLUENCING_REACTIONS).be(true);
 				
-				StringBuilder template = new StringBuilder("<template><name>_" + r.getId() + "</name><declaration>int[-1, 1] delta, deltaNew, deltaOld, deltaOldOld, deltaOldOldOld;\nbool deltaAlternating;\nint[-1, 1073741822] tL, tU;\nclock c;\nint[-99980001, 99980001] totalRate_b;\nint totalRate_e;\n\n\nvoid updateDeltaOld() {\n\tdeltaOldOldOld = deltaOldOld;\n\tdeltaOldOld = deltaOld;\n\tdeltaOld = deltaNew;\n\tdeltaNew = delta;\n\tdeltaAlternating = false;\n\tif (deltaOldOldOld != 0) { //We have updated delta at least 4 times, so we can see whether we have an oscillation\n\t\tif (deltaNew == deltaOldOld &amp;&amp; deltaOld == deltaOldOldOld &amp;&amp; deltaNew != deltaOld) { //Pairwise equal and alternating (e.g. +1, -1, +1, -1): we are oscillating\n\t\t\tdeltaAlternating = true;\n\t\t}\n\t}\n}\n\nvoid update() {\n");
+				StringBuilder template = new StringBuilder("<template><name>_" + r.getId() + "</name><declaration>int[-1, 1] delta;\nint[-1, 1073741822] tL, tU;\nclock c;\nint[-99980001, 99980001] totalRate_b;\nint totalRate_e;\n\n\nvoid update() {\n");
 				for (int i=0; i<influencingReactions.size(); i++) {
 					formatDoubleDeclaration("\t", template, "ret" + i, 0);
 				}
@@ -1010,8 +1010,8 @@ public class VariablesModelOpaal extends VariablesModelReactantCentered {
 					template.append("\t\ta_b = retval_b;\n\t\ta_e = retval_e;\n\t\tb_b = UPPER_UNC_b;\n\t\tb_e = UPPER_UNC_e;\n\t\tmultiply();\n");
 				}
 				template.append("\t\ta_b = retval_b;\n\t\ta_e = retval_e;\n\t\ttU = round();\n");
-				template.append("\t} else {\n\t\ttL = INFINITE_TIME;\n\t\ttU = INFINITE_TIME;\n\t}\n\tif (tL != INFINITE_TIME &amp;&amp; tL &gt; tU) { //We use rounded things: maybe the difference between tL and tU was not so great, and with some rounding problems we could have this case\n\t\ttL = tU;\n\t}\n\tupdateDeltaOld();\n}\n\nvoid react() {\n\tif (0 &lt;= " + r.getId() + " + delta &amp;&amp; " + r.getId() + " + delta &lt;= " + r.get(NUMBER_OF_LEVELS).as(Integer.class) + ") {\n\t\t" + r.getId() + " = " + r.getId() + " + delta;\n\t}\n\tupdate();\n}\n\nbool can_react() {\n\treturn !deltaAlternating &amp;&amp; (tL != INFINITE_TIME &amp;&amp; tL != 0 &amp;&amp; tU != 0 &amp;&amp; ((delta &gt; 0 &amp;&amp; " + r.getId() + " &lt; " + r.get(NUMBER_OF_LEVELS).as(Integer.class) + ") || (delta &lt; 0 &amp;&amp; " + r.getId() + " &gt; 0)));\n}\n\nbool cant_react() {\n\treturn deltaAlternating || (tL == INFINITE_TIME || tL == 0 || tU == 0 || (delta &gt; 0 &amp;&amp; " + r.getId() + " == " + r.get(NUMBER_OF_LEVELS).as(Integer.class) + ") || (delta &lt; 0 &amp;&amp; " + r.getId() + " == 0));\n}</declaration>");
-				template.append("<location id=\"id0\" x=\"-1896\" y=\"-728\"><name x=\"-1960\" y=\"-752\">stubborn</name><committed/></location><location id=\"id1\" x=\"-1528\" y=\"-728\"><committed/></location><location id=\"id6\" x=\"-1256\" y=\"-728\"><name x=\"-1248\" y=\"-752\">start</name><committed/></location><location id=\"id7\" x=\"-1552\" y=\"-856\"><name x=\"-1656\" y=\"-872\">not_reacting</name></location><location id=\"id8\" x=\"-1416\" y=\"-728\"><name x=\"-1400\" y=\"-752\">updating</name><committed/></location><location id=\"id9\" x=\"-1664\" y=\"-728\"><name x=\"-1728\" y=\"-744\">waiting</name><label kind=\"invariant\" x=\"-1728\" y=\"-720\">c &lt;= tU\n|| tU ==\nINFINITE_TIME</label></location><init ref=\"id6\"/><transition><source ref=\"id1\"/><target ref=\"id9\"/><label kind=\"guard\" x=\"-1640\" y=\"-760\">tU == INFINITE_TIME\n|| c &lt;= tU</label>" + (normalModelChecking?"<label kind=\"synchronisation\" x=\"-1640\" y=\"-776\">sequencer[" + r.get(REACTANT_INDEX).as(Integer.class) + "]!</label>":"") + "</transition><transition><source ref=\"id1\"/><target ref=\"id9\"/><label kind=\"guard\" x=\"-1608\" y=\"-712\">tU != INFINITE_TIME\n&amp;&amp; c &gt; tU</label>" + (normalModelChecking?"<label kind=\"synchronisation\" x=\"-1608\" y=\"-664\">sequencer[" + r.get(REACTANT_INDEX).as(Integer.class) + "]!</label>":"") + "<label kind=\"assignment\" x=\"-1608\" y=\"-680\">c := tU</label><nail x=\"-1528\" y=\"-680\"/><nail x=\"-1608\" y=\"-680\"/></transition><transition><source ref=\"id0\"/><target ref=\"id8\"/><label kind=\"guard\" x=\"-1816\" y=\"-632\">c &lt; tL</label>" + (normalModelChecking?"<label kind=\"synchronisation\" x=\"-1816\" y=\"-600\">sequencer[" + r.get(REACTANT_INDEX).as(Integer.class) + "]!</label>":"") + "<label kind=\"assignment\" x=\"-1816\" y=\"-616\">update()</label><nail x=\"-1848\" y=\"-616\"/><nail x=\"-1464\" y=\"-616\"/></transition><transition><source ref=\"id0\"/><target ref=\"id9\"/><label kind=\"guard\" x=\"-1816\" y=\"-680\">c &gt;= tL</label>" + (normalModelChecking?"<label kind=\"synchronisation\" x=\"-1816\" y=\"-664\">sequencer[" + r.get(REACTANT_INDEX).as(Integer.class) + "]!</label>":"") + "<nail x=\"-1840\" y=\"-664\"/><nail x=\"-1744\" y=\"-664\"/></transition><transition><source ref=\"id6\"/><target ref=\"id8\"/>" + (normalModelChecking?"<label kind=\"synchronisation\" x=\"-1344\" y=\"-744\">sequencer[" + r.get(REACTANT_INDEX).as(Integer.class) + "]!</label>":"") + "<label kind=\"assignment\" x=\"-1344\" y=\"-728\">update()</label></transition>");
+				template.append("\t} else {\n\t\ttL = INFINITE_TIME;\n\t\ttU = INFINITE_TIME;\n\t}\n\tif (tL != INFINITE_TIME &amp;&amp; tL &gt; tU) { //We use rounded things: maybe the difference between tL and tU was not so great, and with some rounding problems we could have this case\n\t\ttL = tU;\n\t}\n}\n\nvoid react() {\n\tif (0 &lt;= " + r.getId() + " + delta &amp;&amp; " + r.getId() + " + delta &lt;= " + r.get(NUMBER_OF_LEVELS).as(Integer.class) + ") {\n\t\t" + r.getId() + " = " + r.getId() + " + delta;\n\t}\n\tupdate();\n}\n\nbool can_react() {\n\treturn tL != INFINITE_TIME &amp;&amp; tL != 0 &amp;&amp; tU != 0 &amp;&amp; ((delta &gt; 0 &amp;&amp; " + r.getId() + " &lt; " + r.get(NUMBER_OF_LEVELS).as(Integer.class) + ") || (delta &lt; 0 &amp;&amp; " + r.getId() + " &gt; 0));\n}\n\nbool cant_react() {\n\treturn tL == INFINITE_TIME || tL == 0 || tU == 0 || (delta &gt; 0 &amp;&amp; " + r.getId() + " == " + r.get(NUMBER_OF_LEVELS).as(Integer.class) + ") || (delta &lt; 0 &amp;&amp; " + r.getId() + " == 0);\n}</declaration>");
+				template.append("<location id=\"id0\" x=\"-1896\" y=\"-728\"><name x=\"-1960\" y=\"-752\">stubborn</name><committed/></location><location id=\"id6\" x=\"-1256\" y=\"-728\"><name x=\"-1248\" y=\"-752\">start</name><committed/></location><location id=\"id7\" x=\"-1552\" y=\"-856\"><name x=\"-1656\" y=\"-872\">not_reacting</name></location><location id=\"id8\" x=\"-1416\" y=\"-728\"><name x=\"-1400\" y=\"-752\">updating</name><committed/></location><location id=\"id9\" x=\"-1664\" y=\"-728\"><name x=\"-1728\" y=\"-744\">waiting</name><label kind=\"invariant\" x=\"-1728\" y=\"-720\">c &lt;= tU\n|| tU ==\nINFINITE_TIME</label></location><init ref=\"id6\"/><transition><source ref=\"id8\"/><target ref=\"id9\"/><label kind=\"guard\" x=\"-1640\" y=\"-760\">(tU == INFINITE_TIME\n|| c &lt;= tU) &amp;&amp; can_react()</label></transition><transition><source ref=\"id8\"/><target ref=\"id9\"/><label kind=\"guard\" x=\"-1608\" y=\"-712\">(tU != INFINITE_TIME\n&amp;&amp; c &gt; tU) &amp;&amp; can_react()</label><label kind=\"assignment\" x=\"-1608\" y=\"-680\">c := tU</label><nail x=\"-1528\" y=\"-680\"/><nail x=\"-1608\" y=\"-680\"/></transition><transition><source ref=\"id0\"/><target ref=\"id8\"/><label kind=\"guard\" x=\"-1816\" y=\"-632\">c &lt; tL</label><label kind=\"assignment\" x=\"-1816\" y=\"-616\">update()</label><nail x=\"-1848\" y=\"-616\"/><nail x=\"-1464\" y=\"-616\"/></transition><transition><source ref=\"id0\"/><target ref=\"id9\"/><label kind=\"guard\" x=\"-1816\" y=\"-680\">c &gt;= tL</label><nail x=\"-1840\" y=\"-664\"/><nail x=\"-1744\" y=\"-664\"/></transition><transition><source ref=\"id6\"/><target ref=\"id8\"/><label kind=\"assignment\" x=\"-1344\" y=\"-728\">update()</label></transition>");
 				int y1 = -904,
 					y2 = -888,
 					y3 = -848,
@@ -1049,7 +1049,7 @@ public class VariablesModelOpaal extends VariablesModelReactantCentered {
 							break;
 					}
 				}
-				template.append("<transition><source ref=\"id8\"/><target ref=\"id7\"/><label kind=\"guard\" x=\"-1512\" y=\"-840\">cant_react()</label>" + (normalModelChecking?"<label kind=\"synchronisation\" x=\"-1512\" y=\"-856\">sequencer[" + r.get(REACTANT_INDEX).as(Integer.class) + "]!</label>":"") + "<nail x=\"-1416\" y=\"-824\"/><nail x=\"-1552\" y=\"-824\"/></transition><transition><source ref=\"id8\"/><target ref=\"id1\"/><label kind=\"guard\" x=\"-1512\" y=\"-744\">can_react()</label>" + (normalModelChecking?"<label kind=\"synchronisation\" x=\"-1512\" y=\"-728\">sequencer[" + r.get(REACTANT_INDEX).as(Integer.class) + "]!</label>":"") + "</transition><transition><source ref=\"id9\"/><target ref=\"id8\"/><label kind=\"guard\" x=\"-1576\" y=\"-816\">c &gt;= tL</label><label kind=\"synchronisation\" x=\"-1584\" y=\"-800\">reacting[" + r.get(REACTANT_INDEX).as(Integer.class) + "]!</label><label kind=\"assignment\" x=\"-1568\" y=\"-784\">react(), c := 0</label><nail x=\"-1632\" y=\"-784\"/><nail x=\"-1464\" y=\"-784\"/></transition>");
+				template.append("<transition><source ref=\"id8\"/><target ref=\"id7\"/><label kind=\"guard\" x=\"-1512\" y=\"-840\">cant_react()</label><nail x=\"-1416\" y=\"-824\"/><nail x=\"-1552\" y=\"-824\"/></transition><transition><source ref=\"id9\"/><target ref=\"id8\"/><label kind=\"guard\" x=\"-1576\" y=\"-816\">c &gt;= tL</label><label kind=\"synchronisation\" x=\"-1584\" y=\"-800\">reacting[" + r.get(REACTANT_INDEX).as(Integer.class) + "]!</label><label kind=\"assignment\" x=\"-1568\" y=\"-784\">react(), c := 0</label><nail x=\"-1632\" y=\"-784\"/><nail x=\"-1464\" y=\"-784\"/></transition>");
 				y1 = -744;
 				y2 = -728;
 				incrY = -48;
