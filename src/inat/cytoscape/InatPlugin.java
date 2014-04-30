@@ -167,6 +167,17 @@ public class InatPlugin extends CytoscapePlugin {
 	}
 	
 	
+	public static boolean areWeTheDeveloper() {
+		final XmlConfiguration configuration = InatBackend.get().configuration();
+		String areWeTheDeveloperStr = configuration.get(XmlConfiguration.DEVELOPER_KEY);
+		boolean areWeTheDeveloper = false;
+		if (areWeTheDeveloperStr != null) {
+			areWeTheDeveloper = Boolean.parseBoolean(areWeTheDeveloperStr);
+		}
+		return areWeTheDeveloper;
+	}
+	
+	
 	/**
 	 * Constructs the panel
 	 * 
@@ -174,12 +185,8 @@ public class InatPlugin extends CytoscapePlugin {
 	 * @return
 	 */
 	private JPanel setupPanel(InatPlugin plugin) {
+		boolean areWeTheDeveloper = areWeTheDeveloper();
 		final XmlConfiguration configuration = InatBackend.get().configuration();
-		String areWeTheDeveloperStr = configuration.get(XmlConfiguration.DEVELOPER_KEY);
-		boolean areWeTheDeveloper = false;
-		if (areWeTheDeveloperStr != null) {
-			areWeTheDeveloper = Boolean.parseBoolean(areWeTheDeveloperStr);
-		}
 		
 		final JPanel panel = new JPanel();
 		panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS)); //BorderLayout(2, 2));

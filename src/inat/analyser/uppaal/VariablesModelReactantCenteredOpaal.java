@@ -22,7 +22,7 @@ import javax.xml.transform.stream.StreamResult;
 import org.w3c.dom.Document;
 
 
-public class VariablesModelReactantCentered extends VariablesModel {
+public class VariablesModelReactantCenteredOpaal extends VariablesModel {
 
 	private static final String REACTANT_INDEX = Model.Properties.REACTANT_INDEX,
 								OUTPUT_REACTANT = Model.Properties.OUTPUT_REACTANT,
@@ -980,7 +980,16 @@ public class VariablesModelReactantCentered extends VariablesModel {
 				}
 				r.let(HAS_INFLUENCING_REACTIONS).be(true);
 				
-				StringBuilder template = new StringBuilder("<template><name>Reactant_" + r.getId() + "</name><parameter>int&amp; R, const int MAX</parameter><declaration>int[-1, 1] delta;\ndouble_t totalRate;\n\n\nvoid update() {\n");
+				boolean useOldResetting = true; //We assume it true, because the c'==0 induces UPPAAL to use the over-approximation, and we get answers such as "Property is maybe satisfied", which is not cool. So we avoid using this unless I explicitly ask for it
+				if (m.getProperties().has("useOldResetting") && !m.getProperties().get("useOldResetting").as(Boolean.class)) {
+					useOldResetting = false;
+				}
+				
+				StringBuilder template = new StringBuilder("<template><name>Reactant_" + r.getId() + "</name><parameter>int&amp; R, const int MAX</parameter><declaration>int[-1, 1] delta;\ndouble_t totalRate;\n\n\nvoid update() {\n\tdouble_t tmp1, tmp2, tmp3, tmp4");
+				for (Reaction re : influencingReactions) {
+					template.append(", " + re.getId() + "_r");
+				}
+				template.append(";\n");
 				for (Reaction re : influencingReactions) {
 					int scenario = re.get(SCENARIO).as(Integer.class);
 					boolean activeR1, activeR2;
@@ -1000,10 +1009,16 @@ public class VariablesModelReactantCentered extends VariablesModel {
 					}
 					switch (scenario) {
 						case 0:
-							template.append("\tdouble_t " + re.getId() + "_r = scenario1(k_" + re.getId() + ", int_to_double(" + m.getReactant(re.get(Model.Properties.CATALYST).as(String.class)).getId() + "), int_to_double(" + m.getReactant(re.get(Model.Properties.CATALYST).as(String.class)).getId() + "Levels), " + activeR1 + ");\n");
+							template.append("\ttmp1 = int_to_double(" + m.getReactant(re.get(Model.Properties.CATALYST).as(String.class)).getId() + ");\n");
+							template.append("\ttmp2 = int_to_double(" + m.getReactant(re.get(Model.Properties.CATALYST).as(String.class)).getId() + "Levels);\n");
+							template.append("\t" + re.getId() + "_r = scenario1(k_" + re.getId() + ", tmp1, tmp2, " + activeR1 + ");\n");
 							break;
 						case 1: case 2:
-							template.append("\tdouble_t " + re.getId() + "_r = scenario2_3(k_" + re.getId() + ", int_to_double(" + m.getReactant(re.get(Model.Properties.REACTANT).as(String.class)).getId() + "), int_to_double(" + m.getReactant(re.get(Model.Properties.REACTANT).as(String.class)).getId() + "Levels), " + activeR2 + ", int_to_double(" + m.getReactant(re.get(Model.Properties.CATALYST).as(String.class)).getId() + "), int_to_double(" + m.getReactant(re.get(Model.Properties.CATALYST).as(String.class)).getId() + "Levels), " + activeR1 + ");\n");
+							template.append("\ttmp1 = int_to_double(" + m.getReactant(re.get(Model.Properties.REACTANT).as(String.class)).getId() + ");\n");
+							template.append("\ttmp2 = int_to_double(" + m.getReactant(re.get(Model.Properties.REACTANT).as(String.class)).getId() + "Levels);\n");
+							template.append("\ttmp3 = int_to_double(" + m.getReactant(re.get(Model.Properties.CATALYST).as(String.class)).getId() + ");\n");
+							template.append("\ttmp4 = int_to_double(" + m.getReactant(re.get(Model.Properties.CATALYST).as(String.class)).getId() + "Levels);\n");
+							template.append("\t" + re.getId() + "_r = scenario2_3(k_" + re.getId() + ", tmp1, tmp2, " + activeR2 + ", tmp3, tmp4, " + activeR1 + ");\n");
 							break;
 						default:
 							break;
@@ -1016,30 +1031,43 @@ public class VariablesModelReactantCentered extends VariablesModel {
 					String subtr1 = (increment > 0)?"":"subtract(zero, ",
 						   subtr2 = (increment > 0)?"":")";
 					template.append(subtr1 + re.getId() + "_r" + subtr2 + ";\n");
-					template.append("\t" + re.getId() + ".T = round(inverse(" + re.getId() + "_r));\n");
+					template.append("\ttmp1 = inverse(" + re.getId() + "_r);\n");
+					template.append("\t" + re.getId() + ".T = round(tmp1);\n");
 				} else {
-					StringBuilder computation = new StringBuilder("zero");
+//						StringBuilder computation = new StringBuilder("zero");
+//						for (Reaction re : influencingReactions) {
+//							computation.append(", " + re.getId() + "_r)");
+//							if (re.get(Model.Properties.INCREMENT).as(Integer.class) > 0) {
+//								computation.insert(0, "add(");
+//							} else {
+//								computation.insert(0, "subtract(");
+//							}
+//						}
+//						template.append(computation);
+//						template.append(";\n");
+					template.append("zero;\n"); //Computation step-by-step instead of nesting calls
 					for (Reaction re : influencingReactions) {
-						computation.append(", " + re.getId() + "_r)");
+						template.append("\ttotalRate = ");
 						if (re.get(Model.Properties.INCREMENT).as(Integer.class) > 0) {
-							computation.insert(0, "add(");
+							template.append("add(totalRate, ");
 						} else {
-							computation.insert(0, "subtract(");
+							template.append("subtract(totalRate, ");
 						}
+						template.append(re.getId() + "_r);\n");
 					}
-					template.append(computation);
-					template.append(";\n");
 					for (Reaction re : influencingReactions) {
-						template.append("\t" + re.getId() + ".T = " + "round(inverse(" + re.getId() + "_r));\n");
+						template.append("\ttmp1 = inverse(" + re.getId() + "_r);\n");
+						template.append("\t" + re.getId() + ".T = " + "round(tmp1);\n");
 					}
 				}
-				template.append("\tif (totalRate.b &lt; 0) {\n\t\tdelta = -1;\n\t\ttotalRate.b = -totalRate.b;\n\t} else {\n\t\tdelta = 1;\n\t}\n");
-				template.append("\tT[" + myIndex + "] = round(inverse(totalRate));\n");
-				template.append("}\n\nvoid react() {\n\tif (0 &lt;= R + delta &amp;&amp; R + delta &lt;= MAX) {\n\t\tR = R + delta;\n\t}\n\tupdate();\n}\n\nbool can_react() {\n\treturn T[" + myIndex + "] != INFINITE_TIME &amp;&amp; T[" + myIndex + "] != 0 &amp;&amp; ((delta &gt;= 0 &amp;&amp; R &lt; MAX) || (delta &lt; 0 &amp;&amp; R &gt; 0));\n}\n\nbool cant_react() {\n\treturn T[" + myIndex + "] == INFINITE_TIME || T[" + myIndex + "] == 0 || (delta &gt;= 0 &amp;&amp; R == MAX) || (delta &lt; 0 &amp;&amp; R == 0);\n}</declaration>");
+				template.append("\tif (totalRate.b &lt; 0) {\n\t\tdelta = -1;\n\t\ttotalRate.b = -totalRate.b;\n\t} else {\n\t\tdelta = 1;\n\t}\n\tif (totalRate.b != 0) {\n");
+				template.append("\t\ttmp1 = inverse(totalRate);\n");
+				template.append("\t\tT[" + myIndex + "] = round(tmp1);\n");
+				template.append("\t} else {\n\t\tT[" + myIndex + "] = INFINITE_TIME;\n\t}\n}\n\nvoid react() {\n\tif (0 &lt;= R + delta &amp;&amp; R + delta &lt;= MAX) {\n\t\tR = R + delta;\n\t}\n\tupdate();\n}\n\nbool can_react() {\n\treturn T[" + myIndex + "] != INFINITE_TIME &amp;&amp; T[" + myIndex + "] != 0 &amp;&amp; ((delta &gt;= 0 &amp;&amp; R &lt; MAX) || (delta &lt; 0 &amp;&amp; R &gt; 0));\n}\n\nbool cant_react() {\n\treturn T[" + myIndex + "] == INFINITE_TIME || T[" + myIndex + "] == 0 || (delta &gt;= 0 &amp;&amp; R == MAX) || (delta &lt; 0 &amp;&amp; R == 0);\n}</declaration>");
 				template.append("<location id=\"id0\" x=\"-1896\" y=\"-728\"><name x=\"-1960\" y=\"-752\">stubborn</name><committed/></location>");
 				template.append("<location id=\"id1\" x=\"-1720\" y=\"-856\"><committed/></location>");
 				template.append("<location id=\"id6\" x=\"-1256\" y=\"-728\"><name x=\"-1248\" y=\"-752\">start</name><committed/></location>");
-				template.append("<location id=\"id7\" x=\"-1456\" y=\"-608\"><name x=\"-1448\" y=\"-632\">not_reacting</name><label kind=\"invariant\" x=\"-1504\" y=\"-600\">c[" + myIndex + "]'==0</label></location>");
+				template.append("<location id=\"id7\" x=\"-1456\" y=\"-608\"><name x=\"-1448\" y=\"-632\">not_reacting</name>" + (useOldResetting?"":"<label kind=\"invariant\" x=\"-1504\" y=\"-600\">c[" + myIndex + "]'==0</label>") + "</location>");
 				template.append("<location id=\"id8\" x=\"-1392\" y=\"-728\"><name x=\"-1400\" y=\"-752\">updating</name><committed/></location>");
 				template.append("<location id=\"id9\" x=\"-1664\" y=\"-728\"><name x=\"-1728\" y=\"-744\">waiting</name><label kind=\"invariant\" x=\"-1728\" y=\"-720\">c[" + myIndex + "] &lt;= T[" + myIndex + "]</label></location>");
 				if (upstreamReactants > 1) { //If I depend on more than 1 reactant, when one reacts I may have to wait also for the others (in case anybody else reacts in the same instant)
@@ -1144,7 +1172,7 @@ public class VariablesModelReactantCentered extends VariablesModel {
 					}
 					template.append("</label>");
 				}
-				template.append("<label kind=\"assignment\" x=\"-1584\" y=\"-856\">update()</label><nail x=\"-1392\" y=\"-856\"/></transition>");
+				template.append("<label kind=\"assignment\" x=\"-1584\" y=\"-856\">update()" + (useOldResetting?", c[" + myIndex + "] := 0":"") + "</label><nail x=\"-1392\" y=\"-856\"/></transition>");
 				int y1 = -624,
 					y2 = -608,
 					y3 = -856,
