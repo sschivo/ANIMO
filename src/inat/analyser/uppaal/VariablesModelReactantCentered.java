@@ -81,7 +81,7 @@ public class VariablesModelReactantCentered extends VariablesModel {
 		out.append(newLine);
 		
 		int reactantIndex = 0;
-		for (Reactant r : m.getReactantCollection()) {
+		for (Reactant r : m.getSortedReactantList()) {
 			if (!r.get(ENABLED).as(Boolean.class)) continue;
 			r.let(REACTANT_INDEX).be(reactantIndex);
 			reactantIndex++; 
@@ -425,7 +425,7 @@ public class VariablesModelReactantCentered extends VariablesModel {
 		out.append(newLine);
 		out.append("\tdouble_t r;");
 		out.append(newLine);
-		out.append("\tif (a.b == 0) {");
+		out.append("\tif (a.b == 0 || a.e &lt; -9) { // 1 / 1e-9 is still ok, but 1 / 1e-10 is too large (&gt; 2&#94;30 - 2, the largest allowed constant for guards/invariants)");
 		out.append(newLine);
 		out.append("\t\treturn INFINITE_TIME_DOUBLE;");
 		out.append(newLine);
@@ -480,6 +480,12 @@ public class VariablesModelReactantCentered extends VariablesModel {
 		out.append("");
 		out.append(newLine);
 		out.append("time_t round(double_t a) { // double --&gt; integer"); // Round
+		out.append(newLine);
+		out.append("\tif (a == INFINITE_TIME_DOUBLE) { // Don't need to translate literally if we have infinite");
+		out.append(newLine);
+		out.append("\t\treturn INFINITE_TIME;");
+		out.append(newLine);
+	    out.append("\t}");
 		out.append(newLine);
 		out.append("\tif (a.e &lt; -3) {");
 		out.append(newLine);
@@ -636,7 +642,7 @@ public class VariablesModelReactantCentered extends VariablesModel {
 		out.append("<system>");
 		out.append(newLine);
 		
-		for (Reactant r : m.getReactantCollection()) {
+		for (Reactant r : m.getSortedReactantList()) {
 			if (!r.get(ENABLED).as(Boolean.class) || !r.get(HAS_INFLUENCING_REACTIONS).as(Boolean.class)) continue;
 			this.appendReactionProcess(out, m, r, reactantIndex);
 		}
@@ -647,7 +653,7 @@ public class VariablesModelReactantCentered extends VariablesModel {
 		
 		// compose the system
 		out.append("system ");
-		Iterator<Reactant> iter = m.getReactantCollection().iterator();
+		Iterator<Reactant> iter = m.getSortedReactantList().iterator();
 		boolean first = true;
 		while (iter.hasNext()) {
 			Reactant r = iter.next();
@@ -699,7 +705,7 @@ public class VariablesModelReactantCentered extends VariablesModel {
 			tra.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "2");
 			tra.setOutputProperty(OutputKeys.OMIT_XML_DECLARATION, "yes");
 			
-			for (Reactant r : m.getReactantCollection()) {
+			for (Reactant r : m.getSortedReactantList()) {
 				if (!r.get(ENABLED).as(Boolean.class)) continue;
 				outString = new StringWriter();
 				Vector<Reaction> influencingReactions = new Vector<Reaction>();
