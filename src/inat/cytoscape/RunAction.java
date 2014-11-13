@@ -152,7 +152,6 @@ public class RunAction extends InatActionTask {
 			try {
 				needToStop = false;
 				
-				
 				//Just check that we understand how many minutes to run the simulation
 				int nMinutesToSimulate = 0;
 				try {
