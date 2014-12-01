@@ -77,6 +77,7 @@ public class NodeDialog extends JDialog {
 		Object res = nodeAttributes.getAttribute(node.getIdentifier(), Model.Properties.CANONICAL_NAME);
 		String name;
 		if (res != null) {
+			//this.setTitle("Reactant " + res.toString());
 			name = res.toString();
 		} else {
 			name = null;
@@ -85,7 +86,11 @@ public class NodeDialog extends JDialog {
 			nodeAttributes.setAttribute(node.getIdentifier(), Model.Properties.INITIAL_LEVEL, 0);
 		}
 		
-		this.setLayout(new GridBagLayout());
+		this.setLayout(new GridBagLayout()); //BorderLayout(2, 2));
+		
+		//JPanel values = new JPanel(new GridLayout(3, 2, 2, 2));
+		//JPanel values = new JPanel(new GridBagLayout()); //You REALLY don't want to know how GridBagLayout works...
+		//Box values = new Box(BoxLayout.Y_AXIS);
 		
 		int levels;
 		if (nodeAttributes.hasAttribute(node.getIdentifier(), Model.Properties.NUMBER_OF_LEVELS)) {
@@ -96,9 +101,15 @@ public class NodeDialog extends JDialog {
 			levels = 15;
 		}
 		
+		//JLabel nameLabel = new JLabel("Reactant name:");
 		final JTextField nameField = new JTextField(name);
+		//values.add(nameLabel, new GridBagConstraints(0, 0, 1, 1, 0.3, 0.0, GridBagConstraints.LINE_START, GridBagConstraints.NONE, new Insets(0, 0, 0, 0), 0, 0));
+		//values.add(nameField, new GridBagConstraints(1, 0, 1, 1, 1, 0.0, GridBagConstraints.LINE_END, GridBagConstraints.HORIZONTAL, new Insets(0, 0, 0, 0), 0, 0));
+		//values.add(new LabelledField("Name", nameField));
 		this.add(new LabelledField("Name", nameField), new GridBagConstraints(0, 0, 1, 1, 0.5, 0.0, GridBagConstraints.CENTER, GridBagConstraints.HORIZONTAL, new Insets(0, 0, 0, 0), 0, 0));
 		
+		//final JLabel totalLevelsLabel = new JLabel("Total activity levels: " + levels);
+		//values.add(totalLevelsLabel, new GridBagConstraints(0, 1, 1, 1, 0.3, 0.0, GridBagConstraints.LINE_START, GridBagConstraints.NONE, new Insets(0, 0, 0, 0), 0, 0));
 		final JSlider totalLevels = new JSlider(1, 100);
 		totalLevels.setValue(levels);
 		totalLevels.setMajorTickSpacing(20);
@@ -111,10 +122,16 @@ public class NodeDialog extends JDialog {
 			labelTable.put(totalLevels.getMaximum(), new JLabel("" + totalLevels.getMaximum()));
 			totalLevels.setLabelTable(labelTable);
 		}
+		////values.add(totalLevels, new GridBagConstraints(1, 1, 1, 1, 1, 0.0, GridBagConstraints.LINE_END, GridBagConstraints.HORIZONTAL, new Insets(0, 0, 0, 0), 0, 0));
 		final LabelledField totalLevelsField = new LabelledField("Total activity levels: " + levels, totalLevels);
+		//values.add(totalLevelsField);
+		
 		
 		final JSlider initialConcentration = new JSlider(0, levels);
+		initialConcentration.setValue(nodeAttributes.getIntegerAttribute(node.getIdentifier(), Model.Properties.INITIAL_LEVEL));
 		
+		////final JLabel initialConcentrationLabel = new JLabel("Initial activity level: " + initialConcentration.getValue());
+		////values.add(initialConcentrationLabel, new GridBagConstraints(0, 2, 1, 1, 0.3, 0.0, GridBagConstraints.LINE_START, GridBagConstraints.NONE, new Insets(0, 0, 0, 0), 0, 0));
 		final LabelledField initialLevelField = new LabelledField("Initial activity level: " + initialConcentration.getValue(), initialConcentration);
 
 
@@ -124,8 +141,14 @@ public class NodeDialog extends JDialog {
 		initialConcentration.setPaintLabels(true);
 		initialConcentration.setPaintTicks(true);
 
+		////values.add(initialConcentration, new GridBagConstraints(1, 2, 1, 1, 1, 0.0, GridBagConstraints.LINE_END, GridBagConstraints.HORIZONTAL, new Insets(0, 0, 0, 0), 0, 0));
+		//values.add(initialLevelField);
+
+		//this.add(values, BorderLayout.CENTER);
+
 		//When the user changes the total number of levels, we automatically update the "current activity level" slider, adapting maximum and current values in a sensible way
 		totalLevels.addChangeListener(new ChangeListener() {
+
 			@Override
 			public void stateChanged(ChangeEvent e) {
 				totalLevelsField.setTitle("Total activity levels: " + totalLevels.getValue());
@@ -147,6 +170,7 @@ public class NodeDialog extends JDialog {
 				initialLevelField.setTitle("Initial activity level: " + initialConcentration.getValue());
 				initialConcentration.setValue(currValue);
 			}
+			
 		});
 		
 		
@@ -289,9 +313,12 @@ public class NodeDialog extends JDialog {
 					}
 				}
 			}
+			
 		});
 		
 		
+		//Box optionBoxes = new Box(BoxLayout.Y_AXIS);
+		String[] moleculeTypes = new String[]{Model.Properties.TYPE_CYTOKINE, Model.Properties.TYPE_RECEPTOR, Model.Properties.TYPE_KINASE, Model.Properties.TYPE_PHOSPHATASE, Model.Properties.TYPE_TRANSCRIPTION_FACTOR, Model.Properties.TYPE_GENE, Model.Properties.TYPE_MRNA, Model.Properties.TYPE_DUMMY, Model.Properties.TYPE_OTHER};
 		PropertyChangeListener pcl = new PropertyChangeListener() {
 			@Override
 			public void propertyChange(PropertyChangeEvent e) {
@@ -341,7 +368,7 @@ public class NodeDialog extends JDialog {
 		}
 		
 		
-		String[] moleculeTypes = new String[]{Model.Properties.TYPE_CYTOKINE, Model.Properties.TYPE_RECEPTOR, Model.Properties.TYPE_KINASE, Model.Properties.TYPE_PHOSPHATASE, Model.Properties.TYPE_TRANSCRIPTION_FACTOR, Model.Properties.TYPE_GENE, Model.Properties.TYPE_MRNA, Model.Properties.TYPE_DUMMY, Model.Properties.TYPE_OTHER};
+		//String[] moleculeTypes = new String[]{Model.Properties.TYPE_CYTOKINE, Model.Properties.TYPE_RECEPTOR, Model.Properties.TYPE_KINASE, Model.Properties.TYPE_PHOSPHATASE, Model.Properties.TYPE_TRANSCRIPTION_FACTOR, Model.Properties.TYPE_GENE, Model.Properties.TYPE_MRNA, Model.Properties.TYPE_DUMMY, Model.Properties.TYPE_OTHER};
 		final JComboBox<String> moleculeType = new JComboBox<String>(moleculeTypes);
 		if (nodeAttributes.hasAttribute(node.getIdentifier(), Model.Properties.MOLECULE_TYPE)) {
 			String type = nodeAttributes.getStringAttribute(node.getIdentifier(), Model.Properties.MOLECULE_TYPE);
@@ -359,7 +386,8 @@ public class NodeDialog extends JDialog {
 		} else {
 			moleculeType.setSelectedItem(Model.Properties.TYPE_KINASE);
 		}
-
+		//optionBoxes.add(new LabelledField("Molecule type", moleculeType));
+		//values.add(new LabelledField("Molecule type", moleculeType));
 		this.add(new LabelledField("Molecule type", moleculeType), new GridBagConstraints(0, 1, 1, 1, 0.5, 0.0, GridBagConstraints.CENTER, GridBagConstraints.HORIZONTAL, new Insets(0, 0, 0, 0), 0, 0));
 		
 		final JSwitchBox enabledNode = new JSwitchBox("Enabled", "Disabled"),
@@ -477,6 +505,8 @@ public class NodeDialog extends JDialog {
 				// discard changes
 				if (wasNewlyCreated) {
 					Cytoscape.getCurrentNetwork().removeNode(node.getRootGraphIndex(), true);
+//					Cytoscape.getCurrentNetwork().getRootGraph().removeNode(node);
+//					Cytoscape.getRootGraph().removeNode(node);
 				}
 				NodeDialog.this.dispose();
 			}

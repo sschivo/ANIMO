@@ -549,7 +549,8 @@ public class Graph extends JPanel implements MouseListener, MouseMotionListener,
 			}
 			
 			
-			if (showThickAxes || showThinAxes) {
+	
+			if  (showThinAxes || showThickAxes) {
 				g.setStroke(oldStroke);
 			}
 			

@@ -19,11 +19,13 @@ import inat.util.Table;
 import inat.util.XmlConfiguration;
 
 import java.awt.BorderLayout;
+import java.awt.Color;
 import java.awt.Component;
 import java.awt.Container;
 import java.awt.Dimension;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
 import java.awt.GridLayout;
-import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.WindowEvent;
@@ -36,6 +38,7 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -45,6 +48,7 @@ import java.util.Vector;
 import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
+import javax.swing.ButtonGroup;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
@@ -55,9 +59,13 @@ import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JProgressBar;
+import javax.swing.JRadioButton;
 import javax.swing.JScrollPane;
+import javax.swing.JSlider;
 import javax.swing.JSplitPane;
 import javax.swing.JTextField;
+import javax.swing.event.ChangeEvent;
+import javax.swing.event.ChangeListener;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 
@@ -82,10 +90,11 @@ public class ParameterFitter {
 	private double scale = 1.0;
 	private Model model = null;
 	private boolean generateTables = false;
-	private String CSV_FILE_NAME = "test.csv"; ///local/schivos/Data_0-120_TNF100_semplificato_con_dichiarazione_solo_MK2_e_JNK1.csva";
+	private String CSV_FILE_NAME = ""; ///local/schivos/Data_0-120_TNF100_semplificato_con_dichiarazione_solo_MK2_e_JNK1.csva";
 	private JProgressBar progress = null;
 	private long startTime = 0;
 	private JFormattedTextField numberOfParallelExecutions = null;
+	private JSlider parallelExecs = null;
 	private ThreadPool pool = null;
 	private final String WINDOW_TITLE = "Acceptable configurations";
 	private JFrame acceptableGraphsWindow = new JFrame(WINDOW_TITLE);
@@ -146,10 +155,10 @@ public class ParameterFitter {
 		}
 	}
 	
-	public void setVariableParameter(Reaction reaction, String parName, Double min, Double max, Double increase) {
+	public void setVariableParameter(Reaction reaction, String parName, Double min, Double max, Double increase, boolean logarithmic) {
 		ParameterSetting parSetting = scenarioFittingParameters.get(reaction).getParameterSetting(parName);
 		if (parSetting != null) {
-			parSetting.setVariable(min, max, increase);
+			parSetting.setVariable(min, max, increase, logarithmic);
 		} else {
 			parSetting = new ParameterSetting(parName, min, max, increase);
 			scenarioFittingParameters.get(reaction).setParameterSetting(parName, parSetting);
@@ -232,7 +241,16 @@ public class ParameterFitter {
 		startExecution = new JButton(BUTTON_START);
 		startExecution.addActionListener(new ActionListener() {
 			
+			private int numberOfShownResults = -1;
+			
 			public void showAcceptableGraphsWindow() {
+				if (numberOfShownResults == -1) {
+					numberOfShownResults = 10;
+				}
+				showAcceptableGraphsWindow(numberOfShownResults);
+			}
+			
+			public void showAcceptableGraphsWindow(int numberOfResultsToShow) {
 				//System.err.println("Ecco le configurazioni accettabili (" + acceptableConfigurations.size() + "):");
 				//acceptableGraphsWindow.getContentPane().setLayout(new GridLayout(2,2));
 				acceptableGraphsWindow.getContentPane().setLayout(new BorderLayout());
@@ -242,7 +260,15 @@ public class ParameterFitter {
 				final JLabel showPageNumber = new JLabel("Page 1/1");
 				int countItems = 0;
 				int countPages = 0;
-				DecimalFormat decimalFormat = new DecimalFormat("##0.##E0");
+				DecimalFormat decimalFormat = new DecimalFormat("0.##E0");
+				Component lastAdded = null;
+				
+				acceptableConfigurations.removeAllElements();
+				numberOfResultsToShow = Math.min(numberOfResultsToShow, allConfigurations.size());
+				for (int i = 0; i < numberOfResultsToShow; i++) {
+					acceptableConfigurations.add(allConfigurations.elementAt(i));
+				}
+				
 				for (final AcceptableConfiguration acceptableConfiguration : acceptableConfigurations) {
 					if (acceptableConfiguration == null) continue;
 					try {
@@ -268,7 +294,7 @@ public class ParameterFitter {
 							shownReactants.add(r.getName());
 						}
 						for (Reactant r : model.getReactantCollection()) {
-							if (shownReactants.contains(r.getName()) || r.get(Model.Properties.PLOTTED).as(Boolean.class)) {
+							if (shownReactants.contains(r.getName())) { // I comment this so I show all and only the reactants selected for comparison. If you remove this comment, you can also get those reactants marked as plotted, and they will be hidden if they are not in a comparison || r.get(Model.Properties.PLOTTED).as(Boolean.class)) {
 								filteredReactants.add(r.getId());
 							}
 						}
@@ -314,7 +340,7 @@ public class ParameterFitter {
 							for (String parName : scnFitting.getParameterSettings().keySet()) {
 								ParameterSetting parSetting = scnFitting.getParameterSettings().get(parName);
 								if (!parSetting.isFixed()) {
-									builder.append(parName + "=" + decimalFormat.format(acceptableConfiguration.getScenarioConfigurations().get(r).getParameters().get(parName)) + ",");
+									builder.append(parName + "=" + decimalFormat.format(acceptableConfiguration.getScenarioConfigurations().get(r.getId()).getParameters().get(parName)) + ",");
 								}
 							}
 							builder.append("]; ");
@@ -323,6 +349,7 @@ public class ParameterFitter {
 						Box graphBox = new Box(BoxLayout.Y_AXIS);
 						graphBox.add(g);
 						JButton accept = new JButton("I want this");
+						accept.setToolTipText("Set the model parameters to obtain this result");
 						accept.addActionListener(new ActionListener() {
 							public void actionPerformed(ActionEvent e) {
 								if (JOptionPane.showConfirmDialog(window, "Are you sure that you want this graph?\n" + title, "Confirm parameter setting choice", JOptionPane.OK_CANCEL_OPTION) != JOptionPane.OK_OPTION) return;
@@ -334,10 +361,11 @@ public class ParameterFitter {
 										ParameterSetting parSetting = scnFitting.getParameterSettings().get(parName);
 										if (parSetting.isFixed()) {
 											//r.getScenarioCfg().getParameters().put(parName, parSetting.getFixedValue());
-											edgeAttr.setAttribute(r.get(Model.Properties.CYTOSCAPE_ID).as(String.class), parName, parSetting.getFixedValue());
+											edgeAttr.setAttribute(r.get(Model.Properties.CYTOSCAPE_ID).as(String.class).substring(1), parName, parSetting.getFixedValue());
 										} else {
+											//System.err.println("Setto il parametro " + parName + " per la reazione " + r.getName() + " (Cyt ID " + r.get(Model.Properties.CYTOSCAPE_ID).as(String.class) + ") a " + acceptableConfiguration.getScenarioConfigurations().get(r.getId()).getParameters().get(parName));
 											//r.getScenarioCfg().getParameters().put(parName, acceptableConfiguration.getScenarioConfigurations().get(r).getParameters().get(parName));
-											edgeAttr.setAttribute(r.get(Model.Properties.CYTOSCAPE_ID).as(String.class), parName, acceptableConfiguration.getScenarioConfigurations().get(r).getParameters().get(parName));
+											edgeAttr.setAttribute(r.get(Model.Properties.CYTOSCAPE_ID).as(String.class).substring(1), parName, acceptableConfiguration.getScenarioConfigurations().get(r.getId()).getParameters().get(parName));
 										}
 									}
 								}
@@ -361,7 +389,32 @@ public class ParameterFitter {
 							}
 						});
 						Box acceptBox = new Box(BoxLayout.X_AXIS);
-						acceptBox.add(new JLabel(acceptableConfiguration.getErrorEstimation() + "  "));
+//						acceptBox.add(new JLabel(acceptableConfiguration.getErrorEstimation() + "  "));
+						JLabel errorLabel = new JLabel("" + acceptableConfiguration.getErrorValue()) {
+							private static final long serialVersionUID = -8694494127364601604L;
+
+							public void paint(Graphics g1) {
+								Graphics2D g = (Graphics2D)g1;
+								double v = -1;
+								try {
+									v = Double.parseDouble(this.getText());
+								} catch (NumberFormatException ex) {
+									v = 0.0;
+								}
+								v = 1 - v;
+								g.setPaint(Color.RED);
+								g.fillRect(0, 0, this.getWidth(), this.getHeight());
+								g.setPaint(Color.GREEN);
+								g.fillRect(0, 0, (int)Math.round(v * this.getWidth()), this.getHeight()); 
+							}
+						};
+						errorLabel.setToolTipText(acceptableConfiguration.getErrorEstimation());
+						Dimension labelSize = new Dimension(75, 15);
+						errorLabel.setPreferredSize(labelSize);
+						errorLabel.setMaximumSize(labelSize);
+						acceptBox.add(new JLabel("Fitness: "));
+						acceptBox.add(errorLabel);
+						acceptBox.add(new JLabel("   "));
 						acceptBox.add(accept);
 						graphBox.add(acceptBox);
 						//acceptableGraphsWindow.getContentPane().add(new LabelledField(title, graphBox, title));
@@ -369,7 +422,8 @@ public class ParameterFitter {
 							pages.add(new JPanel());
 							pages.elementAt(countPages).setLayout(new GridLayout(2,itemsPerPage/2));
 						}
-						pages.elementAt(countPages).add(new LabelledField(title, graphBox, title));
+						lastAdded = new LabelledField(title, graphBox, title);
+						pages.elementAt(countPages).add(lastAdded);
 						countItems++;
 						if (countItems % itemsPerPage == 0) {
 							countPages++;
@@ -380,6 +434,14 @@ public class ParameterFitter {
 						e.printStackTrace();
 					}
 					
+				}
+				//System.err.println("Inseriti " + countItems + " grafici, in " + (countPages + 1) + " pagine, " + itemsPerPage + " per pagina");
+				if (lastAdded != null && countItems < itemsPerPage * (countPages + 1)) { //The last page needs "empty" elements to make everybody behave correctly
+					int diff = itemsPerPage * (countPages + 1) - countItems;
+					//System.err.println("Dato che devo riempire ancora " + diff + " posti, inserisco delle strutture rigide di dimensioni " + lastAdded.getPreferredSize());
+					for (int i=0;i<diff;i++) {
+						pages.elementAt(countPages).add(Box.createRigidArea(lastAdded.getPreferredSize()));
+					}
 				}
 				if (pages.size() > 0) {
 					acceptableGraphsWindow.getContentPane().add(pages.elementAt(0), BorderLayout.CENTER);
@@ -437,67 +499,89 @@ public class ParameterFitter {
 					acceptableGraphsWindow.getContentPane().add(boxButtons, BorderLayout.SOUTH);
 				}
 				final Box filterButtonsBox = new Box(BoxLayout.X_AXIS);
-				filterButtonsBox.add(Box.createGlue());
+//				filterButtonsBox.add(Box.createGlue());
 				JButton filter = new JButton("Filter");
-				final Vector<Pair<JTextField, ReactantComparison>> comparisonFieldParameters = new Vector<Pair<JTextField, ReactantComparison>>();
-				for (Reactant r : reactantComparisons.keySet()) {
-					ReactantComparison compare = reactantComparisons.get(r);
-					JTextField comparisonError = new JTextField("" + compare.getMaxError());
-					comparisonFieldParameters.add(new Pair<JTextField, ReactantComparison>(comparisonError, compare));
-					filterButtonsBox.add(new LabelledField(r.getName() + " error", comparisonError));
-				}
+//				final Vector<Pair<JTextField, ReactantComparison>> comparisonFieldParameters = new Vector<Pair<JTextField, ReactantComparison>>();
+//				for (Reactant r : reactantComparisons.keySet()) {
+//					ReactantComparison compare = reactantComparisons.get(r);
+//					JTextField comparisonError = new JTextField("" + compare.getMaxError());
+//					comparisonFieldParameters.add(new Pair<JTextField, ReactantComparison>(comparisonError, compare));
+//					filterButtonsBox.add(new LabelledField(r.getName() + " error", comparisonError));
+//				}
+				//filterButtonsBox.add(Box.createGlue());
+				final JFormattedTextField resultsToShow = new JFormattedTextField(numberOfResultsToShow);
+				//resultsToShow.setColumns(20);
+				Dimension prefSize = resultsToShow.getPreferredSize();
+				prefSize.width *= 1.5;
+				resultsToShow.setPreferredSize(prefSize);
+				resultsToShow.setMaximumSize(prefSize);
+				//filterButtonsBox.add(new LabelledField("Show the first results", resultsToShow));
+				JLabel labelShow = new JLabel("Show the best "),
+					   labelResults = new JLabel(" results  ");
+				filterButtonsBox.add(labelShow);
+				filterButtonsBox.add(resultsToShow);
+				filterButtonsBox.add(labelResults);
 				filter.addActionListener(new ActionListener() {
 					@Override
 					public void actionPerformed(ActionEvent e) {
-						for (Pair<JTextField, ReactantComparison> pair : comparisonFieldParameters) {
-							double value = 0;
-							try {
-								value = Double.parseDouble(pair.first.getText());
-							} catch (Exception ex) {
-								value = pair.second.getMaxError();
-							}
-							pair.second.setMaxError(value);
+//						for (Pair<JTextField, ReactantComparison> pair : comparisonFieldParameters) {
+//							double value = 0;
+//							try {
+//								value = Double.parseDouble(pair.first.getText());
+//							} catch (Exception ex) {
+//								value = pair.second.getMaxError();
+//							}
+//							pair.second.setMaxError(value);
+//						}
+						
+						int nResults = 0;
+						try {
+							nResults = Integer.parseInt(resultsToShow.getValue().toString());
+						} catch (NumberFormatException ex) {
+							nResults = 0;
 						}
-						acceptableConfigurations.removeAllElements();
-						DecimalFormat decimalFormat = new DecimalFormat("##0.####");
-						for (AcceptableConfiguration tryConfiguration : allConfigurations) {
-							if (tryConfiguration == null) continue;
-							try {
-								Pair<Boolean, Double> comparisonResult = compareResults(tryConfiguration.getResult());
-								if (comparisonResult.first) {
-									acceptableConfigurations.add(tryConfiguration);
-									tryConfiguration.setErrorEstimation("Max abs diff: " + decimalFormat.format(comparisonResult.second));
-								}
-							} catch (Exception ex) {
-								ex.printStackTrace();
-							}
-						}
-						showAcceptableGraphsWindow();
+//						DecimalFormat decimalFormat = new DecimalFormat("##0.####");
+//						for (AcceptableConfiguration tryConfiguration : allConfigurations) {
+//							if (tryConfiguration == null) continue;
+//							try {
+//								Pair<Boolean, Double> comparisonResult = compareResults(tryConfiguration.getResult());
+//								if (comparisonResult.first) {
+//									acceptableConfigurations.add(tryConfiguration);
+//									tryConfiguration.setErrorEstimation("Max abs diff: " + decimalFormat.format(comparisonResult.second));
+//								}
+//							} catch (Exception ex) {
+//								ex.printStackTrace();
+//							}
+//						}
+						showAcceptableGraphsWindow(nResults);
 					}
 				});
-				filterButtonsBox.add(Box.createGlue());
+				//filterButtonsBox.add(Box.createGlue());
 				filterButtonsBox.add(filter);
 				JButton showAll = new JButton("Show all");
+				//filterButtonsBox.add(Box.createGlue());
 				showAll.addActionListener(new ActionListener() {
 					@Override
 					public void actionPerformed(ActionEvent e) {
-						acceptableConfigurations.removeAllElements();
-						DecimalFormat decimalFormat = new DecimalFormat("##0.####");
-						for (AcceptableConfiguration tryConfiguration : allConfigurations) {
-							if (tryConfiguration == null) continue;
-							try {
-								Pair<Boolean, Double> comparisonResult = compareResults(tryConfiguration.getResult());
-								acceptableConfigurations.add(tryConfiguration);
-								tryConfiguration.setErrorEstimation("Max abs diff: " + decimalFormat.format(comparisonResult.second));
-							} catch (Exception ex) {
-								ex.printStackTrace();
-							}
-						}
-						showAcceptableGraphsWindow();
+						//acceptableConfigurations.removeAllElements();
+//						DecimalFormat decimalFormat = new DecimalFormat("##0.####");
+//						for (AcceptableConfiguration tryConfiguration : allConfigurations) {
+//							if (tryConfiguration == null) continue;
+//							try {
+//								Pair<Boolean, Double> comparisonResult = compareResults(tryConfiguration.getResult());
+//								acceptableConfigurations.add(tryConfiguration);
+//								tryConfiguration.setErrorEstimation("Max abs diff: " + decimalFormat.format(comparisonResult.second));
+//							} catch (Exception ex) {
+//								ex.printStackTrace();
+//							}
+//						}
+						//acceptableConfigurations.addAll(allConfigurations);
+						showAcceptableGraphsWindow(allConfigurations.size());
 					}
 				});
-				filterButtonsBox.add(Box.createGlue());
+				//filterButtonsBox.add(Box.createGlue());
 				filterButtonsBox.add(showAll);
+				//filterButtonsBox.add(Box.createGlue());
 				acceptableGraphsWindow.getContentPane().add(filterButtonsBox, BorderLayout.NORTH);
 				acceptableGraphsWindow.setBounds(window.getBounds());
 				int actuallyAccepted = 0;
@@ -522,16 +606,24 @@ public class ParameterFitter {
 							allConfigurations = new Vector<AcceptableConfiguration>();
 							acceptableConfigurations.setSize((int) totalComputations);
 							allConfigurations.setSize((int) totalComputations);
-							int nParallelExecutions = 2*(Runtime.getRuntime().availableProcessors() -1);
+							int nParallelExecutions = 2 * (Runtime.getRuntime().availableProcessors() - 1);
 							if (numberOfParallelExecutions.getText() != null) {
 								try {
 									nParallelExecutions = Integer.parseInt(numberOfParallelExecutions.getText());
 								} catch (Exception e) {
 									//nothing to do
 								}
+								if (nParallelExecutions < 1) {
+									nParallelExecutions = 1;
+								}
 							}
+							int valueForSlider = Math.max(nParallelExecutions, parallelExecs.getMinimum());
+							valueForSlider = Math.min(valueForSlider, parallelExecs.getMaximum());
+							parallelExecs.setValue(valueForSlider);
+							numberOfParallelExecutions.setValue(nParallelExecutions);
 							pool = new ThreadPool(nParallelExecutions);
 							parameterSweep(pool);
+							sortConfigurations(allConfigurations);
 							showAcceptableGraphsWindow();
 							startExecution.setText(BUTTON_START);
 						}
@@ -553,9 +645,11 @@ public class ParameterFitter {
 		buttonsBox.add(startExecution);
 		window.getContentPane().add(buttonsBox, BorderLayout.SOUTH);
 		//window.pack(); //NON FARLO MAI! SE LO FAI CRASHA X!!! ZIO GUSTAVO
-		window.setBounds(0,0,1160,607);
-		Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
-		window.setBounds((int)((screenSize.getWidth() - window.getWidth()) / 2), (int)((screenSize.getHeight() - window.getHeight()) / 2), window.getWidth(), window.getHeight());
+		//window.setBounds(0,0,1160,607);
+		//Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
+		//window.setBounds((int)((screenSize.getWidth() - window.getWidth()) / 2), (int)((screenSize.getHeight() - window.getHeight()) / 2), window.getWidth(), window.getHeight());
+		//window.setBounds((int)(screenSize.getWidth() / 4), (int)(screenSize.getHeight()  / 4), (int)(screenSize.getWidth() / 2), (int)(screenSize.getHeight() / 2));
+		window.setBounds((int)(Cytoscape.getDesktop().getWidth() * 0.2), (int)(Cytoscape.getDesktop().getHeight() * 0.2), (int)(Cytoscape.getDesktop().getWidth() * 0.6), (int)(Cytoscape.getDesktop().getHeight() * 0.6));
 		if (exitOnClose) {
 			window.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		} else {
@@ -603,7 +697,12 @@ public class ParameterFitter {
 					Double min = setting.getMin(),
 						   max = setting.getMax(),
 						   inc = setting.getIncrease();
-					long nSteps = Math.round((max - min) / inc + 1);
+					long nSteps = 1;
+					if (setting.isLogarithmic()) {
+						nSteps = 1 + Math.round(Math.log(max / min) / Math.log(inc));
+					} else {
+						nSteps = Math.round((max - min) / inc + 1);
+					}
 					totalComputations *= nSteps;
 				}
 			}
@@ -646,6 +745,7 @@ public class ParameterFitter {
 			});
 			setFixedParameter(reaction, parName, new Double(paramValue.getValue().toString()));
 			updateTotalComputations();
+			window.validate();
 			parametersBox.add(new LabelledField(parName, paramValue));
 		}
 		
@@ -673,14 +773,40 @@ public class ParameterFitter {
 			final JFormattedTextField minValue = new JFormattedTextField(format);
 			final JFormattedTextField maxValue = new JFormattedTextField(format);
 			final JFormattedTextField incrementValue = new JFormattedTextField(format);
-			minValue.setValue(parameters.get(parName)/10.0);
+			final JRadioButton linearScale = new JRadioButton("Linear"),
+							   logarithmicScale = new JRadioButton("Logarithmic");
+			Box boxIncrement = new Box(BoxLayout.Y_AXIS);
+			Box boxScale = new Box(BoxLayout.X_AXIS);
+			boxScale.add(linearScale);
+			boxScale.add(logarithmicScale);
+			boxIncrement.add(incrementValue);
+			boxIncrement.add(boxScale);
+			final LabelledField incrementField = new LabelledField("Increment", boxIncrement);
+			ButtonGroup scaleGroup = new ButtonGroup();
+			scaleGroup.add(linearScale);
+			scaleGroup.add(logarithmicScale);
+			ActionListener l = new ActionListener() {
+				@Override
+				public void actionPerformed(ActionEvent e) {
+					if (linearScale.isSelected()) {
+						incrementField.setTitle("Increment");
+					} else {
+						incrementField.setTitle("Log base");
+					}
+				}
+			};
+			linearScale.addActionListener(l);
+			logarithmicScale.addActionListener(l);
+			logarithmicScale.setSelected(true);
+			linearScale.setSelected(false);
+			minValue.setValue(0.001); //parameters.get(parName)/10.0);
 			Dimension prefSize = minValue.getPreferredSize();
 			prefSize.width *= 1.5;
 			minValue.setPreferredSize(prefSize);
 			minValue.getDocument().addDocumentListener(new DocumentListener() {
 				@Override
 				public void changedUpdate(DocumentEvent e) {
-					setVariableParameter(reaction, parName, new Double(minValue.getValue().toString()), new Double(maxValue.getValue().toString()), new Double(incrementValue.getValue().toString()));
+					setVariableParameter(reaction, parName, new Double(minValue.getValue().toString()), new Double(maxValue.getValue().toString()), new Double(incrementValue.getValue().toString()), logarithmicScale.isSelected());
 					updateTotalComputations();
 				}
 
@@ -695,14 +821,14 @@ public class ParameterFitter {
 				}
 			});
 			parameterBox.add(new LabelledField("Min", minValue));
-			maxValue.setValue(parameters.get(parName));
+			maxValue.setValue(0.016); //parameters.get(parName));
 			prefSize = maxValue.getPreferredSize();
 			prefSize.width *= 1.5;
 			maxValue.setPreferredSize(prefSize);
 			maxValue.getDocument().addDocumentListener(new DocumentListener() {
 				@Override
 				public void changedUpdate(DocumentEvent e) {
-					setVariableParameter(reaction, parName, new Double(minValue.getValue().toString()), new Double(maxValue.getValue().toString()), new Double(incrementValue.getValue().toString()));
+					setVariableParameter(reaction, parName, new Double(minValue.getValue().toString()), new Double(maxValue.getValue().toString()), new Double(incrementValue.getValue().toString()), logarithmicScale.isSelected());
 					updateTotalComputations();
 				}
 
@@ -717,14 +843,14 @@ public class ParameterFitter {
 				}
 			});
 			parameterBox.add(new LabelledField("Max", maxValue));
-			incrementValue.setValue(parameters.get(parName)/10.0);
+			incrementValue.setValue(2); //parameters.get(parName)/10.0);
 			prefSize = incrementValue.getPreferredSize();
 			prefSize.width *= 1.5;
 			incrementValue.setPreferredSize(prefSize);
 			incrementValue.getDocument().addDocumentListener(new DocumentListener() {
 				@Override
 				public void changedUpdate(DocumentEvent e) {
-					setVariableParameter(reaction, parName, new Double(minValue.getValue().toString()), new Double(maxValue.getValue().toString()), new Double(incrementValue.getValue().toString()));
+					setVariableParameter(reaction, parName, new Double(minValue.getValue().toString()), new Double(maxValue.getValue().toString()), new Double(incrementValue.getValue().toString()), logarithmicScale.isSelected());
 					updateTotalComputations();
 				}
 
@@ -738,10 +864,10 @@ public class ParameterFitter {
 					changedUpdate(e);
 				}
 			});
-			parameterBox.add(new LabelledField("Increment", incrementValue));
+			parameterBox.add(incrementField);
 			parameterBox.add(Box.createGlue());
 			parametersBox.add(new LabelledField(parName, parameterBox));
-			setVariableParameter(reaction, parName, new Double(minValue.getValue().toString()), new Double(maxValue.getValue().toString()), new Double(incrementValue.getValue().toString()));
+			setVariableParameter(reaction, parName, new Double(minValue.getValue().toString()), new Double(maxValue.getValue().toString()), new Double(incrementValue.getValue().toString()), logarithmicScale.isSelected());
 			updateTotalComputations();
 		}
 		parametersBox.add(Box.createGlue());
@@ -752,157 +878,79 @@ public class ParameterFitter {
 		
 	}
 	
+	private void updateComparisonBox(Box comparisonBox, String csvFileName) {
+		File f = new File(csvFileName);
+		try {
+			if (!f.exists()) return;
+			BufferedReader is = new BufferedReader(new FileReader(f));
+			String firstLine = is.readLine();
+			StringTokenizer tritatutto = new StringTokenizer(firstLine, ",");
+			int nColonne = tritatutto.countTokens();
+			final String[] graphNames = new String[nColonne - 1];
+			tritatutto.nextToken(); //il primo e' la X (tempo)
+			for (int i=0;i<graphNames.length;i++) {
+				graphNames[i] = tritatutto.nextToken().replace('\"',' ');
+			}
+			comparisonBox.removeAll();
+			comparisonBox.add(Box.createGlue());
+			for (final Reactant reactant : model.getReactantCollection()) {
+				final Box reagentBox = new Box(BoxLayout.X_AXIS);
+//				reagentBox.add(Box.createGlue());
+				Vector<String> selectedSeries = new Vector<String>();
+				selectedSeries.add(graphNames[0]);
+				final ReactantComparison comparison = new ReactantComparison(csvFileName, selectedSeries, 0.2);
+				final JCheckBox checkBox = new JCheckBox(reactant.getName());
+				final JComboBox<String> comboBox = new JComboBox<String>(graphNames);
+//				final JFormattedTextField error = new JFormattedTextField(new Double(0.2));
+				checkBox.addActionListener(new ActionListener() {
+					public void actionPerformed(ActionEvent e) {
+						comboBox.setEnabled(checkBox.isSelected());
+//						error.setEnabled(checkBox.isSelected());
+						if (checkBox.isEnabled()) {
+							reactantComparisons.put(reactant, comparison);
+						} else {
+							reactantComparisons.remove(reactant);
+						}
+					}
+				});
+				comboBox.setEnabled(false);
+//				error.setEnabled(false);
+				comboBox.addActionListener(new ActionListener() {
+					public void actionPerformed(ActionEvent e) {
+						Vector<String> seriesNames = new Vector<String>();
+						seriesNames.add(comboBox.getSelectedItem().toString());
+						comparison.setSeriesNames(seriesNames);
+					}
+				});
+				reagentBox.add(checkBox);
+				reagentBox.add(Box.createGlue());
+				reagentBox.add(comboBox);
+				reagentBox.add(Box.createGlue());
+				comparisonBox.add(reagentBox);
+			}
+			comparisonBox.add(Box.createGlue());
+			is.close();
+		} catch (Exception ex) {
+			
+		}
+	}
+	
 	public JComponent createReactionComparisonPanel(final Model model) {
 		try {
 			final JPanel comparisonPanel = new JPanel();
+			comparisonPanel.setLayout(new BorderLayout());
 			final Box comparisonBox = new Box(BoxLayout.Y_AXIS);
 			comparisonBox.add(Box.createGlue());
 			numberOfParallelExecutions = new JFormattedTextField(2*(Runtime.getRuntime().availableProcessors() -1));
 			final JTextField csvFileName = new JTextField(15);
 			csvFileName.setText(CSV_FILE_NAME);
-			File f = new File(CSV_FILE_NAME);
-			if (f.exists()) {
-				BufferedReader is = new BufferedReader(new FileReader(f));
-				String firstLine = is.readLine();
-				StringTokenizer tritatutto = new StringTokenizer(firstLine, ",");
-				int nColonne = tritatutto.countTokens();
-				final String[] graphNames = new String[nColonne - 1];
-				tritatutto.nextToken(); //il primo � la X (tempo)
-				for (int i=0;i<graphNames.length;i++) {
-					graphNames[i] = tritatutto.nextToken().replace('\"',' ');
-				}
-				for (Reactant reactant : model.getReactantCollection()) {
-					final Box reagentBox = new Box(BoxLayout.X_AXIS);
-					reagentBox.add(Box.createGlue());
-					Vector<String> selectedSeries = new Vector<String>();
-					selectedSeries.add(graphNames[0]);
-					final ReactantComparison comparison = new ReactantComparison(CSV_FILE_NAME, selectedSeries, 0.2);
-					final JCheckBox checkBox = new JCheckBox(reactant.getName());
-					final JComboBox<String> comboBox = new JComboBox<String>(graphNames);
-					final JFormattedTextField error = new JFormattedTextField(new Double(0.2));
-					final Reactant cherottura = reactant;
-					checkBox.addActionListener(new ActionListener() {
-						public void actionPerformed(ActionEvent e) {
-							comboBox.setEnabled(checkBox.isSelected());
-							error.setEnabled(checkBox.isSelected());
-							if (checkBox.isEnabled()) {
-								reactantComparisons.put(cherottura, comparison);
-							} else {
-								reactantComparisons.remove(cherottura);
-							}
-						}
-					});
-					comboBox.setEnabled(false);
-					error.setEnabled(false);
-					comboBox.addActionListener(new ActionListener() {
-						public void actionPerformed(ActionEvent e) {
-							Vector<String> seriesNames = new Vector<String>();
-							seriesNames.add(comboBox.getSelectedItem().toString());
-							comparison.setSeriesNames(seriesNames);
-						}
-					});
-					error.getDocument().addDocumentListener(new DocumentListener() {
-						@Override
-						public void changedUpdate(DocumentEvent e) {
-							comparison.setMaxError(Double.parseDouble(error.getValue().toString()));
-						}
-		
-						@Override
-						public void insertUpdate(DocumentEvent e) {
-							changedUpdate(e);
-						}
-		
-						@Override
-						public void removeUpdate(DocumentEvent e) {
-							changedUpdate(e);
-						}
-					});
-					reagentBox.add(checkBox);
-					reagentBox.add(Box.createGlue());
-					reagentBox.add(comboBox);
-					reagentBox.add(Box.createGlue());
-					reagentBox.add(error);
-					reagentBox.add(Box.createGlue());
-					comparisonBox.add(reagentBox);
-				}
-				is.close();
-			}
+			updateComparisonBox(comparisonBox, CSV_FILE_NAME);
 			
 			csvFileName.getDocument().addDocumentListener(new DocumentListener() {
 				@Override
 				public void changedUpdate(DocumentEvent e) {
-					File f = new File(csvFileName.getText());
-					try {
-						BufferedReader is = new BufferedReader(new FileReader(f));
-						String firstLine = is.readLine();
-						StringTokenizer tritatutto = new StringTokenizer(firstLine, ",");
-						int nColonne = tritatutto.countTokens();
-						final String[] graphNames = new String[nColonne - 1];
-						tritatutto.nextToken(); //il primo � la X (tempo)
-						for (int i=0;i<graphNames.length;i++) {
-							graphNames[i] = tritatutto.nextToken().replace('\"',' ');
-						}
-						comparisonBox.removeAll();
-						comparisonBox.add(Box.createGlue());
-						for (final Reactant reactant : model.getReactantCollection()) {
-							final Box reagentBox = new Box(BoxLayout.X_AXIS);
-							reagentBox.add(Box.createGlue());
-							Vector<String> selectedSeries = new Vector<String>();
-							selectedSeries.add(graphNames[0]);
-							final ReactantComparison comparison = new ReactantComparison(csvFileName.getText(), selectedSeries, 0.2);
-							final JCheckBox checkBox = new JCheckBox(reactant.getName());
-							final JComboBox<String> comboBox = new JComboBox<String>(graphNames);
-							final JFormattedTextField error = new JFormattedTextField(new Double(0.2));
-							checkBox.addActionListener(new ActionListener() {
-								public void actionPerformed(ActionEvent e) {
-									comboBox.setEnabled(checkBox.isSelected());
-									error.setEnabled(checkBox.isSelected());
-									if (checkBox.isEnabled()) {
-										reactantComparisons.put(reactant, comparison);
-									} else {
-										reactantComparisons.remove(reactant);
-									}
-								}
-							});
-							comboBox.setEnabled(false);
-							error.setEnabled(false);
-							comboBox.addActionListener(new ActionListener() {
-								public void actionPerformed(ActionEvent e) {
-									Vector<String> seriesNames = new Vector<String>();
-									seriesNames.add(comboBox.getSelectedItem().toString());
-									comparison.setSeriesNames(seriesNames);
-								}
-							});
-							error.getDocument().addDocumentListener(new DocumentListener() {
-								@Override
-								public void changedUpdate(DocumentEvent e) {
-									comparison.setMaxError(Double.parseDouble(error.getValue().toString()));
-								}
-				
-								@Override
-								public void insertUpdate(DocumentEvent e) {
-									changedUpdate(e);
-								}
-				
-								@Override
-								public void removeUpdate(DocumentEvent e) {
-									changedUpdate(e);
-								}
-							});
-							reagentBox.add(checkBox);
-							reagentBox.add(Box.createGlue());
-							reagentBox.add(comboBox);
-							reagentBox.add(Box.createGlue());
-							reagentBox.add(error);
-							reagentBox.add(Box.createGlue());
-							comparisonBox.add(reagentBox);
-						}
-						comparisonBox.add(Box.createGlue());
-						comparisonPanel.validate();
-						is.close();
-					} catch (Exception ex) {
-						
-					}
+					updateComparisonBox(comparisonBox, csvFileName.getText());
+					comparisonPanel.validate();
 				}
 	
 				@Override
@@ -916,8 +964,11 @@ public class ParameterFitter {
 				}
 			});
 			comparisonBox.add(Box.createGlue());
-			comparisonPanel.add(comparisonBox, BorderLayout.CENTER);
-			Box vTextBox = new Box(BoxLayout.Y_AXIS);
+			JScrollPane scrollComparison = new JScrollPane(comparisonBox);
+			scrollComparison.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
+			scrollComparison.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
+			comparisonPanel.add(scrollComparison, BorderLayout.CENTER);
+//			Box vTextBox = new Box(BoxLayout.Y_AXIS);
 			Box csvBox = new Box(BoxLayout.X_AXIS);
 			csvBox.add(csvFileName);
 			csvBox.add(Box.createGlue());
@@ -933,12 +984,35 @@ public class ParameterFitter {
 				}
 			});
 			csvBox.add(openCSV);
-			vTextBox.add(new LabelledField("CSV file name", csvBox));
-			vTextBox.add(new LabelledField("Number of parallel executions", numberOfParallelExecutions));
-			comparisonPanel.add(vTextBox, BorderLayout.SOUTH);
-			JScrollPane scrollComparison = new JScrollPane(comparisonPanel);
-			scrollComparison.getVerticalScrollBar().setUnitIncrement(16);
-			return scrollComparison;
+//			vTextBox.add(new LabelledField("CSV file name", csvBox));
+//			vTextBox.add(new LabelledField("Number of parallel executions", numberOfParallelExecutions));
+//			comparisonPanel.add(vTextBox, BorderLayout.SOUTH);
+			comparisonPanel.add(new LabelledField("CSV file name", csvBox), BorderLayout.NORTH);
+			parallelExecs = new JSlider();
+			parallelExecs.setMinimum(1);
+			parallelExecs.setMaximum(2 * Runtime.getRuntime().availableProcessors());
+			parallelExecs.addChangeListener(new ChangeListener () {
+				@Override
+				public void stateChanged(ChangeEvent arg0) {
+					numberOfParallelExecutions.setValue(new Integer(parallelExecs.getValue()));
+				}
+			});
+			Box parallelBox = new Box(BoxLayout.X_AXIS);
+			parallelBox.add(parallelExecs);
+			parallelBox.add(Box.createGlue());
+			parallelBox.add(numberOfParallelExecutions);
+			int nExecs = parallelExecs.getMaximum();
+			try {
+				nExecs = Integer.parseInt(numberOfParallelExecutions.getValue().toString());
+			} catch (NumberFormatException ex) {
+				nExecs = parallelExecs.getMaximum();
+			}
+			parallelExecs.setValue(nExecs);
+			comparisonPanel.add(new LabelledField("Number of parallel executions", parallelBox), BorderLayout.SOUTH);
+			
+//			JScrollPane scrollComparison = new JScrollPane(comparisonPanel);
+//			scrollComparison.getVerticalScrollBar().setUnitIncrement(16);
+			return comparisonPanel; //scrollComparison;
 		} catch (Exception ex) {
 			ex.printStackTrace();
 			return null;
@@ -1004,17 +1078,30 @@ public class ParameterFitter {
 			Pair<ScenarioCfg, ParameterSetting> pair = parSettings.elementAt(startIndex);
 			ScenarioCfg cfg = pair.first;
 			ParameterSetting parSetting = pair.second;
-			long computationsAtMyLevel = Math.round((parSetting.getMax() - parSetting.getMin()) / parSetting.getIncrease() + 1);
-			long mySteps = 0;
-			for (Double val = parSetting.getMin(); mySteps < computationsAtMyLevel; val += parSetting.getIncrease()) { //the termination condition on the for is correct: we don't want to stop too early just because of some rounding problems
-				HashMap<String, Double> params = cfg.getParameters();
-				if (params == null) {
-					params = new HashMap<String, Double>();
+			boolean isLogarithmicScale = parSetting.isLogarithmic();
+			if (isLogarithmicScale) {
+				for (Double val = parSetting.getMin(); val <= parSetting.getMax(); val *= parSetting.getIncrease()) { //parSetting.getIncrease() gives us the log base if we are on a logarithmic scale
+					HashMap<String, Double> params = cfg.getParameters();
+					if (params == null) {
+						params = new HashMap<String, Double>();
+					}
+					params.put(parSetting.getName(), val);
+					cfg.setParameters(params);
+					visitParameterSettings(parSettings, startIndex + 1, pool);
 				}
-				params.put(parSetting.getName(), val);
-				cfg.setParameters(params);
-				visitParameterSettings(parSettings, startIndex + 1, pool);
-				mySteps++;
+			} else {
+				long computationsAtMyLevel = Math.round((parSetting.getMax() - parSetting.getMin()) / parSetting.getIncrease() + 1);
+				long mySteps = 0;
+				for (Double val = parSetting.getMin(); mySteps < computationsAtMyLevel; val += parSetting.getIncrease()) { //the termination condition on the for is correct: we don't want to stop too early just because of some rounding problems
+					HashMap<String, Double> params = cfg.getParameters();
+					if (params == null) {
+						params = new HashMap<String, Double>();
+					}
+					params.put(parSetting.getName(), val);
+					cfg.setParameters(params);
+					visitParameterSettings(parSettings, startIndex + 1, pool);
+					mySteps++;
+				}
 			}
 		}
 	}
@@ -1037,10 +1124,10 @@ public class ParameterFitter {
 	public void stampaRapporto(double a, double b) {
 		if (a < b) {
 			long estimation = (long)((System.currentTimeMillis() - startTime) / (a + 1) * (b - a - 1));
-			progress.setToolTipText("Estimated remaining time: " + RunAction.timeDifferenceFormat(estimation));
+			progress.setToolTipText("Estimated remaining time: " + RunAction.timeDifferenceFormat(estimation / 1000));
 		} else {
 			long duration = System.currentTimeMillis() - startTime;
-			progress.setToolTipText("Process completed in " + RunAction.timeDifferenceFormat(duration));
+			progress.setToolTipText("Process completed in " + RunAction.timeDifferenceFormat(duration / 1000));
 		}
 		progress.setValue(progress.getMinimum() + (int)(a / b * (progress.getMaximum() - progress.getMinimum())));
 		NumberFormat formatter = new DecimalFormat("#,###");
@@ -1053,7 +1140,7 @@ public class ParameterFitter {
 						 UPPAAL_MODEL_TMP_PREFIX = "iknat_uppaal_model";*/
 	
 	public void doCompute(ThreadPool pool) {
-		final HashMap<Reaction, ScenarioCfg> currentConfiguration = new HashMap<Reaction, ScenarioCfg>();
+		final HashMap<String, ScenarioCfg> currentConfiguration = new HashMap<String, ScenarioCfg>();
 		double secStepFactor = model.getProperties().get(Model.Properties.SECS_POINT_SCALE_FACTOR).as(Double.class);
 		//System.err.println("Ho appena creato un modello nuovo apposta (non so quanto sia saggio), e sto facendo i conti.");
 		//System.err.println("Conto ben " + model.getReactions().size() + " reazioni");
@@ -1067,8 +1154,8 @@ public class ParameterFitter {
 			for (String parName : scenario.getParameters().keySet()) {
 				scenario.setParameter(parName, cfg.getParameters().get(parName));
 			}
-
-			Integer unc = 5; //Uncertainty value is now ANIMO-wide (TODO: is that a bit excessive? One would expect the uncertainty to be connected to the model...)
+			
+			/*Integer unc = 5; //Uncertainty value is now ANIMO-wide (TODO: is that a bit excessive? One would expect the uncertainty to be connected to the model...)
 			XmlConfiguration configuration = InatBackend.get().configuration();
 			try {
 				unc = new Integer(configuration.get(XmlConfiguration.UNCERTAINTY_KEY));
@@ -1077,8 +1164,8 @@ public class ParameterFitter {
 			}
 //			if (r.has(Model.Properties.UNCERTAINTY)) { //We always want to use the uncertainty set in the options, so no specific uncertainty values for single reactions
 //				unc = r.get(Model.Properties.UNCERTAINTY).as(Integer.class);
-//			}
-			double uncertainty = unc;
+//			}*/
+			double uncertainty = 0; // We don't want to use uncertainty in the parameter sweeping!! Otherwise you would need many simulations for each configuration! unc;
 			int scenarioIdx = cfg.getIndex();
 			int nLevelsR1, nLevelsR2;
 			double levelsScaleFactor = r.get(Model.Properties.LEVELS_SCALE_FACTOR + "_reaction").as(Double.class);
@@ -1146,12 +1233,15 @@ public class ParameterFitter {
 				r.let(Model.Properties.TIMES_UPPER).be(timesUTable);
 			}
 			
-			/*System.err.print("Nella configurazione corrente, abbiamo che la reazione " + r.getName() + " ha la configurazione (" + cfg.getIndex());
-			for (String pn : cfg.getParameters().keySet()) {
-				System.err.print(", " + pn + " = " + cfg.getParameters().get(pn));
-			}
-			System.err.println(")");*/
-			currentConfiguration.put(r, new ScenarioCfg(cfg));
+			/*if (!scenarioFittingParameters.get(r).getParameterSetting("k").isFixed()) {
+				//System.err.print("Nella configurazione corrente, abbiamo che la reazione " + r.getName() + " ha la configurazione (" + cfg.getIndex());
+				System.err.print(r.getName() + " ha la configurazione (" + cfg.getIndex());
+				for (String pn : cfg.getParameters().keySet()) {
+					System.err.print(", " + pn + " = " + cfg.getParameters().get(pn));
+				}
+				System.err.println(")");
+			}*/
+			currentConfiguration.put(r.getId(), new ScenarioCfg(cfg));
 		}
 		/*final EstraiValori estrattore = new EstraiValori();*/
 		try {
@@ -1174,14 +1264,27 @@ public class ParameterFitter {
 						/*File outputCSV = estrattore.mediaVeloce(uppaalModel.getAbsolutePath(), uppaalQuery.getAbsolutePath(), 1, false, false);*/
 						//int timeTo = (int)(TIME_TO * 60.0 / analyzedModel.getProperties().get(Model.Properties.SECONDS_PER_POINT).as(Double.class));
 						try {
+							for (Reaction r : analyzedModel.getReactionCollection()) {
+								ScenarioCfg cfg = currentConfiguration.get(r.getId());
+								for (String pn : cfg.getParameters().keySet()) {
+									r.let(pn).be(cfg.getParameters().get(pn));
+								}
+								/*if (!scenarioFittingParameters.get(r.getId()).getParameterSetting("k").isFixed()) {
+									System.err.print(r.getName() + " ha la configurazione (" + cfg.getIndex());
+									for (String pn : cfg.getParameters().keySet()) {
+										System.err.print(", " + pn + " = " + cfg.getParameters().get(pn));
+									}
+									System.err.println(")");
+								}*/
+							}
 							LevelResult result = new UppaalModelAnalyserSMC(null, null).analyze(analyzedModel, timeTo);
 							Pair<Boolean, Double> comparisonResult = compareResults(result);
-							if (comparisonResult.first) {
-								synchronized(acceptableConfigurations) {
-									//System.err.println("Configurazione accettabile al numero " + actualIndexToRemember + ", max differenza: " + comparisonResult.second);
-									acceptableConfigurations.set(actualIndexToRemember, new AcceptableConfiguration(currentConfiguration, result, "Max abs diff: " + decimalFormat.format(comparisonResult.second)));
-								}
-							}
+//							if (comparisonResult.first) {
+//								synchronized(acceptableConfigurations) {
+//									//System.err.println("Configurazione accettabile al numero " + actualIndexToRemember + ", max differenza: " + comparisonResult.second);
+//									acceptableConfigurations.set(actualIndexToRemember, new AcceptableConfiguration(currentConfiguration, result, "Max abs diff: " + decimalFormat.format(comparisonResult.second)));
+//								}
+//							}
 							allConfigurations.set(actualIndexToRemember, new AcceptableConfiguration(currentConfiguration, result, "Max abs diff: " + decimalFormat.format(comparisonResult.second)));
 						} catch (Exception ex) {
 							ex.printStackTrace();
@@ -1204,12 +1307,32 @@ public class ParameterFitter {
 	}
 	
 	
+	private void sortConfigurations(Vector<AcceptableConfiguration> candidateConfigurations) {
+		DecimalFormat decimalFormat = new DecimalFormat("##0.####");
+		try {
+			for (AcceptableConfiguration tryConfiguration : candidateConfigurations) {
+				if (Double.isNaN(tryConfiguration.getErrorValue())) {
+					Pair<Boolean, Double> comparisonResult = compareResults(tryConfiguration.getResult());
+					//if (comparisonResult.first) {
+						//acceptableConfigurations.add(tryConfiguration);
+						tryConfiguration.setErrorValue(comparisonResult.second);
+						tryConfiguration.setErrorEstimation("Max abs diff: " + decimalFormat.format(comparisonResult.second));
+					//}
+				}
+			}
+			Collections.sort(candidateConfigurations);
+		} catch (Exception ex) {
+			
+		}
+	}
+	
+	
 	private Pair<Boolean, Double> compareResults(LevelResult myResult) throws Exception {
 		double maxDiff = 0;
 		for (Reactant reactant : reactantComparisons.keySet()) {
 			ReactantComparison compare = reactantComparisons.get(reactant);
 			//System.err.println("Devo comparare il reagente " + reactant + " con " + compare.getSeriesNames().firstElement() + ", errore massimo di " + compare.getMaxError());
-			double allowedError = compare.getMaxError();
+//			double allowedError = compare.getMaxError();
 			File hisCSV = new File(compare.getCsvFile());
 			String hisColumn = compare.getSeriesNames().firstElement(),
 				   hisNLevelsColumn = Graph.MAX_Y_STRING.toLowerCase();
@@ -1226,7 +1349,7 @@ public class ParameterFitter {
 			if (hisFirstLine == null) {
 				System.err.println("ERROR file " + hisCSV + ": is empty!");
 				hisIS.close();
-				return new Pair<Boolean, Double>(false, 100.0);
+				return new Pair<Boolean, Double>(false, 101.0);
 			}
 			StringTokenizer hisTritatutto = new StringTokenizer(hisFirstLine, ",");
 			boolean foundColumn = false,
@@ -1238,46 +1361,50 @@ public class ParameterFitter {
 				} else if (colName.equals(hisColumn)) {
 					foundColumn = true;
 				}
-				if (!colName.toLowerCase().equals(hisNLevelsColumn) && !foundNLevels) {
-					hisNLevelsColumnIndex++;
-				} else if (colName.equals(hisNLevelsColumn)) {
+				if (colName.toLowerCase().equals(hisNLevelsColumn)) {
 					foundNLevels = true;
+					//System.err.println("Ho trovato la colonna " + colName);
+				} else {
+					hisNLevelsColumnIndex++;
 				}
 				if (foundColumn && foundNLevels) break;
 			}
 			
 			String hisLine = null;
 			double maxDifference = 0;
-			foundNLevels = false;
+			foundColumn = false;
 			while ((hisLine = hisIS.readLine()) != null) {
 				hisTritatutto = new StringTokenizer(hisLine, ",");
 				double hisTime = Double.parseDouble(hisTritatutto.nextToken());
-				for (int i=1;i<hisColumnIndex;i++) {
-					if (i == hisNLevelsColumnIndex && !foundNLevels) {
-						try {
-							hisNLevels = Double.parseDouble(hisTritatutto.nextToken());
-							foundNLevels = true;
-							//System.err.println("Lui ha " + hisNLevels);
-						} catch (Exception ex) {
-							foundNLevels = false;
-						}
-					} else {
+				//System.err.println("t = " + hisTime);
+				int i=1;
+				for (;i<hisColumnIndex - 1;i++) {
+					hisTritatutto.nextToken();
+				}
+				double hisValue = Double.parseDouble(hisTritatutto.nextToken());
+				//System.err.println("v = " + hisValue);
+				if (foundNLevels && !foundColumn) {
+					//System.err.println("Sono alla colonna " + i + " e invece il numero di livelli sta a " + hisNLevelsColumnIndex);
+					for (;i<hisNLevelsColumnIndex - 1; i++) {
 						hisTritatutto.nextToken();
 					}
+					hisNLevels = Double.parseDouble(hisTritatutto.nextToken());
+					foundColumn = true;
+					//System.err.println("Lui ha " + hisNLevels + " livelli");
 				}
-				double hisValue = Double.parseDouble(hisTritatutto.nextToken()) / hisNLevels * myNLevels;
+				hisValue = hisValue / hisNLevels;
 				double myValue = myResult.getConcentration(reactant.getId(), hisTime / scale);
-				double difference = Math.abs(myValue - hisValue)/myNLevels;
+				double difference = Math.abs(myValue / myNLevels - hisValue);
 				//System.err.println("IO (" + (hisTime / scale) + "): " + myValue + "/" + myNLevels + ", LUI (" + hisTime + "): " + (hisValue / myNLevels * hisNLevels) + "/" + hisNLevels + ". Diff: " + difference);
 				if (difference > maxDifference) {
 					maxDifference = difference;
 				}
-				if (difference > allowedError) {
-					//System.err.println("E la comparazione fallisce! Mio valore = " + myValue + ", suo valore = " + hisValue);
-					//System.err.println("Differenza attuale: " + difference + ", massimo consentito: " + allowedError);
-					hisIS.close();
-					return new Pair<Boolean, Double>(false, 100.0);
-				}
+//				if (difference > allowedError) {
+//					//System.err.println("E la comparazione fallisce! Mio valore = " + myValue + ", suo valore = " + hisValue);
+//					//System.err.println("Differenza attuale: " + difference + ", massimo consentito: " + allowedError);
+//					hisIS.close();
+//					return new Pair<Boolean, Double>(false, difference);
+//				}
 			}
 			//System.err.println("Differenza massima per il mio reagente " + reactant + " = " + maxDifference);
 			if (maxDifference > maxDiff) {

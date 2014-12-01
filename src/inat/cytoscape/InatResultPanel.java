@@ -46,6 +46,7 @@ import javax.imageio.ImageIO;
 import javax.swing.AbstractAction;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
+import javax.swing.JFileChooser;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
@@ -54,6 +55,7 @@ import javax.swing.JSplitPane;
 import javax.swing.SwingConstants;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
+import javax.swing.filechooser.FileFilter;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.transform.OutputKeys;
 import javax.xml.transform.Transformer;
@@ -72,6 +74,7 @@ import cytoscape.CyNetwork;
 import cytoscape.CyNode;
 import cytoscape.Cytoscape;
 import cytoscape.data.CyAttributes;
+import cytoscape.util.export.BitmapExporter;
 import cytoscape.view.CyNetworkView;
 import cytoscape.view.cytopanels.CytoPanel;
 import cytoscape.view.cytopanels.CytoPanelImp;
@@ -425,12 +428,85 @@ public class InatResultPanel extends JPanel implements ChangeListener, GraphScal
 					if (model.getReactant(r) == null) continue;
 					final String id = model.getReactant(r).get(Model.Properties.REACTANT_NAME).as(String.class);
 					//System.err.println("R id = " + id);
-					final double level = result.getConcentration(r, t) / nLevels * model.getReactant(r).get(Model.Properties.NUMBER_OF_LEVELS).as(Integer.class); //We also rescale the value to the correct number of levels of each node
+					final double level = result.getConcentration(r, t) / nLevels * nodeAttributes.getIntegerAttribute(id, Model.Properties.NUMBER_OF_LEVELS); //model.getReactant(r).get(Model.Properties.NUMBER_OF_LEVELS).as(Integer.class); //We also rescale the value to the correct number of levels of each node. Attention: we need to use the CURRENT number of levels of the node, or we will get inconsistent results!
 					nodeAttributes.setAttribute(id, Model.Properties.INITIAL_LEVEL, (int)Math.round(level));
 				}
 			}
 		});
 		sliderPanel.add(setParameters, BorderLayout.WEST);
+		
+		JButton animate;
+		animate = new JButton("Animation");
+		animate.setToolTipText("Make an animation of this time series");
+		animate.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				int nSteps = 10;
+				int percentage = 100;
+				String nStepsString = JOptionPane.showInputDialog(Cytoscape.getDesktop(), "Number of frames", nSteps);
+				if (nStepsString == null) return;
+				try {
+					nSteps = Integer.parseInt(nStepsString);
+				} catch (NumberFormatException ex) {
+					nSteps = 10;
+				}
+				String percentageString = JOptionPane.showInputDialog(Cytoscape.getDesktop(), "Percentage dimension of image", percentage);
+				if (percentageString == null) return;
+				try {
+					percentage = Integer.parseInt(percentageString);
+				} catch (NumberFormatException ex) {
+					percentage = 100;
+				}
+				
+				String directory = ".";
+				File currentDirectory = new File(directory);
+				if (Cytoscape.getCurrentSessionFileName() != null) {
+					File curSession = new File(Cytoscape.getCurrentSessionFileName());
+					if (curSession != null && curSession.exists()) {
+						currentDirectory = curSession.getParentFile();
+					}
+				}
+				JFileChooser chooser = new JFileChooser(currentDirectory);
+				chooser.setFileFilter(new FileFilter() {
+					public boolean accept(File pathName) {
+						if (pathName.isDirectory()) {
+							return true;
+						}
+						return false;
+					}
+
+					public String getDescription() {
+						return "Directory";
+					}
+				});
+				chooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+				int result = chooser.showSaveDialog(Cytoscape.getDesktop());
+				if (result == JFileChooser.APPROVE_OPTION) {
+					currentDirectory = chooser.getCurrentDirectory();
+					String fileName = chooser.getSelectedFile().getAbsolutePath();
+					directory = fileName;
+				}
+				
+				slider.setValue(slider.getMinimum());
+				int delta = (int)Math.round(1.0 * (slider.getMaximum() - slider.getMinimum() + 1) / nSteps);
+				int idx = 0;
+				BitmapExporter be = new BitmapExporter("png", percentage / 100.0);
+				for (int i = slider.getMinimum(); i <= slider.getMaximum(); i += delta, idx++) {
+					slider.setValue(i);
+					CyAttributes edgeAttrs = Cytoscape.getEdgeAttributes();
+					edgeAttrs.deleteAttribute(Model.Properties.SHOWN_LEVEL);
+					Cytoscape.getCurrentNetworkView().updateView();
+					try {
+						be.export(Cytoscape.getCurrentNetworkView(), new FileOutputStream(directory + File.separator + "Frame" + String.format("%03d", idx) + ".png"));
+					} catch (Exception ex) {
+						ex.printStackTrace();
+					}
+				}
+			}
+		});
+		if (InatPlugin.areWeTheDeveloper()) {
+			sliderPanel.add(animate, BorderLayout.EAST);
+		}
 		
 		sliderPanel.add(this.slider, BorderLayout.CENTER);
 		
@@ -1108,7 +1184,16 @@ public class InatResultPanel extends JPanel implements ChangeListener, GraphScal
 			}
 		} else if (caption.equals(END_DIFFERENCE)) {
 			if (differenceWith != null) {
-				SimpleLevelResult diff = (SimpleLevelResult)this.result.difference(differenceWith.result);
+				Map<String, String> hisMapCytoscapeIDtoModelID = differenceWith.model.getMapCytoscapeIDtoReactantID();
+				//System.err.println("La sua mappa da Cytoscape a Model ID: " + hisMapCytoscapeIDtoModelID);
+				Map<String, String> myMapCytoscapeIDtoModelID = this.model.getMapCytoscapeIDtoReactantID();
+				Map<String, String> myMapModelIDtoCytoscapeID = new HashMap<String, String>();
+				//System.err.println("La mia mappa da Cytoscape a Model ID: " + myMapCytoscapeIDtoModelID);
+				for (String k : myMapCytoscapeIDtoModelID.keySet()) {
+					myMapModelIDtoCytoscapeID.put(myMapCytoscapeIDtoModelID.get(k), k);
+				}
+				//System.err.println("La mia mappa da Model a Cytoscape ID: " + myMapModelIDtoCytoscapeID);
+				SimpleLevelResult diff = (SimpleLevelResult)this.result.difference(differenceWith.result, myMapModelIDtoCytoscapeID, hisMapCytoscapeIDtoModelID);
 				if (diff.isEmpty()) {
 					JOptionPane.showMessageDialog(Cytoscape.getDesktop(), "Error: empty difference. Please contact the developers and send them the current model,\nwith a reference to which simulations were used for the difference.");
 					return;

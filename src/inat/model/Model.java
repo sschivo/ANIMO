@@ -10,8 +10,10 @@ import inat.util.Table;
 import inat.util.XmlConfiguration;
 
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -238,6 +240,18 @@ public class Model implements Serializable {
 	public Collection<Reactant> getReactantCollection() {
 		return Collections.unmodifiableCollection(this.reactants.values());
 	}
+	
+	public List<Reactant> getSortedReactantList() {
+		List<Reactant> result = new ArrayList<Reactant>();
+		result.addAll(this.reactants.values());
+		Collections.sort(result, new Comparator<Reactant>() {
+			@Override
+			public int compare(Reactant r1, Reactant r2) {
+				return r1.getName().compareTo(r2.getName());
+			}
+		});
+		return result;
+	}
 
 	/**
 	 * returns an unmodifiable view of all edges in this model.
@@ -326,6 +340,12 @@ public class Model implements Serializable {
 		
 		CyAttributes networkAttributes = Cytoscape.getNetworkAttributes();
 		
+		if (networkAttributes.hasAttribute(network.getIdentifier(), "deltaAlternating")) {
+			model.getProperties().let("deltaAlternating").be(networkAttributes.getBooleanAttribute(network.getIdentifier(), "deltaAlternating"));
+		}
+		if (networkAttributes.hasAttribute(network.getIdentifier(), "useOldResetting")) {
+			model.getProperties().let("useOldResetting").be(networkAttributes.getBooleanAttribute(network.getIdentifier(), "useOldResetting"));
+		}
 		model.getProperties().let(NUMBER_OF_LEVELS).be(networkAttributes.getAttribute(network.getIdentifier(), NUMBER_OF_LEVELS));
 		model.getProperties().let(SECONDS_PER_POINT).be(networkAttributes.getAttribute(network.getIdentifier(), SECONDS_PER_POINT));
 		double secStepFactor = networkAttributes.getDoubleAttribute(network.getIdentifier(), SECS_POINT_SCALE_FACTOR);
@@ -338,14 +358,31 @@ public class Model implements Serializable {
 		model.getProperties().let(SECONDS_PER_POINT).be(nSecondsPerPoint);
 		
 		// do nodes first
-		CyAttributes nodeAttributes = Cytoscape.getNodeAttributes();
-		final Iterator<Node> nodes = (Iterator<Node>) network.nodesIterator();
+		final CyAttributes nodeAttributes = Cytoscape.getNodeAttributes();
+		List<Node> nodesList = (List<Node>) network.nodesList();
+		Collections.sort(nodesList, new Comparator<Node>() {
+			@Override
+			public int compare(Node n1, Node n2) {
+				String name1, name2;
+				if (nodeAttributes.hasAttribute(n1.getIdentifier(), CANONICAL_NAME)) {
+					name1 = nodeAttributes.getStringAttribute(n1.getIdentifier(), CANONICAL_NAME);
+				} else {
+					name1 = n1.getIdentifier();
+				}
+				if (nodeAttributes.hasAttribute(n2.getIdentifier(), CANONICAL_NAME)) {
+					name2 = nodeAttributes.getStringAttribute(n2.getIdentifier(), CANONICAL_NAME);
+				} else {
+					name2 = n2.getIdentifier();
+				}
+				return name1.compareTo(name2);
+			}
+		});
+		final Iterator<Node> nodes = (Iterator<Node>) nodesList.iterator(); //network.nodesIterator();
 		for (int i = 0; nodes.hasNext(); i++) {
 			if (monitor != null) {
 				monitor.setPercentCompleted((100 * doneWork++) / totalWork);
 			}
 			Node node = nodes.next();
-			if (!nodeAttributes.getBooleanAttribute(node.getIdentifier(), ENABLED)) continue;
 			
 			final String reactantId = "R" + i;
 			Reactant r = new Reactant(reactantId);

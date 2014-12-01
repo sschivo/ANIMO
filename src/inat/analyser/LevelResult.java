@@ -4,6 +4,7 @@
 package inat.analyser;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.Vector;
 
@@ -72,7 +73,11 @@ public abstract class LevelResult {
 	 * The values of those series will be the difference between the
 	 * value in "subtractFrom" and the value in this.
 	 * @param subtractFrom
+	 * @param myMapModelIDtoCytoscapeID The connection between the IDs used in the
+	 * model (and result series)
+	 * @param hisMapCytoscapeIDtoModelID The same thing, but to go in subtractFrom
+	 * from the original Cytoscape id to the corresponding model id
 	 * @return
 	 */
-	public abstract LevelResult difference(LevelResult subtractFrom);
+	public abstract LevelResult difference(LevelResult subtractFrom, Map<String, String> myMapModelIDtoCytoscapeID, Map<String, String> hisMapCytoscapeIDtoModelID);
 }

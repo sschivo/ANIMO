@@ -1,25 +1,25 @@
 package fitting;
 import inat.analyser.LevelResult;
-import inat.model.Reaction;
 
 import java.util.HashMap;
 
-public class AcceptableConfiguration {
-	private HashMap<Reaction, ScenarioCfg> scenarioConfigurations = null;
+public class AcceptableConfiguration implements Comparable<AcceptableConfiguration> {
+	private HashMap<String, ScenarioCfg> scenarioConfigurations = null;
 	private LevelResult result = null;
 	private String errorEstimation = null;
+	private double errorValue = Double.NaN;
 	
-	public AcceptableConfiguration(HashMap<Reaction, ScenarioCfg> scenarioConfigurations, LevelResult result, String errorEstimation) {
+	public AcceptableConfiguration(HashMap<String, ScenarioCfg> scenarioConfigurations, LevelResult result, String errorEstimation) {
 		this.scenarioConfigurations = scenarioConfigurations;
 		this.result = result;
 		this.errorEstimation = errorEstimation;
 	}
 	
-	public void setScenarioConfigurations(HashMap<Reaction, ScenarioCfg> scenarioConfigurations) {
+	public void setScenarioConfigurations(HashMap<String, ScenarioCfg> scenarioConfigurations) {
 		this.scenarioConfigurations = scenarioConfigurations;
 	}
 	
-	public HashMap<Reaction, ScenarioCfg> getScenarioConfigurations() {
+	public HashMap<String, ScenarioCfg> getScenarioConfigurations() {
 		return this.scenarioConfigurations;
 	}
 	
@@ -39,10 +39,18 @@ public class AcceptableConfiguration {
 		return this.errorEstimation;
 	}
 	
+	public void setErrorValue(double errorValue) {
+		this.errorValue = errorValue;
+	}
+	
+	public double getErrorValue() {
+		return this.errorValue;
+	}
+	
 	public String toString() {
 		StringBuilder builder = new StringBuilder();
-		for (Reaction r : scenarioConfigurations.keySet()) {
-			builder.append(r.getName() + " uses ");
+		for (String r : scenarioConfigurations.keySet()) {
+			builder.append(r + " uses ");
 			ScenarioCfg cfg = scenarioConfigurations.get(r);
 			for (String parName : cfg.getParameters().keySet()) {
 				builder.append(parName + "=" + cfg.getParameters().get(parName) + ", ");
@@ -51,5 +59,14 @@ public class AcceptableConfiguration {
 		}
 		builder.append(". Error estimation: " + errorEstimation);
 		return builder.toString();
+	}
+
+	@Override
+	public int compareTo(AcceptableConfiguration other) {
+		if (this.errorValue < other.errorValue) {
+			return -1;
+		} else if (this.errorValue == other.errorValue) {
+			return 0;
+		} else return 1;
 	}
 }

@@ -693,7 +693,7 @@ public class UppaalModelAnalyserSMC implements ModelAnalyser<LevelResult> {
 			BufferedReader br = new BufferedReader(new InputStreamReader(output));
 			String line = null;
 			
-			while ((line = br.readLine()) != null && !line.startsWith(" -- Property is satisfied."));
+			while ((line = br.readLine()) != null && !line.contains("is satisfied"));
 			
 			long endTime = System.currentTimeMillis();
 			System.err.println(" took " + RunAction.timeDifferenceFormat(startTime, endTime));
@@ -756,13 +756,10 @@ public class UppaalModelAnalyserSMC implements ModelAnalyser<LevelResult> {
 				if (m.getReactant(reactantId) != null) {
 					levels.put(reactantId, new TreeMap<Double, Double>());
 				} else if (reactantId.contains(dot)) {
-					String afterDot = reactantId.substring(reactantId.lastIndexOf(dot) + 1);
-					if (afterDot.equals("T")) {
-						reactionId = reactantId.substring(0, reactantId.lastIndexOf(dot));
-						reaction = m.getReaction(reactionId);
-						if (reaction != null) {
-							levels.put(reaction.get(Model.Properties.CYTOSCAPE_ID).as(String.class), new TreeMap<Double, Double>());
-						}
+					reactionId = reactantId.substring(0, reactantId.lastIndexOf(dot));
+					reaction = m.getReaction(reactionId);
+					if (reaction != null) {
+						levels.put(reaction.get(Model.Properties.CYTOSCAPE_ID).as(String.class), new TreeMap<Double, Double>());
 					}
 				} else if (reactantId.endsWith("_c")) { //This is a "collapsed" double, i.e. a double number where the .b and .e are contained in the same variable. We need to do this in order to make sure that both values were taken in the same interval. Otherwise, UPPAAL will output two different time series for .b and .e, possibly using different time instants for the "sampling".
 					levels.put(reactantId.substring(0, reactantId.lastIndexOf("_c")), new TreeMap<Double, Double>());
@@ -780,22 +777,19 @@ public class UppaalModelAnalyserSMC implements ModelAnalyser<LevelResult> {
 						if (numberOfLevels.get(reactantId) != maxNumberOfLevels) {
 							level = level / (double)numberOfLevels.get(reactantId) * (double)maxNumberOfLevels;
 						}
-					} else if (reactantId.contains(dot)) { //It is not a reactant: this means that it is either a reaction duration or a reactant in the "double" format
-						String afterDot = reactantId.substring(reactantId.lastIndexOf(dot) + 1);
-						if (afterDot.equals("T")) {
-							reactionId = reactantId.substring(0, reactantId.lastIndexOf(dot)); //It is in the form R6_R4.T, so we remove the ".T" and keep the rest, which is used as reaction ID in the Model object
-							reaction = m.getReaction(reactionId);
-							if (reaction != null) {
-								chosenMap = reaction.get(Model.Properties.CYTOSCAPE_ID).as(String.class);
-								//int minTime = reaction.get(Model.Properties.MINIMUM_DURATION).as(Integer.class); //We use global instead of local minimum: see definition of minTime
-								if (level == 0 || level == VariablesModelReactionCentered.INFINITE_TIME || minTime == VariablesModelReactionCentered.INFINITE_TIME) { //I put also level == 0 because otherwise we go in the "else" and we divide by 0 =)
-									level = 0;
-								} else if (activityIntervalWidth > -2) { //If there are not orders of magnitude of difference between minimum and maximum, we can simply use a normal linear scale as we did before
-									level = 1.0 * minTime / level;
-								} else {
-									//level = 1.0 * minTime / level;
-									level = (activityIntervalWidth - Math.log10(1.0 * minTime / level)) / activityIntervalWidth;
-								}
+					} else if (reactantId.contains(dot)) { //It is not a reactant: for the moment, this can only mean that it is a reaction duration
+						reactionId = reactantId.substring(0, reactantId.lastIndexOf(dot)); //It is in the form R6_R4.T, so we remove the ".T" and keep the rest, which is used as reaction ID in the Model object
+						reaction = m.getReaction(reactionId);
+						if (reaction != null) {
+							chosenMap = reaction.get(Model.Properties.CYTOSCAPE_ID).as(String.class);
+							//int minTime = reaction.get(Model.Properties.MINIMUM_DURATION).as(Integer.class); //We use global instead of local minimum: see definition of minTime
+							if (level == 0 || level == VariablesModelReactionCentered.INFINITE_TIME || minTime == VariablesModelReactionCentered.INFINITE_TIME) { //I put also level == 0 because otherwise we go in the "else" and we divide by 0 =)
+								level = 0;
+							} else if (activityIntervalWidth > -2) { //If there are not orders of magnitude of difference between minimum and maximum, we can simply use a normal linear scale as we did before
+								level = 1.0 * minTime / level;
+							} else {
+								//level = 1.0 * minTime / level;
+								level = (activityIntervalWidth - Math.log10(1.0 * minTime / level)) / activityIntervalWidth;
 							}
 						}
 					} else if (reactantId.endsWith("_c")) { //If we have a collapsed double, decode it first to "double" and then to actual double
