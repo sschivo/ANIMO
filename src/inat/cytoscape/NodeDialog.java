@@ -4,13 +4,16 @@ import giny.model.Node;
 import inat.model.Model;
 import inat.util.JSwitchBox;
 
+import java.awt.Color;
 import java.awt.Component;
 import java.awt.Dialog;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
+import java.awt.Graphics;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
+import java.awt.Rectangle;
 import java.awt.Window;
 import java.awt.event.ActionEvent;
 import java.awt.event.KeyEvent;
@@ -36,8 +39,12 @@ import javax.swing.JSlider;
 import javax.swing.JTextField;
 import javax.swing.JTextPane;
 import javax.swing.KeyStroke;
+import javax.swing.UIManager;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
+import javax.swing.plaf.SliderUI;
+import javax.swing.plaf.basic.BasicSliderUI;
+import javax.swing.plaf.metal.MetalSliderUI;
 import javax.swing.text.DefaultFormatterFactory;
 import javax.swing.text.NumberFormatter;
 
@@ -238,7 +245,7 @@ public class NodeDialog extends JDialog {
 		
 		
 		class InitialActivityManager {
-			double getInitialActivity() {
+			double getInitialActivity() { //Get the % of activity to write on the label based on the current position of the initialConcentration slider, given that we are currently using a log-scale
 				int iActivity = initialConcentration.getValue();
 				double stepSize = 1.5;
 				try {
@@ -250,6 +257,37 @@ public class NodeDialog extends JDialog {
 					return initialConcentration.getMinimum();
 				} else {
 					return Math.pow(stepSize, tickPosition);
+				}
+			}
+			
+			int getLogPosition(double initialActivity) { //Given an initial activity value in [0, 1] (activityRatio), return the slider value for the log-scale
+				if (initialActivity <= 0) {
+					return initialConcentration.getMinimum();
+				} else if (initialActivity >= 1) {
+					return initialConcentration.getMaximum();
+				}
+				initialActivity *= 100;
+				double stepSize = 1.5;
+				try {
+					stepSize = Double.parseDouble(logStepPercent.getValue().toString()) + 1.0;
+				} catch (NumberFormatException ex) {
+				}
+				double tickPosition = Math.round(Math.log(initialActivity) / Math.log(stepSize));
+				if (tickPosition == 0) {
+					return initialConcentration.getMinimum();
+				} else {
+					return (int)Math.round(Math.pow(stepSize, tickPosition));
+				}
+			}
+			
+			int getLinPosition(double initialActivity) { //Given an initial activity value in [0, 1] (activityRatio), return the slider value for the linear scale
+				int nLevels = totalLevels.getValue();
+				if (initialActivity <= 0) {
+					return 0;
+				} else if (initialActivity >= 1) {
+					return nLevels;
+				} else {
+					return (int)Math.round(initialActivity * nLevels);
 				}
 			}
 			
@@ -269,20 +307,81 @@ public class NodeDialog extends JDialog {
 					} catch (NumberFormatException ex) {
 					}
 					labelTable.put(0, new JLabel("0"));
-					for (double pos = stepSize;pos < 100;pos *= stepSize) {
-						int iPos = (int)Math.round(pos);
-						labelTable.put(iPos, new JLabel("|")); // + iPos));
+					final double stepSize_ = stepSize;
+					
+					class MyBasicSliderUI extends BasicSliderUI {
+						public MyBasicSliderUI(JSlider slider) {
+							super(slider);
+						}
+						
+						public void paintTicks(Graphics g)  {
+					        Rectangle tickBounds = tickRect;
+					        g.setColor(Color.black);
+					        g.translate(0, tickBounds.y);
+					        for (double pos = stepSize_;pos < 100;pos *= stepSize_) {
+			                	int xPos = xPositionForValue((int)Math.round(pos));
+			                	paintMinorTickForHorizSlider( g, tickBounds, xPos );
+			                }
+			                paintMajorTickForHorizSlider(g, tickBounds, xPositionForValue(0));
+			                paintMajorTickForHorizSlider(g, tickBounds, xPositionForValue(25));
+			                paintMajorTickForHorizSlider(g, tickBounds, xPositionForValue(50));
+			                paintMajorTickForHorizSlider(g, tickBounds, xPositionForValue(75));
+			                paintMajorTickForHorizSlider(g, tickBounds, xPositionForValue(100));
+			                g.translate( 0, -tickBounds.y);
+					    }
+					};
+					class MyMetalSliderUI extends MetalSliderUI {
+						public MyMetalSliderUI() {
+						}
+						
+						public void paintTicks(Graphics g) {
+							Rectangle tickBounds = tickRect;
+					        g.setColor(Color.black);
+					        g.translate(0, tickBounds.y);
+					        for (double pos = stepSize_;pos < 100;pos *= stepSize_) {
+			                	int xPos = xPositionForValue((int)Math.round(pos));
+			                	paintMinorTickForHorizSlider( g, tickBounds, xPos );
+			                }
+			                paintMajorTickForHorizSlider(g, tickBounds, xPositionForValue(0));
+			                paintMajorTickForHorizSlider(g, tickBounds, xPositionForValue(25));
+			                paintMajorTickForHorizSlider(g, tickBounds, xPositionForValue(50));
+			                paintMajorTickForHorizSlider(g, tickBounds, xPositionForValue(75));
+			                paintMajorTickForHorizSlider(g, tickBounds, xPositionForValue(100));
+			                g.translate( 0, -tickBounds.y);
+						}
+					};
+					
+					SliderUI ui = null;
+					SliderUI currentUI = initialConcentration.getUI();
+					if (currentUI == null) {
+						ui = new MyBasicSliderUI(initialConcentration);
+					} else {
+						if (currentUI instanceof MetalSliderUI) {
+							ui = new MyMetalSliderUI();
+						} else {
+							ui = new MyBasicSliderUI(initialConcentration);
+						}
 					}
+					initialConcentration.setUI(ui);
+//					for (double pos = stepSize;pos < 100;pos *= stepSize) {
+//						int iPos = (int)Math.round(pos);
+//						labelTable.put(iPos, new JLabel("|")); // + iPos));
+//					}
+					labelTable.put(25, new JLabel("25"));
+					labelTable.put(50, new JLabel("50"));
+					labelTable.put(75, new JLabel("75"));
 					labelTable.put(100, new JLabel("100"));
 					initialConcentration.setLabelTable(labelTable);
 					initialLevelField.setTitle("Initial activity: " + initialConcentration.getValue() + "%");
 					initialConcentration.setValue(0);
-					initialConcentration.setPaintTicks(false);
+					initialConcentration.setPaintTicks(true);
+//					initialConcentration.setPaintTicks(false);
 				} else {
 					ChangeEvent e = new ChangeEvent(totalLevels);
 					for(ChangeListener l : totalLevels.getChangeListeners()){
 						l.stateChanged(e);
 					}
+					initialConcentration.setUI((SliderUI)UIManager.getUI(initialConcentration));
 					initialConcentration.setPaintTicks(true);
 				}
 			}
@@ -411,10 +510,21 @@ public class NodeDialog extends JDialog {
 			@Override
 			public void stateChanged(ChangeEvent arg0) {
 				boolean linear = discretizationChoice.isSelected();
+				double previousLevel;
+				if (!linear) { //We have to translate the previously shown value on the log-scale we are now going to show
+					previousLevel = 1.0 * initialConcentration.getValue() / totalLevels.getValue();
+				} else { //Translate back the log-scale value into normal activity
+					previousLevel = initialActivityManager.getInitialActivity() / 100.0;
+				}
 				totalLevelsField.setEnabled(linear);
 				logPercentageField.setEnabled(!linear);
 				logTotalStepsField.setEnabled(!linear);
 				initialActivityManager.update();
+				if (!linear) {
+					initialConcentration.setValue(initialActivityManager.getLogPosition(previousLevel));
+				} else {
+					initialConcentration.setValue(initialActivityManager.getLinPosition(previousLevel));
+				}
 				NodeDialog.this.pack();
 			}
 		};
@@ -471,7 +581,7 @@ public class NodeDialog extends JDialog {
 				if (discretizationChoice.isSelected()) {
 					activityRatio = (double)initialConcentration.getValue() / totalLevels.getValue();
 				} else {
-					activityRatio = initialActivityManager.getInitialActivity() / totalLevels.getValue();
+					activityRatio = initialActivityManager.getInitialActivity() / 100.0;
 				}
 				nodeAttributes.setAttribute(node.getIdentifier(), Model.Properties.SHOWN_LEVEL, activityRatio);
 				

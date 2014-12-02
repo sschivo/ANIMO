@@ -388,13 +388,15 @@ public class Model implements Serializable {
 			Reactant r = new Reactant(reactantId);
 			nodeNameToId.put(node.getIdentifier(), reactantId);
 			
+			r.let(ENABLED).be(nodeAttributes.getAttribute(node.getIdentifier(), ENABLED));
+			if (!r.get(ENABLED).as(Boolean.class)) continue;
+			
 			r.let(CYTOSCAPE_ID).be(node.getIdentifier());
 			r.let(REACTANT_NAME).be(node.getIdentifier());
 			r.let(REACTANT_ALIAS).be(nodeAttributes.getAttribute(node.getIdentifier(), CANONICAL_NAME));
 			r.let(NUMBER_OF_LEVELS).be(nodeAttributes.getAttribute(node.getIdentifier(), NUMBER_OF_LEVELS));
 			r.let(LEVELS_SCALE_FACTOR).be(nodeAttributes.getAttribute(node.getIdentifier(), LEVELS_SCALE_FACTOR));
 			r.let(GROUP).be(nodeAttributes.getAttribute(node.getIdentifier(), GROUP));
-			r.let(ENABLED).be(nodeAttributes.getAttribute(node.getIdentifier(), ENABLED));
 			r.let(PLOTTED).be(nodeAttributes.getAttribute(node.getIdentifier(), PLOTTED));
 			r.let(INITIAL_LEVEL).be(nodeAttributes.getIntegerAttribute(node.getIdentifier(), INITIAL_LEVEL));
 			r.let(LINEAR_SCALE).be(nodeAttributes.getBooleanAttribute(node.getIdentifier(), LINEAR_SCALE));

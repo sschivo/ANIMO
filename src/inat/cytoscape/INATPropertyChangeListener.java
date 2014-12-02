@@ -9,6 +9,7 @@ import inat.model.Model;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Container;
+import java.awt.Rectangle;
 import java.awt.event.ActionEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
@@ -706,6 +707,9 @@ public class INATPropertyChangeListener implements PropertyChangeListener {
 						NodeDialog dialog = new NodeDialog(node);
 						dialog.pack();
 						dialog.setLocationRelativeTo(Cytoscape.getDesktop());
+						Rectangle dim = dialog.getBounds();
+						dim.height = (int)Math.round(dim.height * 1.1);
+						dialog.setBounds(dim);
 						dialog.setVisible(true);
 						return;
 					}
@@ -877,6 +881,9 @@ public class INATPropertyChangeListener implements PropertyChangeListener {
 						NodeDialog dialog = new NodeDialog(node);
 						dialog.pack();
 						dialog.setLocationRelativeTo(Cytoscape.getDesktop());
+						Rectangle dim = dialog.getBounds();
+						dim.height = (int)Math.round(dim.height * 1.1);
+						dialog.setBounds(dim);
 						dialog.setCreatedNewNode();
 						dialog.setVisible(true);
 						newNodeNumber = network.getNodeCount(); //Re-update the current number of nodes, because the new node may have been deleted by hitting "Cancel"

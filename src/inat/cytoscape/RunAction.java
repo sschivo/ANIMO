@@ -15,7 +15,7 @@ import java.awt.event.ActionEvent;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.PrintStream;
-import java.util.Calendar;
+import java.text.SimpleDateFormat;
 import java.util.Date;
 
 import javax.swing.JCheckBox;
@@ -94,16 +94,17 @@ public class RunAction extends InatActionTask {
 		
 		long startTime = System.currentTimeMillis();
 		Date now = new Date(startTime);
-		Calendar nowCal = Calendar.getInstance();
+//		Calendar nowCal = Calendar.getInstance();
 		File logFile = null;
 		PrintStream logStream = null;
 		PrintStream oldErr = System.err;
 		try {
-			if (UppaalModelAnalyserSMC/*FasterConcrete*/.areWeUnderWindows()) {
-				logFile = File.createTempFile("ANIMO_run_" + nowCal.get(Calendar.YEAR) + "-" + nowCal.get(Calendar.MONTH) + "-" + nowCal.get(Calendar.DAY_OF_MONTH) + "_" + nowCal.get(Calendar.HOUR_OF_DAY) + "-" + nowCal.get(Calendar.MINUTE) + "-" + nowCal.get(Calendar.SECOND), ".log"); //windows doesn't like long file names..
-			} else {
-				logFile = File.createTempFile("ANIMO run " + now.toString(), ".log");
-			}
+//			if (UppaalModelAnalyserSMC/*FasterConcrete*/.areWeUnderWindows()) {
+//				logFile = File.createTempFile("ANIMO_run_" + nowCal.get(Calendar.YEAR) + "-" + nowCal.get(Calendar.MONTH) + "-" + nowCal.get(Calendar.DAY_OF_MONTH) + "_" + nowCal.get(Calendar.HOUR_OF_DAY) + "-" + nowCal.get(Calendar.MINUTE) + "-" + nowCal.get(Calendar.SECOND), ".log"); //windows doesn't like long file names..
+//			} else {
+				//logFile = File.createTempFile("ANIMO run " + now.toString(), ".log");
+				logFile = File.createTempFile("ANIMO_run_" + new SimpleDateFormat("dd-MMM-yyyy_HH.mm.ss_").format(now), ".log");
+//			}
 			logFile.deleteOnExit();
 			logStream = new PrintStream(new FileOutputStream(logFile));
 			System.setErr(logStream);
