@@ -25,8 +25,6 @@ import java.util.Dictionary;
 import java.util.Hashtable;
 
 import javax.swing.AbstractAction;
-import javax.swing.Box;
-import javax.swing.BoxLayout;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
 import javax.swing.JComponent;
@@ -534,13 +532,9 @@ public class NodeDialog extends JDialog {
 			initialConcentration.setValue(nodeAttributes.getIntegerAttribute(node.getIdentifier(), Model.Properties.INITIAL_LEVEL));
 		}
 		
-		Box discretizationChoiceBox = new Box(BoxLayout.X_AXIS);
-		discretizationChoiceBox.add(Box.createGlue());
-		discretizationChoiceBox.add(discretizationChoice);
-		discretizationChoiceBox.add(Box.createGlue());
 		JPanel discretization = new JPanel();
 		discretization.setLayout(new GridBagLayout());
-		discretization.add(discretizationChoiceBox, new GridBagConstraints(0, 0, 2, 1, 1.0, 0.0, GridBagConstraints.CENTER, GridBagConstraints.BOTH, new Insets(0, 0, 0, 0), 0, 0));
+		discretization.add(discretizationChoice, new GridBagConstraints(0, 0, 2, 1, 1.0, 0.0, GridBagConstraints.CENTER, GridBagConstraints.NONE, new Insets(0, 0, 0, 0), 0, 0));
 		discretization.add(totalLevelsField, new GridBagConstraints(1, 1, 1, 2, 0.5, 0.0, GridBagConstraints.CENTER, GridBagConstraints.BOTH, new Insets(0, 0, 0, 0), 0, 0));
 		//discretization.add(initialLevelField, new GridBagConstraints(0, 3, 2, 1, 0.5, 0.0, GridBagConstraints.CENTER, GridBagConstraints.BOTH, new Insets(0, 0, 0, 0), 0, 0));
 		discretization.add(logPercentageField, new GridBagConstraints(0, 1, 1, 1, 0.5, 0.0, GridBagConstraints.LINE_START, GridBagConstraints.NONE, new Insets(0, 0, 0, 0), 0, 0));
